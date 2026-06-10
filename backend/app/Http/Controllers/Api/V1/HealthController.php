@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+
+class HealthController extends Controller
+{
+    public function index(): JsonResponse
+    {
+        return response()->json([
+            'status'    => 'ok',
+            'timestamp' => now()->toIso8601String(),
+            'version'   => '1.0.0',
+            'service'   => config('app.name'),
+        ]);
+    }
+}

@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="230" fill="#E1F5EE"/>
+  <path d="M512,112 C512,112 720,196 720,480 C720,648 640,736 512,756 C384,736 304,648 304,480 C304,196 512,112 512,112 Z" fill="#1D9E75"/>
+  <path d="M512,112 C512,112 720,196 720,480 C720,648 640,736 512,756 L512,112 Z" fill="#0F6E56"/>
+  <line x1="512" y1="120" x2="512" y2="748" stroke="#E1F5EE" stroke-width="12" stroke-linecap="round"/>
+  <path d="M512,300 Q580,272 614,230" fill="none" stroke="#E1F5EE" stroke-width="9" stroke-linecap="round" opacity="0.75"/>
+  <path d="M512,380 Q574,354 604,312" fill="none" stroke="#E1F5EE" stroke-width="9" stroke-linecap="round" opacity="0.75"/>
+  <path d="M512,460 Q568,436 592,396" fill="none" stroke="#E1F5EE" stroke-width="8" stroke-linecap="round" opacity="0.65"/>
+  <path d="M512,540 Q558,520 578,484" fill="none" stroke="#E1F5EE" stroke-width="7" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="400" cy="282" r="26" fill="none" stroke="#E1F5EE" stroke-width="10"/>
+  <circle cx="358" cy="370" r="26" fill="none" stroke="#E1F5EE" stroke-width="10"/>
+  <circle cx="390" cy="462" r="26" fill="none" stroke="#E1F5EE" stroke-width="10"/>
+  <circle cx="358" cy="550" r="26" fill="none" stroke="#E1F5EE" stroke-width="10"/>
+  <polyline points="400,308 400,342 358,344" fill="none" stroke="#E1F5EE" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="358,396 358,428 390,434" fill="none" stroke="#E1F5EE" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="390,488 390,518 358,524" fill="none" stroke="#E1F5EE" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="400" y1="256" x2="470" y2="256" stroke="#E1F5EE" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- App name -->
+  <text font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="86" y="848" text-anchor="middle">
+    <tspan x="512" fill="#0C447C">Calor</tspan><tspan fill="#1D9E75" dx="10"> Eye</tspan>
+  </text>
+
+  <!-- Slogan -->
+  <text x="512" y="902" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#5F5E5A">Nh&#7853;n di&#7879;n t&#7913;c th&#236;, s&#7889;ng kh&#7887;e m&#7895;i ng&#224;y</text>
+
+  <!-- Sub-tagline -->
+  <text x="512" y="950" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#378ADD" letter-spacing="6">FOOD &#183; AI &#183; HEALTH</text>
+</svg>

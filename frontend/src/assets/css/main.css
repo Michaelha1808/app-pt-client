@@ -1,0 +1,237 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── CaloEye Brand ── */
+  --color-calor-green:  #18A874;   /* primary action – slightly brighter than logo #1D9E75 */
+  --color-calor-dark:   #0F6E56;   /* hover / pressed state */
+  --color-calor-deep:   #0C4D3D;   /* text on light bg */
+  --color-calor-light:  #E1F5EE;   /* chip / badge bg */
+  --color-calor-mint:   #9FE1CB;   /* subtle accent */
+  --color-calor-navy:   #0C447C;   /* wordmark blue */
+  --color-calor-bg:     #F2F8F5;   /* app background (subtle green tint) */
+
+  /* ── Keep as iOS semantic aliases so existing classes still work ── */
+  --color-ios-blue:     #18A874;   /* was #007AFF – now CaloEye green */
+  --color-ios-green:    #34C759;   /* success – unchanged */
+  --color-ios-orange:   #FF9500;   /* warning – unchanged */
+  --color-ios-red:      #FF3B30;   /* danger – unchanged */
+  --color-ios-purple:   #AF52DE;
+  --color-ios-pink:     #FF2D55;
+  --color-ios-indigo:   #5856D6;
+  --color-ios-teal:     #32ADE6;
+  --color-ios-yellow:   #FFCC00;
+  --color-ios-gray:     #8E8E93;
+  --color-ios-gray2:    #AEAEB2;
+  --color-ios-gray3:    #C7C7CC;
+  --color-ios-gray4:    #D1D1D6;
+  --color-ios-gray5:    #E5E5EA;
+  --color-ios-gray6:    #F2F8F5;   /* app bg – now with subtle green tint */
+}
+
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+               'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  height: 100%;
+  background: #1C2B24;   /* dark green instead of near-black */
+}
+
+#__nuxt {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100svh;
+  background: #F2F8F5;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+}
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+/* ──── iOS Blur (tinted green) ──── */
+.ios-blur {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(242, 248, 245, 0.88);
+}
+
+.ios-blur-white {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.ios-blur-dark {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(15, 50, 35, 0.80);
+}
+
+/* ──── Animations ──── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position: 400px 0; }
+}
+@keyframes scanLine {
+  0%, 100% { top: 12%; }
+  50%       { top: 78%; }
+}
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%            { transform: translateY(-7px); }
+}
+@keyframes ringDraw {
+  from { stroke-dashoffset: 628; }
+}
+@keyframes popIn {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes breath {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50%       { transform: scale(1.15); opacity: 0.3; }
+}
+
+/* Character mood animations */
+@keyframes charFloat {
+  0%   { transform: translateY(0)    rotate(-1deg); }
+  25%  { transform: translateY(-9px) rotate(1.5deg); }
+  55%  { transform: translateY(-13px) rotate(0.2deg); }
+  80%  { transform: translateY(-6px) rotate(-1.8deg); }
+  100% { transform: translateY(0)    rotate(-1deg); }
+}
+@keyframes charBounce {
+  0%   { transform: scaleX(1)    scaleY(1)    translateY(0); }
+  12%  { transform: scaleX(1.13) scaleY(0.85) translateY(4px); }
+  38%  { transform: scaleX(0.87) scaleY(1.16) translateY(-18px); }
+  58%  { transform: scaleX(1.09) scaleY(0.88) translateY(5px); }
+  74%  { transform: scaleX(0.95) scaleY(1.07) translateY(-8px); }
+  88%  { transform: scaleX(1.03) scaleY(0.97) translateY(2px); }
+  100% { transform: scaleX(1)    scaleY(1)    translateY(0); }
+}
+@keyframes charCelebrate {
+  0%   { transform: rotate(-9deg) scale(1)    translateY(0); }
+  15%  { transform: rotate(11deg) scale(1.10) translateY(-10px); }
+  35%  { transform: rotate(-7deg) scale(1.14) translateY(-16px); }
+  55%  { transform: rotate(9deg)  scale(1.08) translateY(-10px); }
+  75%  { transform: rotate(-5deg) scale(1.04) translateY(-4px); }
+  100% { transform: rotate(-9deg) scale(1)    translateY(0); }
+}
+@keyframes charThink {
+  0%, 100% { transform: rotate(0)    translateX(0)   translateY(0); }
+  20%       { transform: rotate(-7deg) translateX(-3px) translateY(-3px); }
+  40%       { transform: rotate(0)    translateX(0)   translateY(-5px); }
+  60%       { transform: rotate(6deg)  translateX(3px) translateY(-3px); }
+  80%       { transform: rotate(0)    translateX(0)   translateY(-1px); }
+}
+@keyframes charWarn {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  12%       { transform: translateX(-8px) rotate(-5deg); }
+  28%       { transform: translateX(8px)  rotate(5deg); }
+  44%       { transform: translateX(-6px) rotate(-3deg); }
+  60%       { transform: translateX(6px)  rotate(3deg); }
+  76%       { transform: translateX(-3px) rotate(-1deg); }
+  88%       { transform: translateX(3px)  rotate(1deg); }
+}
+@keyframes charWave {
+  0%, 100% { transform: rotate(0) translateY(0) scale(1); }
+  10%       { transform: rotate(-12deg) translateY(-5px) scale(1.02); }
+  25%       { transform: rotate(14deg)  translateY(-9px) scale(1.04); }
+  40%       { transform: rotate(-9deg)  translateY(-6px) scale(1.02); }
+  55%       { transform: rotate(11deg)  translateY(-8px) scale(1.03); }
+  70%       { transform: rotate(-6deg)  translateY(-4px) scale(1.01); }
+  85%       { transform: rotate(6deg)   translateY(-6px) scale(1.02); }
+}
+@keyframes charExcited {
+  0%, 100% { transform: scale(1)    rotate(0)    translateY(0); }
+  20%       { transform: scale(1.12) rotate(6deg) translateY(-10px); }
+  40%       { transform: scale(0.92) rotate(-6deg) translateY(3px); }
+  60%       { transform: scale(1.09) rotate(5deg) translateY(-7px); }
+  80%       { transform: scale(0.96) rotate(-3deg) translateY(1px); }
+}
+@keyframes charIdle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-5px) scale(1.02); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.15; transform: scale(1.35); }
+}
+@keyframes thinkDot {
+  0%, 60%, 100% { opacity: 0; transform: scale(0.5); }
+  30%            { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeInUp     { animation: fadeInUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fadeIn       { animation: fadeIn 0.3s ease forwards; }
+.animate-scaleIn      { animation: scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-slideUpSheet { animation: slideUpSheet 0.44s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.animate-popIn        { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-breath       { animation: breath 2.5s ease-in-out infinite; }
+.animate-ring-draw    { animation: ringDraw 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-glow-pulse   { animation: glowPulse 2s ease-in-out infinite; }
+
+.char-float     { animation: charFloat 4s ease-in-out infinite; }
+.char-bounce    { animation: charBounce 1s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite; }
+.char-celebrate { animation: charCelebrate 1.2s ease-in-out infinite; }
+.char-think     { animation: charThink 2.5s ease-in-out infinite; }
+.char-warn      { animation: charWarn 0.65s ease-in-out 3; }
+.char-wave      { animation: charWave 1.6s ease-in-out infinite; }
+.char-excited   { animation: charExcited 0.85s ease-in-out infinite; }
+.char-idle      { animation: charIdle 2.8s ease-in-out infinite; }
+
+.delay-1 { animation-delay: 0.06s; }
+.delay-2 { animation-delay: 0.12s; }
+.delay-3 { animation-delay: 0.18s; }
+.delay-4 { animation-delay: 0.24s; }
+.delay-5 { animation-delay: 0.30s; }
+.delay-6 { animation-delay: 0.36s; }
+
+.typing-dot-1 { animation: typingBounce 1.4s 0.0s ease-in-out infinite; }
+.typing-dot-2 { animation: typingBounce 1.4s 0.2s ease-in-out infinite; }
+.typing-dot-3 { animation: typingBounce 1.4s 0.4s ease-in-out infinite; }
+
+.skeleton {
+  background: linear-gradient(90deg, #D8EDE4 25%, #E8F5EF 50%, #D8EDE4 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.3s infinite linear;
+  border-radius: 8px;
+}
+
+.scan-line { animation: scanLine 2.5s ease-in-out infinite; }
+.ios-press { transition: transform 0.1s ease, opacity 0.1s ease; }
+.ios-press:active { transform: scale(0.96); opacity: 0.75; }
+
+.border-hairline   { border-width: 0.5px; }
+.border-t-hairline { border-top-width: 0.5px; }
+.border-b-hairline { border-bottom-width: 0.5px; }
+
+.ios-separator {
+  height: 0.5px;
+  background: rgba(24, 168, 116, 0.15);
+}

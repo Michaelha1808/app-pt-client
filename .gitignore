@@ -1,0 +1,24 @@
+# Environment
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+frontend/public/sw.js
+frontend/public/workbox-*.js
+frontend/public/worker-*.js
+frontend/public/fallback-*.js
+
+# Laravel
+backend/vendor/
+backend/storage/logs/*.log
+backend/.phpunit.result.cache
+backend/database/database.sqlite

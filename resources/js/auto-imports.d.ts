@@ -77,8 +77,10 @@ declare global {
   const useClock: typeof import('./composables/useClock').useClock
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
+  const useFoodAnalysis: typeof import('./composables/useFoodAnalysis').useFoodAnalysis
   const useId: typeof import('vue').useId
   const useLink: typeof import('vue-router').useLink
+  const useMealLog: typeof import('./composables/useMealLog').useMealLog
   const useModel: typeof import('vue').useModel
   const useProfile: typeof import('./composables/useProfile').useProfile
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
@@ -178,8 +180,10 @@ declare module 'vue' {
     readonly useClock: UnwrapRef<typeof import('./composables/useClock')['useClock']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useFoodAnalysis: UnwrapRef<typeof import('./composables/useFoodAnalysis')['useFoodAnalysis']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
+    readonly useMealLog: UnwrapRef<typeof import('./composables/useMealLog')['useMealLog']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>

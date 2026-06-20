@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,17 @@ Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });
+});
+
+// Food analysis — public (guest được phép), rate limit 10/min
+Route::middleware('throttle:10,1')->post('/food/analyze', [FoodController::class, 'analyze']);
+
+// Food log — auth required
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/food/log', [FoodController::class, 'log']);
+    Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
+    Route::get('/food/today', [FoodController::class, 'todayStats']);
+    Route::get('/food/history', [FoodController::class, 'history']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

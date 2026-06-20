@@ -1,18 +1,33 @@
 <script setup lang="ts">
-const meals = [
-  { id: 1, name: 'Phở bò', time: '07:30', cal: 450, emoji: '🍜', tag: 'Sáng' },
-  { id: 2, name: 'Cơm gà xối mỡ', time: '12:15', cal: 680, emoji: '🍗', tag: 'Trưa' },
-  { id: 3, name: 'Sinh tố bơ', time: '15:30', cal: 210, emoji: '🥑', tag: 'Phụ' },
-]
+import { useMealLog } from '@/composables/useMealLog'
+import { useAuthStore } from '@/stores/auth'
 
-const consumed = computed(() => meals.reduce((sum, m) => sum + m.cal, 0))
-const goal = 2000
+const store = useAuthStore()
+const { todayStats, loading, fetchTodayStats } = useMealLog()
 
-const macros = [
-  { label: 'Protein', value: 82, max: 120, unit: 'g', color: '#007AFF' },
-  { label: 'Carbs', value: 210, max: 260, unit: 'g', color: '#FF9500' },
-  { label: 'Chất béo', value: 54, max: 65, unit: 'g', color: '#FF2D55' },
-]
+const consumed = computed(() => todayStats.value?.total_calories ?? 0)
+const goal     = computed(() => store.user?.calorie_goal ?? 2000)
+
+const macros = computed(() => {
+  const s = todayStats.value
+  const proteinGoal = Math.round(goal.value * 0.3 / 4)
+  const carbGoal    = Math.round(goal.value * 0.45 / 4)
+  const fatGoal     = Math.round(goal.value * 0.25 / 9)
+  return [
+    { label: 'Protein',   value: s?.total_protein ?? 0, max: proteinGoal, unit: 'g', color: '#007AFF' },
+    { label: 'Carbs',     value: s?.total_carbs   ?? 0, max: carbGoal,    unit: 'g', color: '#FF9500' },
+    { label: 'Chất béo',  value: s?.total_fat     ?? 0, max: fatGoal,     unit: 'g', color: '#FF2D55' },
+  ]
+})
+
+const meals = computed(() => todayStats.value?.meals ?? [])
+
+const userName = computed(() => store.user?.name?.split(' ').at(-1) ?? 'bạn')
+const userInitial = computed(() => store.user?.name?.[0]?.toUpperCase() ?? '?')
+
+onMounted(() => {
+  if (store.token) fetchTodayStats()
+})
 </script>
 
 <template>
@@ -21,12 +36,13 @@ const macros = [
     <div class="px-5 pt-2 pb-3">
       <div class="flex items-center justify-between animate-fadeInUp" style="opacity:0">
         <div>
-          <p class="text-[14px] text-ios-gray">Thứ Bảy, 14 tháng 6</p>
-          <h1 class="text-[22px] font-bold text-black leading-tight mt-0.5">Xin chào, <span class="text-calor-green">Minh!</span></h1>
+          <p class="text-[14px] text-ios-gray">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
+          <h1 class="text-[22px] font-bold text-black leading-tight mt-0.5">Xin chào, <span class="text-calor-green">{{ userName }}!</span></h1>
         </div>
         <NuxtLink to="/profile">
-          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-calor-green to-calor-dark flex items-center justify-center">
-            <span class="text-white font-bold text-[15px]">M</span>
+          <div class="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-calor-green to-calor-dark flex items-center justify-center">
+            <img v-if="store.user?.avatar_url" :src="store.user.avatar_url" class="w-full h-full object-cover" />
+            <span v-else class="text-white font-bold text-[15px]">{{ userInitial }}</span>
           </div>
         </NuxtLink>
       </div>
@@ -56,6 +72,9 @@ const macros = [
       <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-4">Calo hôm nay</h2>
       <div class="flex justify-center">
         <HomeCalorieRing :consumed="consumed" :goal="goal" />
+      </div>
+      <div v-if="loading" class="mt-3 flex justify-center">
+        <div class="w-4 h-4 rounded-full border-2 border-calor-green border-t-transparent animate-spin"/>
       </div>
     </div>
 
@@ -120,26 +139,27 @@ const macros = [
       </div>
 
       <div class="bg-white rounded-[18px] overflow-hidden shadow-sm">
+        <div v-if="meals.length === 0 && !loading" class="px-4 py-6 flex flex-col items-center gap-2 text-center">
+          <span class="text-3xl">🍽️</span>
+          <p class="text-[14px] text-ios-gray">Chưa có bữa ăn nào hôm nay</p>
+        </div>
         <div
           v-for="(meal, idx) in meals"
           :key="meal.id"
         >
           <div class="flex items-center gap-3 px-4 py-3.5">
-            <!-- Emoji icon -->
+            <!-- Icon -->
             <div class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
-              {{ meal.emoji }}
+              🍽️
             </div>
             <!-- Info -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5">
-                <p class="text-[15px] font-medium text-black truncate">{{ meal.name }}</p>
-                <span class="text-[10px] font-semibold text-ios-blue bg-ios-blue/10 rounded-full px-1.5 py-0.5 flex-shrink-0">{{ meal.tag }}</span>
-              </div>
-              <p class="text-[12px] text-ios-gray mt-0.5">{{ meal.time }}</p>
+              <p class="text-[15px] font-medium text-black truncate">{{ meal.food_name }}</p>
+              <p class="text-[12px] text-ios-gray mt-0.5">{{ meal.logged_at }}{{ meal.serving ? ` · ${meal.serving}` : '' }}</p>
             </div>
             <!-- Calories -->
             <div class="text-right">
-              <p class="text-[15px] font-semibold text-black">{{ meal.cal }}</p>
+              <p class="text-[15px] font-semibold text-black">{{ meal.calories }}</p>
               <p class="text-[11px] text-ios-gray">kcal</p>
             </div>
           </div>

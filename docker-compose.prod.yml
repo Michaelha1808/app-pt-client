@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # No exposed ports in production — DB is internal only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    volumes:
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      - app_storage:/var/www/storage          # Laravel logs, sessions, uploads
+      - app_public:/var/www/public-shared     # populated by entrypoint, read by nginx
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${APP_KEY}
+      - APP_URL=${APP_URL}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - FRONTEND_URL=${APP_URL}
+      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Healthy once entrypoint has finished copying public files and fpm is ready
+      test: ["CMD-SHELL", "test -f /var/www/public-shared/index.php"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 60s
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/prod.conf:/etc/nginx/templates/default.conf.template:ro
+      - app_public:/var/www/public:ro             # static files served by nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro      # SSL certs (issued on host via certbot)
+      - ./certbot/www:/var/www/certbot:ro         # webroot challenge dir (host certbot writes here)
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  app_storage:
+  app_public:

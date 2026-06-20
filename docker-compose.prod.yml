@@ -9,7 +9,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    # No exposed ports in production — DB is internal only
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -17,16 +16,13 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
+    # Image được build bởi GitHub Actions và push lên Docker Hub
+    image: ${DOCKER_IMAGE}
     restart: unless-stopped
     volumes:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
-      - app_storage:/var/www/storage          # Laravel logs, sessions, uploads
-      - app_public:/var/www/public-shared     # populated by entrypoint, read by nginx
+      - app_storage:/var/www/storage
+      - app_public:/var/www/public-shared
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
@@ -44,7 +40,6 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      # Healthy once entrypoint has finished copying public files and fpm is ready
       test: ["CMD-SHELL", "test -f /var/www/public-shared/index.php"]
       interval: 5s
       timeout: 3s
@@ -59,9 +54,9 @@ services:
       - "443:443"
     volumes:
       - ./docker/nginx/prod.conf:/etc/nginx/templates/default.conf.template:ro
-      - app_public:/var/www/public:ro             # static files served by nginx
-      - /etc/letsencrypt:/etc/letsencrypt:ro      # SSL certs (issued on host via certbot)
-      - ./certbot/www:/var/www/certbot:ro         # webroot challenge dir (host certbot writes here)
+      - app_public:/var/www/public:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
     environment:
       - DOMAIN=${DOMAIN}
     depends_on:

@@ -1,5 +1,8 @@
 # Environment
 .env
+.env.backup
+.env.development
+.env.production
 *.env.local
 
 # OS
@@ -9,16 +12,35 @@ Thumbs.db
 # Node
 node_modules/
 
-# Next.js build output
-frontend/.next/
-frontend/out/
+# Nuxt / Frontend
+frontend/.nuxt/
+frontend/.output/
 frontend/public/sw.js
 frontend/public/workbox-*.js
 frontend/public/worker-*.js
 frontend/public/fallback-*.js
 
 # Laravel
-backend/vendor/
-backend/storage/logs/*.log
-backend/.phpunit.result.cache
-backend/database/database.sqlite
+/bootstrap/cache/*.php
+*.log
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.vscode
+/.zed
+/auth.json
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+/database/database.sqlite
+_ide_helper.php
+Homestead.json
+Homestead.yaml

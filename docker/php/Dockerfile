@@ -1,6 +1,16 @@
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run prod
+
+
 FROM php:8.4-fpm-alpine
 
-# System dependencies
 RUN apk add --no-cache \
     git \
     curl \
@@ -11,7 +21,6 @@ RUN apk add --no-cache \
     postgresql-dev \
     oniguruma-dev
 
-# PHP extensions
 RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
@@ -23,12 +32,12 @@ RUN docker-php-ext-install \
     bcmath \
     gd
 
-# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
 COPY . .
+COPY --from=frontend-builder /app/public/build ./public/build
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 

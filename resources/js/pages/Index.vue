@@ -24,7 +24,7 @@ onMounted(() => {
 
     <!-- Character (large, centered) -->
     <div class="animate-scaleIn mb-4" style="opacity:0">
-      <CaloeyeCharacter mood="happy" :size="130" />
+      <CaloeyeCharacter mood="wave" :size="130" />
     </div>
 
     <!-- Logo wordmark -->

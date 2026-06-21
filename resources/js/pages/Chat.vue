@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+
 interface Message {
   id: number
   role: 'user' | 'ai'
@@ -83,7 +85,7 @@ function scrollToBottom() {
   <div class="flex flex-col h-full">
     <!-- Header -->
     <div class="px-5 pt-2 pb-3 flex items-center gap-3">
-      <CaloeyeCharacter mood="happy" :size="44" />
+      <CaloeyeCharacter mood="wave" :size="44" />
       <div>
         <h1 class="text-[17px] font-semibold text-black">CaloEye AI</h1>
         <div class="flex items-center gap-1">

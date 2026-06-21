@@ -146,7 +146,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
       <!-- ── Error state ── -->
       <div v-if="error && !loading" class="mx-5 mt-4 bg-ios-red/8 border border-ios-red/25 rounded-[18px] px-5 py-5 animate-fadeInUp" style="opacity:0">
         <div class="flex flex-col items-center gap-3 text-center">
-          <span class="text-4xl">😕</span>
+          <CaloeyeCharacter mood="warning" :size="72" />
           <p class="text-[15px] font-semibold text-ios-red">Không thể phân tích</p>
           <p class="text-[13px] text-ios-gray leading-relaxed">{{ error }}</p>
           <button
@@ -178,7 +178,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         <div class="bg-white rounded-[18px] px-5 py-5 mb-3 shadow-sm">
           <div class="flex items-center gap-4">
             <CaloeyeCharacter
-              mood="thinking"
+              mood="waiting"
               :size="68"
               message="Bạn chờ chút nhé..."
               bubble-dir="right"

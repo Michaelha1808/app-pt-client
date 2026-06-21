@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+
 const { login, loginWithGoogle, loginAsGuest, extractError } = useAuth()
 
 const email = ref('')
@@ -39,7 +41,7 @@ async function handleLogin() {
   <div class="flex flex-col min-h-full px-6 py-5">
     <!-- Logo + Character (compact horizontal) -->
     <div class="flex items-center gap-3 mb-5 animate-fadeInUp" style="opacity:0">
-      <CaloeyeCharacter mood="happy" :size="64" />
+      <CaloeyeCharacter mood="wave" :size="64" />
       <div>
         <div class="flex items-baseline gap-0.5">
           <span class="text-[26px] font-bold text-[#0C447C] tracking-tight">Calor</span>

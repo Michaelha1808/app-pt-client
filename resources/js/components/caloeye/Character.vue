@@ -1,6 +1,10 @@
 <script setup lang="ts">
+type Mood =
+  | 'normal' | 'happy' | 'celebrate' | 'thinking' | 'warning' | 'wave' | 'excited' | 'idle'
+  | 'motivate' | 'reminder' | 'waiting' | 'rest' | 'water' | 'exercise'
+
 const props = withDefaults(defineProps<{
-  mood?: 'normal' | 'happy' | 'celebrate' | 'thinking' | 'warning' | 'wave' | 'excited' | 'idle'
+  mood?: Mood
   size?: number
   message?: string
   bubbleDir?: 'right' | 'left' | 'top'
@@ -10,16 +14,41 @@ const props = withDefaults(defineProps<{
   bubbleDir: 'right',
 })
 
+const moodSvg: Record<Mood, string> = {
+  normal:   '/svg/AVO-01-xin-chao.svg',
+  wave:     '/svg/AVO-01-xin-chao.svg',
+  motivate: '/svg/AVO-02-co-len.svg',
+  reminder: '/svg/AVO-03-nhac-nho.svg',
+  waiting:  '/svg/AVO-04-cho-chut.svg',
+  celebrate:'/svg/AVO-05-tuyet-voi.svg',
+  idle:     '/svg/AVO-06-nghi-ngoi.svg',
+  rest:     '/svg/AVO-06-nghi-ngoi.svg',
+  water:    '/svg/AVO-07-uong-nuoc.svg',
+  thinking: '/svg/AVO-08-suy-nghi.svg',
+  warning:  '/svg/AVO-09-tiec-qua.svg',
+  excited:  '/svg/AVO-10-quyet-tam.svg',
+  happy:    '/svg/AVO-11-thich.svg',
+  exercise: '/svg/AVO-12-tap-luyen.svg',
+}
+
 const moodClass = computed(() => ({
-  normal:    'char-float',
-  idle:      'char-idle',
-  happy:     'char-bounce',
-  celebrate: 'char-celebrate',
-  thinking:  'char-think',
-  warning:   'char-warn',
-  wave:      'char-wave',
-  excited:   'char-excited',
-})[props.mood])
+  normal:   'char-float',
+  idle:     'char-idle',
+  rest:     'char-idle',
+  happy:    'char-bounce',
+  celebrate:'char-celebrate',
+  thinking: 'char-think',
+  waiting:  'char-think',
+  warning:  'char-warn',
+  wave:     'char-wave',
+  excited:  'char-excited',
+  motivate: 'char-bounce',
+  reminder: 'char-float',
+  water:    'char-float',
+  exercise: 'char-bounce',
+}[props.mood] ?? 'char-float'))
+
+const avatarSrc = computed(() => moodSvg[props.mood])
 </script>
 
 <template>
@@ -42,7 +71,7 @@ const moodClass = computed(() => ({
     <!-- Character -->
     <div :class="moodClass" class="relative flex-shrink-0" :style="`width:${size}px;height:${size}px`">
       <img
-        :src="'/logo/AVO-mascot-nobg.png'"
+        :src="avatarSrc"
         :width="size"
         :height="size"
         alt="AVO"
@@ -50,30 +79,15 @@ const moodClass = computed(() => ({
         draggable="false"
       />
 
-      <!-- Celebrate: sparkles -->
+      <!-- Celebrate / Excited: sparkles -->
       <template v-if="mood === 'celebrate' || mood === 'excited'">
         <div class="absolute -top-2 -right-1 text-[16px] sparkle-1">✨</div>
         <div class="absolute top-0 -left-2 text-[12px] sparkle-2">⭐</div>
         <div class="absolute -top-3 left-1/2 text-[10px] sparkle-3">💫</div>
       </template>
 
-      <!-- Warning badge -->
-      <template v-if="mood === 'warning'">
-        <div
-          class="absolute -top-1 -right-1 rounded-full bg-ios-orange flex items-center justify-center shadow-md"
-          :style="`width:${Math.round(size*0.26)}px;height:${Math.round(size*0.26)}px`"
-        >
-          <span class="text-white font-black leading-none" :style="`font-size:${Math.round(size*0.15)}px`">!</span>
-        </div>
-      </template>
-
-      <!-- Wave: small hand wave indicator -->
-      <template v-if="mood === 'wave'">
-        <div class="absolute -top-1 -right-1 text-[14px] wave-emoji">👋</div>
-      </template>
-
-      <!-- Thinking dots above head -->
-      <template v-if="mood === 'thinking'">
+      <!-- Thinking / Waiting: animated dots above head -->
+      <template v-if="mood === 'thinking' || mood === 'waiting'">
         <div class="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-1">
           <div class="w-1.5 h-1.5 rounded-full bg-calor-green typing-dot-1"/>
           <div class="w-1.5 h-1.5 rounded-full bg-calor-green typing-dot-2"/>
@@ -140,13 +154,7 @@ const moodClass = computed(() => ({
   0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
   50%       { transform: scale(1.45) rotate(25deg); opacity: 0.65; }
 }
-@keyframes waveEmoji {
-  0%, 100% { transform: rotate(0deg); }
-  30%       { transform: rotate(-20deg); }
-  60%       { transform: rotate(15deg); }
-}
 .sparkle-1 { animation: sparklePop 1.1s 0.0s ease-in-out infinite; }
 .sparkle-2 { animation: sparklePop 1.1s 0.4s ease-in-out infinite; }
 .sparkle-3 { animation: sparklePop 1.1s 0.7s ease-in-out infinite; }
-.wave-emoji { animation: waveEmoji 0.8s ease-in-out infinite; }
 </style>

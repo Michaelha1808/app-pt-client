@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useMealLog } from '@/composables/useMealLog'
+import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const store = useAuthStore()
@@ -202,10 +203,10 @@ onMounted(async () => {
             <div class="w-8 h-8 rounded-full border-2 border-ios-blue border-t-transparent animate-spin"/>
           </div>
 
-          <div v-else-if="meals.length === 0" class="bg-white rounded-[18px] p-6 text-center">
-            <p class="text-[32px] mb-2">🍽</p>
+          <div v-else-if="meals.length === 0" class="bg-white rounded-[18px] p-6 flex flex-col items-center gap-2 text-center">
+            <CaloeyeCharacter mood="reminder" :size="72" />
             <p class="text-[15px] font-medium text-black">Chưa có bữa ăn nào</p>
-            <p class="text-[13px] text-ios-gray mt-1">Quét món ăn để bắt đầu ghi lại</p>
+            <p class="text-[13px] text-ios-gray">Quét món ăn để bắt đầu ghi lại</p>
           </div>
 
           <div v-else class="bg-white rounded-[18px] overflow-hidden shadow-sm">
@@ -257,7 +258,8 @@ onMounted(async () => {
             <p class="text-[13px] text-ios-gray">Tổng hôm nay</p>
             <p class="text-[26px] font-bold text-ios-green">0 <span class="text-[14px] font-normal text-ios-gray">kcal đốt cháy</span></p>
           </div>
-          <div class="px-5 py-6 text-center">
+          <div class="px-5 py-6 flex flex-col items-center gap-3 text-center">
+            <CaloeyeCharacter mood="exercise" :size="72" />
             <p class="text-[13px] text-ios-gray">Chưa có dữ liệu tập luyện</p>
           </div>
         </div>

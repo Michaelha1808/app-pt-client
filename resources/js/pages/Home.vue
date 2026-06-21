@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useMealLog } from '@/composables/useMealLog'
 import { useAuthStore } from '@/stores/auth'
+import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import HomeCalorieRing from '@/components/home/CalorieRing.vue'
 
 const store = useAuthStore()
 const { todayStats, loading, fetchTodayStats } = useMealLog()
@@ -51,7 +53,7 @@ onMounted(() => {
     <!-- Character greeting card -->
     <div class="mx-5 mb-4 bg-gradient-to-r from-calor-light to-[#C8F0E2] rounded-[20px] px-4 py-4 flex items-center gap-4 animate-fadeInUp delay-1 shadow-sm shadow-calor-green/10" style="opacity:0">
       <CaloeyeCharacter
-        :mood="consumed >= goal ? 'warning' : consumed >= goal * 0.8 ? 'normal' : 'happy'"
+        :mood="consumed >= goal ? 'warning' : consumed >= goal * 0.8 ? 'motivate' : 'happy'"
         :size="76"
       />
       <div class="flex-1 min-w-0">
@@ -140,7 +142,7 @@ onMounted(() => {
 
       <div class="bg-white rounded-[18px] overflow-hidden shadow-sm">
         <div v-if="meals.length === 0 && !loading" class="px-4 py-6 flex flex-col items-center gap-2 text-center">
-          <span class="text-3xl">🍽️</span>
+          <CaloeyeCharacter mood="reminder" :size="64" />
           <p class="text-[14px] text-ios-gray">Chưa có bữa ăn nào hôm nay</p>
         </div>
         <div

@@ -337,9 +337,9 @@ onUnmounted(() => {
       style="bottom: 160px; opacity:0; animation-delay:0.8s"
     >
       <CaloeyeCharacter
-        :mood="capturing ? 'excited' : 'thinking'"
+        :mood="capturing ? 'waiting' : 'thinking'"
         :size="52"
-        :message="capturing ? 'Đang phân tích...' : 'Đưa món ăn vào khung!'"
+        :message="capturing ? 'Chờ chút nhé...' : 'Đưa món ăn vào khung!'"
         bubble-dir="right"
       />
     </div>

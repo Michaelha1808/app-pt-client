@@ -3,6 +3,7 @@ import { useMealLog } from '@/composables/useMealLog'
 import { useAuthStore } from '@/stores/auth'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import HomeCalorieRing from '@/components/home/CalorieRing.vue'
+import NotificationsPermissionBanner from '@/components/notifications/PermissionBanner.vue'
 
 const store = useAuthStore()
 const { todayStats, loading, fetchTodayStats } = useMealLog()
@@ -34,6 +35,7 @@ onMounted(() => {
 
 <template>
   <div class="pb-4">
+    <NotificationsPermissionBanner class="pt-3"/>
     <!-- Page header -->
     <div class="px-5 pt-2 pb-3">
       <div class="flex items-center justify-between animate-fadeInUp" style="opacity:0">

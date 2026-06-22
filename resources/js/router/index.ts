@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/profile', component: () => import('@/pages/Profile.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/profile/edit', component: () => import('@/pages/profile/Edit.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/change-password', component: () => import('@/pages/profile/ChangePassword.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+  { path: '/settings/notifications', component: () => import('@/pages/settings/Notifications.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
 ]
 
 export const router = createRouter({

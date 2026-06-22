@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
+});
+
+Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+    Route::post('/subscribe', [NotificationController::class, 'subscribe']);
+    Route::delete('/subscribe', [NotificationController::class, 'unsubscribe']);
+    Route::get('/settings', [NotificationController::class, 'getSettings']);
+    Route::put('/settings', [NotificationController::class, 'updateSettings']);
+    Route::post('/test', [NotificationController::class, 'sendTest']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

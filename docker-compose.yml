@@ -39,6 +39,49 @@ services:
       postgres:
         condition: service_healthy
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    entrypoint: ["php", "/var/www/artisan", "schedule:work", "--verbose"]
+    volumes:
+      - .:/var/www
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB:-pt_client}
+      - DB_USERNAME=${POSTGRES_USER:-pt_user}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-secret}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    entrypoint: ["php", "/var/www/artisan", "queue:work", "--tries=3", "--timeout=90", "--verbose"]
+    volumes:
+      - .:/var/www
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB:-pt_client}
+      - DB_USERNAME=${POSTGRES_USER:-pt_user}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

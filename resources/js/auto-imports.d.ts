@@ -82,6 +82,7 @@ declare global {
   const useLink: typeof import('vue-router').useLink
   const useMealLog: typeof import('./composables/useMealLog').useMealLog
   const useModel: typeof import('vue').useModel
+  const useNotifications: typeof import('./composables/useNotifications').useNotifications
   const useProfile: typeof import('./composables/useProfile').useProfile
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
@@ -102,6 +103,9 @@ declare global {
   // @ts-ignore
   export type { ClockState } from './composables/useClock'
   import('./composables/useClock')
+  // @ts-ignore
+  export type { NotificationSettings } from './composables/useNotifications'
+  import('./composables/useNotifications')
 }
 
 // for vue template auto import
@@ -185,6 +189,7 @@ declare module 'vue' {
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useMealLog: UnwrapRef<typeof import('./composables/useMealLog')['useMealLog']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
+    readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>

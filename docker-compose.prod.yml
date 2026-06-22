@@ -46,6 +46,63 @@ services:
       retries: 20
       start_period: 60s
 
+  scheduler:
+    image: ${DOCKER_IMAGE}
+    restart: unless-stopped
+    entrypoint: ["php", "/var/www/artisan", "schedule:work", "--verbose"]
+    volumes:
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      - app_storage:/var/www/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${APP_KEY}
+      - APP_URL=${APP_URL}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  queue:
+    image: ${DOCKER_IMAGE}
+    restart: unless-stopped
+    entrypoint: ["php", "/var/www/artisan", "queue:work", "--tries=3", "--timeout=90", "--verbose"]
+    volumes:
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      - app_storage:/var/www/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${APP_KEY}
+      - APP_URL=${APP_URL}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+    depends_on:
+      backend:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

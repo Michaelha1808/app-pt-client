@@ -16,6 +16,8 @@ use Laravel\Sanctum\HasApiTokens;
     'name', 'email', 'password', 'google_id', 'provider',
     'avatar_url', 'birth_year', 'gender', 'height_cm', 'weight_kg',
     'calorie_goal', 'morning_notify', 'evening_notify', 'calorie_streak',
+    'morning_notify_enabled', 'midday_notify_enabled', 'evening_notify_enabled',
+    'email_reengagement_enabled', 'last_seen_at', 'reengagement_sent_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -33,6 +35,11 @@ class User extends Authenticatable
         return $this->hasMany(MealLog::class);
     }
 
+    public function notificationSubscriptions(): HasMany
+    {
+        return $this->hasMany(NotificationSubscription::class);
+    }
+
     protected function casts(): array
     {
         return [
@@ -42,7 +49,13 @@ class User extends Authenticatable
             'height_cm'         => 'decimal:1',
             'weight_kg'         => 'decimal:1',
             'calorie_goal'      => 'integer',
-            'calorie_streak'    => 'integer',
+            'calorie_streak'              => 'integer',
+            'morning_notify_enabled'      => 'boolean',
+            'midday_notify_enabled'       => 'boolean',
+            'evening_notify_enabled'      => 'boolean',
+            'email_reengagement_enabled'  => 'boolean',
+            'last_seen_at'                => 'datetime',
+            'reengagement_sent_at'        => 'datetime',
         ];
     }
 }

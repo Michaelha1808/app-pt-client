@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { apiFetch } from '@/utils/api'
 import { useToast } from '@/composables/useToast'
+import { useNotifications } from '@/composables/useNotifications'
 import type { User, AuthResponse, RegisterPayload } from '@/types/auth'
 
 export function useAuth() {
@@ -69,6 +70,8 @@ export function useAuth() {
   }
 
   async function logout(): Promise<void> {
+    const { unsubscribeOnLogout } = useNotifications()
+    await unsubscribeOnLogout()
     try { await apiFetch('/auth/logout', { method: 'POST' }) } catch {}
     store.token = null; store.user = null; store.isGuest = false
     const { success } = useToast()

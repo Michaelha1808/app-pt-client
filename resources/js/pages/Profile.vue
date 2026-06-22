@@ -8,10 +8,6 @@ const avatarUploading = ref(false)
 const logoutLoading = ref(false)
 const calorieGoal = ref(2000)
 
-const morningNotif = ref(true)
-const noonNotif = ref(true)
-const eveningNotif = ref(true)
-const pushNotif = ref(true)
 const darkMode = ref(false)
 
 const connectedDevices = ref([
@@ -196,32 +192,13 @@ async function handleLogout() {
       <div class="px-5 mb-2 animate-fadeInUp delay-3" style="opacity:0">
         <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Thông báo</p>
         <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
-          <template v-for="(item, idx) in [
-            { key: 'pushNotif', label: 'Bật thông báo', icon: '🔔', model: pushNotif },
-            { key: 'morningNotif', label: 'Lời chào buổi sáng', icon: '🌅', time: '07:00', model: morningNotif },
-            { key: 'noonNotif', label: 'Nhắc nhở giữa ngày', icon: '☀️', time: '12:00', model: noonNotif },
-            { key: 'eveningNotif', label: 'Tổng kết cuối ngày', icon: '🌙', time: '21:00', model: eveningNotif },
-          ]" :key="item.key">
-            <div class="flex items-center gap-3 px-4 py-3">
-              <span class="text-lg w-6 text-center">{{ item.icon }}</span>
-              <span class="flex-1 text-[15px] text-black">{{ item.label }}</span>
-              <span v-if="item.time" class="text-[13px] text-ios-gray mr-2">{{ item.time }}</span>
-              <button
-                class="w-12 h-7 rounded-full transition-colors duration-200 relative flex-shrink-0"
-                :class="item.model ? 'bg-ios-green' : 'bg-ios-gray4'"
-                @click="item.key === 'pushNotif' ? pushNotif = !pushNotif
-                      : item.key === 'morningNotif' ? morningNotif = !morningNotif
-                      : item.key === 'noonNotif' ? noonNotif = !noonNotif
-                      : eveningNotif = !eveningNotif"
-              >
-                <div
-                  class="absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-md transition-all duration-200"
-                  :class="item.model ? 'left-[22px]' : 'left-[3px]'"
-                />
-              </button>
+          <NuxtLink to="/settings/notifications" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-green/10 flex items-center justify-center">
+              <span class="text-base">🔔</span>
             </div>
-            <div v-if="idx < 3" class="ios-separator mx-4"/>
-          </template>
+            <span class="flex-1 text-left text-[15px] text-black">Cài đặt thông báo</span>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </NuxtLink>
         </div>
       </div>
 

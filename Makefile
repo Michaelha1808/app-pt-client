@@ -1,6 +1,6 @@
 PHP = /d/laragon/bin/php/php-8.4.18-Win32-vs17-x64/php.exe
 COMPOSER = $(PHP) /c/ProgramData/ComposerSetup/bin/composer.phar
-ARTISAN = $(PHP) backend/artisan
+ARTISAN = $(PHP) artisan
 
 # ─── Docker ────────────────────────────────────────────────────────────────────
 .PHONY: up down logs ps
@@ -36,25 +36,21 @@ tinker:
 	$(ARTISAN) tinker
 
 test:
-	cd backend && $(PHP) vendor/bin/phpunit
+	$(PHP) vendor/bin/phpunit
 
-# ─── Frontend (local, no Docker) ───────────────────────────────────────────────
-.PHONY: fe-dev fe-build fe-start
+# ─── Frontend / Vue SPA (Vite, served by Laravel) ──────────────────────────────
+.PHONY: fe-dev fe-build
 
 fe-dev:
-	cd frontend && npm run dev
+	npm run dev
 
 fe-build:
-	cd frontend && npm run build
-
-fe-start:
-	cd frontend && npm run start
+	npm run build
 
 # ─── Setup ─────────────────────────────────────────────────────────────────────
 .PHONY: install
 
 install:
-	cd backend && $(COMPOSER) install
-	cd frontend && npm install
+	$(COMPOSER) install
+	npm install
 	cp -n .env.example .env || true
-	cp -n backend/.env.example backend/.env || true

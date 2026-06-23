@@ -1,0 +1,25 @@
+<?php
+
+use App\Console\Commands\Notifications\SendEveningNotifications;
+use App\Console\Commands\Notifications\SendMiddayNotifications;
+use App\Console\Commands\Notifications\SendMorningNotifications;
+use App\Console\Commands\Notifications\SendReengagementEmails;
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('inspire', function () {
+    $this->comment(Inspiring::quote());
+})->purpose('Display an inspiring quote');
+
+// Thông báo đầu ngày — chạy mỗi phút, tự filter theo giờ từng user
+Schedule::command(SendMorningNotifications::class)->everyMinute();
+
+// Thông báo giữa ngày — cố định 12:00 (Asia/Ho_Chi_Minh)
+Schedule::command(SendMiddayNotifications::class)->dailyAt('12:00');
+
+// Thông báo cuối ngày — chạy mỗi phút, tự filter theo giờ từng user
+Schedule::command(SendEveningNotifications::class)->everyMinute();
+
+// Email re-engagement — chạy mỗi ngày lúc 09:00
+Schedule::command(SendReengagementEmails::class)->dailyAt('09:00');

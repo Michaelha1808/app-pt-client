@@ -1,18 +1,6 @@
-# ── Stage 1: Build frontend ───────────────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
-
-# VITE_API_URL is passed as build-arg from docker-compose.prod.yml
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run prod
-
-
-# ── Stage 2: PHP runtime ──────────────────────────────────────────────────────
+# ── PHP runtime ───────────────────────────────────────────────────────────────
+# Frontend assets are pre-built on the host with `npm run prod` before docker build.
+# For CI/prod builds use docker-compose.prod.yml which passes VITE_API_URL build-arg.
 FROM php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
@@ -41,7 +29,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 COPY . .
-COPY --from=frontend-builder /app/public/build ./public/build
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 

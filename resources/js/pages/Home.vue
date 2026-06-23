@@ -1,12 +1,48 @@
 <script setup lang="ts">
 import { useMealLog } from '@/composables/useMealLog'
 import { useAuthStore } from '@/stores/auth'
+import { useNotifications } from '@/composables/useNotifications'
+import { useStreak } from '@/composables/useStreak'
+import { useWater } from '@/composables/useWater'
+import { apiFetch } from '@/utils/api'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import HomeCalorieRing from '@/components/home/CalorieRing.vue'
 import NotificationsPermissionBanner from '@/components/notifications/PermissionBanner.vue'
+import NotificationPanel from '@/components/notifications/NotificationPanel.vue'
+import StreakBadge from '@/components/streak/StreakBadge.vue'
+import StreakModal from '@/components/streak/StreakModal.vue'
+import MilestoneToast from '@/components/streak/MilestoneToast.vue'
+import DailyTasksCard from '@/components/home/DailyTasksCard.vue'
 
 const store = useAuthStore()
 const { todayStats, loading, fetchTodayStats } = useMealLog()
+const { permission } = useNotifications()
+const { streak, newMilestone, milestoneInfo, showRiskBanner, earnedTokenAtMilestone,
+        streakCount, fetchStreak, useFreeze } = useStreak()
+const { fetchWaterToday } = useWater()
+
+const panelOpen    = ref(false)
+const streakOpen   = ref(false)
+const unreadCount  = ref(0)
+
+async function fetchUnreadCount() {
+  if (!store.token) return
+  try {
+    const logs = await apiFetch<{ read_at: string | null }[]>('/notifications/history')
+    unreadCount.value = logs.filter(l => !l.read_at).length
+  } catch {}
+}
+
+function openPanel() {
+  panelOpen.value = true
+}
+
+watch(panelOpen, (v) => {
+  if (!v) {
+    // Panel đóng → reset count vì user đã xem
+    unreadCount.value = 0
+  }
+})
 
 const consumed = computed(() => todayStats.value?.total_calories ?? 0)
 const goal     = computed(() => store.user?.calorie_goal ?? 2000)
@@ -29,7 +65,12 @@ const userName = computed(() => store.user?.name?.split(' ').at(-1) ?? 'bạn')
 const userInitial = computed(() => store.user?.name?.[0]?.toUpperCase() ?? '?')
 
 onMounted(() => {
-  if (store.token) fetchTodayStats()
+  if (store.token) {
+    fetchTodayStats()
+    fetchUnreadCount()
+    fetchStreak()
+    fetchWaterToday()
+  }
 })
 </script>
 
@@ -43,12 +84,45 @@ onMounted(() => {
           <p class="text-[14px] text-ios-gray">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
           <h1 class="text-[22px] font-bold text-black leading-tight mt-0.5">Xin chào, <span class="text-calor-green">{{ userName }}!</span></h1>
         </div>
-        <NuxtLink to="/profile">
-          <div class="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-calor-green to-calor-dark flex items-center justify-center">
-            <img v-if="store.user?.avatar_url" :src="store.user.avatar_url" class="w-full h-full object-cover" />
-            <span v-else class="text-white font-bold text-[15px]">{{ userInitial }}</span>
-          </div>
-        </NuxtLink>
+        <div class="flex items-center gap-2">
+          <!-- Streak badge -->
+          <StreakBadge
+            :count="streakCount"
+            :at-risk="showRiskBanner"
+            @click="streakOpen = true"
+          />
+
+          <!-- Bell icon -->
+          <button
+            class="relative w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm ios-press"
+            @click="openPanel"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5" :class="permission === 'denied' ? 'text-ios-gray3' : 'text-black'" fill="currentColor">
+              <path v-if="permission !== 'denied'" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              <path v-else d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6.27V11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.43.12L18 10.73v5z"/>
+            </svg>
+            <!-- Badge số unread -->
+            <span
+              v-if="unreadCount > 0"
+              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-ios-red rounded-full border border-white flex items-center justify-center"
+            >
+              <span class="text-[10px] font-bold text-white px-0.5 leading-none">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+            </span>
+            <!-- Badge chấm khi chưa cấp quyền -->
+            <span
+              v-else-if="permission === 'default'"
+              class="absolute top-1.5 right-1.5 w-2 h-2 bg-ios-red rounded-full border border-white"
+            />
+          </button>
+
+          <!-- Avatar -->
+          <NuxtLink to="/profile">
+            <div class="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-calor-green to-calor-dark flex items-center justify-center">
+              <img v-if="store.user?.avatar_url" :src="store.user.avatar_url" class="w-full h-full object-cover" />
+              <span v-else class="text-white font-bold text-[15px]">{{ userInitial }}</span>
+            </div>
+          </NuxtLink>
+        </div>
       </div>
     </div>
 
@@ -70,6 +144,12 @@ onMounted(() => {
         </p>
       </div>
     </div>
+
+    <!-- Daily tasks card -->
+    <DailyTasksCard
+      :meal-logged="streak?.is_logged_today ?? false"
+      :streak-at-risk="showRiskBanner"
+    />
 
     <!-- Calorie ring card -->
     <div class="mx-5 mb-4 bg-white rounded-[20px] px-5 py-6 shadow-sm animate-fadeInUp delay-1" style="opacity:0">
@@ -200,4 +280,22 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
+  <NotificationPanel v-model:open="panelOpen" />
+
+  <!-- Streak modal -->
+  <StreakModal
+    v-model:open="streakOpen"
+    :streak="streak"
+    :loading="false"
+    @use-freeze="useFreeze()"
+  />
+
+  <!-- Milestone celebration -->
+  <MilestoneToast
+    v-if="newMilestone !== null && milestoneInfo"
+    :days="newMilestone"
+    :earned-token="earnedTokenAtMilestone"
+    @close="newMilestone = null"
+  />
 </template>

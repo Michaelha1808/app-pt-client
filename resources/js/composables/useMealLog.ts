@@ -1,10 +1,12 @@
 import type { FoodAnalysisResult } from '@/types/food'
 import type { HistoryStats, TodayStats } from '@/types/meal'
+import { type MealStreakResult, useStreak } from '@/composables/useStreak'
 
 export function useMealLog() {
   const todayStats   = ref<TodayStats | null>(null)
   const historyStats = ref<HistoryStats | null>(null)
   const loading      = ref(false)
+  const { onMealLogged } = useStreak()
 
   async function fetchTodayStats(): Promise<void> {
     loading.value = true
@@ -31,7 +33,7 @@ export function useMealLog() {
 
   async function logMeal(result: FoodAnalysisResult): Promise<boolean> {
     try {
-      await apiFetch('/food/log', {
+      const res = await apiFetch<{ id: number; streak: MealStreakResult }>('/food/log', {
         method: 'POST',
         body: {
           food_name: result.food_name,
@@ -43,6 +45,7 @@ export function useMealLog() {
           sodium:    result.sodium,
         },
       })
+      if (res.streak) onMealLogged(res.streak)
       return true
     } catch {
       return false

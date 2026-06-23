@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\NotificationLog;
 use App\Models\NotificationSubscription;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
@@ -88,6 +89,25 @@ class NotificationController extends Controller
         }
 
         return response()->json(['message' => 'Cập nhật thành công']);
+    }
+
+    public function history(Request $request)
+    {
+        $logs = NotificationLog::where('user_id', $request->user()->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get(['id', 'type', 'title', 'body', 'read_at', 'created_at']);
+
+        return response()->json($logs);
+    }
+
+    public function markAllRead(Request $request)
+    {
+        NotificationLog::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return response()->noContent();
     }
 
     // Chỉ dùng để test trong dev — gửi push thử đến thiết bị của chính user

@@ -6,7 +6,10 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const ALL_MILESTONES: typeof import('./composables/useStreak').ALL_MILESTONES
   const EffectScope: typeof import('vue').EffectScope
+  const MILESTONE_META: typeof import('./composables/useStreak').MILESTONE_META
+  const WATER_GOAL_ML: typeof import('./composables/useWater').WATER_GOAL_ML
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiFetch: typeof import('./utils/api').apiFetch
   const computed: typeof import('vue').computed
@@ -88,8 +91,10 @@ declare global {
   const useRoute: typeof import('vue-router').useRoute
   const useRouter: typeof import('vue-router').useRouter
   const useSlots: typeof import('vue').useSlots
+  const useStreak: typeof import('./composables/useStreak').useStreak
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('./composables/useToast').useToast
+  const useWater: typeof import('./composables/useWater').useWater
   const watch: typeof import('vue').watch
   const watchEffect: typeof import('vue').watchEffect
   const watchPostEffect: typeof import('vue').watchPostEffect
@@ -106,6 +111,12 @@ declare global {
   // @ts-ignore
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
+  // @ts-ignore
+  export type { StreakData, MealStreakResult } from './composables/useStreak'
+  import('./composables/useStreak')
+  // @ts-ignore
+  export type { WaterLogEntry, WaterToday } from './composables/useWater'
+  import('./composables/useWater')
 }
 
 // for vue template auto import
@@ -113,7 +124,10 @@ import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
+    readonly ALL_MILESTONES: UnwrapRef<typeof import('./composables/useStreak')['ALL_MILESTONES']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly MILESTONE_META: UnwrapRef<typeof import('./composables/useStreak')['MILESTONE_META']>
+    readonly WATER_GOAL_ML: UnwrapRef<typeof import('./composables/useWater')['WATER_GOAL_ML']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly apiFetch: UnwrapRef<typeof import('./utils/api')['apiFetch']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
@@ -195,8 +209,10 @@ declare module 'vue' {
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
+    readonly useStreak: UnwrapRef<typeof import('./composables/useStreak')['useStreak']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useToast: UnwrapRef<typeof import('./composables/useToast')['useToast']>
+    readonly useWater: UnwrapRef<typeof import('./composables/useWater')['useWater']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\MealLog;
 use App\Services\FoodAnalysisService;
+use App\Services\StreakService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,7 +73,7 @@ class FoodController extends Controller
         );
     }
 
-    public function log(Request $request): JsonResponse
+    public function log(Request $request, StreakService $streakService): JsonResponse
     {
         $data = $request->validate([
             'food_name' => 'required|string|max:200',
@@ -84,9 +85,16 @@ class FoodController extends Controller
             'sodium'    => 'required|integer|min:0',
         ]);
 
-        $log = $request->user()->mealLogs()->create($data);
+        $user = $request->user();
+        $log  = $user->mealLogs()->create($data);
 
-        return response()->json(['message' => 'Đã lưu bữa ăn', 'id' => $log->id], 201);
+        $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
+
+        return response()->json([
+            'message' => 'Đã lưu bữa ăn',
+            'id'      => $log->id,
+            'streak'  => $streak,
+        ], 201);
     }
 
     public function todayStats(Request $request): JsonResponse

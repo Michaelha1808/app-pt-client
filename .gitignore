@@ -37,6 +37,7 @@ frontend/public/fallback-*.js
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+/public-shared/
 /storage/*.key
 /storage/pail
 /vendor

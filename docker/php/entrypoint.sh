@@ -1,11 +1,17 @@
 #!/bin/sh
 set -e
 
-echo "[entrypoint] Copying public assets to shared volume..."
-cp -r /var/www/public/. /var/www/public-shared/
+if [ -d /var/www/public-shared ]; then
+  echo "[entrypoint] Copying public assets..."
+  cp -r /var/www/public/. /var/www/public-shared/
+fi
 
-echo "[entrypoint] Running database migrations..."
-php artisan migrate --force
+# Deploy script runs migrations in a temp container before swap.
+# SKIP_MIGRATIONS=1 skips this step to minimise container-swap downtime.
+if [ "${SKIP_MIGRATIONS:-0}" = "0" ]; then
+  echo "[entrypoint] Running database migrations..."
+  php artisan migrate --force
+fi
 
 echo "[entrypoint] Caching config / routes / views..."
 php artisan config:cache

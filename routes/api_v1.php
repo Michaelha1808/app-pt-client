@@ -4,7 +4,9 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WaterController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
@@ -41,7 +43,20 @@ Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::delete('/subscribe', [NotificationController::class, 'unsubscribe']);
     Route::get('/settings', [NotificationController::class, 'getSettings']);
     Route::put('/settings', [NotificationController::class, 'updateSettings']);
+    Route::get('/history', [NotificationController::class, 'history']);
+    Route::patch('/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('/test', [NotificationController::class, 'sendTest']);
+});
+
+Route::middleware('auth:sanctum')->prefix('streak')->group(function () {
+    Route::get('/',       [StreakController::class, 'show']);
+    Route::post('/freeze', [StreakController::class, 'useFreeze']);
+});
+
+Route::middleware('auth:sanctum')->prefix('water')->group(function () {
+    Route::get('/today',        [WaterController::class, 'today']);
+    Route::post('/log',         [WaterController::class, 'log']);
+    Route::delete('/log/{waterLog}', [WaterController::class, 'delete']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

@@ -39,6 +39,9 @@ frontend/public/fallback-*.js
 /public/storage
 /public-shared/
 /storage/*.key
+/storage/app/firebase/
+*service_account*.json
+*-adminsdk-*.json
 /storage/pail
 /vendor
 /database/database.sqlite

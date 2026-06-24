@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
-    'name', 'email', 'password', 'google_id', 'provider',
+    'name', 'email', 'password', 'google_id', 'facebook_id', 'provider',
     'avatar_url', 'birth_year', 'gender', 'height_cm', 'weight_kg',
     'calorie_goal', 'morning_notify', 'evening_notify', 'calorie_streak',
     'morning_notify_enabled', 'midday_notify_enabled', 'evening_notify_enabled',

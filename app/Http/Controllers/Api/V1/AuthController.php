@@ -162,6 +162,57 @@ class AuthController extends Controller
             ->cookie('refresh_token', $token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
     }
 
+    public function facebookRedirect(Request $request)
+    {
+        $redirectUri = $request->query('redirect_uri', env('FRONTEND_URL') . '/auth/callback');
+
+        return Socialite::driver('facebook')
+            ->stateless()
+            ->with(['state' => urlencode($redirectUri)])
+            ->redirect();
+    }
+
+    public function facebookCallback(Request $request)
+    {
+        try {
+            $fbUser = Socialite::driver('facebook')->stateless()->user();
+        } catch (\Exception $e) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=facebook_failed');
+        }
+
+        $user = User::where('facebook_id', $fbUser->getId())
+            ->orWhere('email', $fbUser->getEmail())
+            ->first();
+
+        if ($user) {
+            if (!$user->facebook_id) {
+                $user->update([
+                    'facebook_id' => $fbUser->getId(),
+                    'provider'    => 'facebook',
+                    'avatar_url'  => $user->avatar_url ?? $fbUser->getAvatar(),
+                ]);
+            }
+        } else {
+            $user = User::create([
+                'name'        => $fbUser->getName(),
+                'email'       => $fbUser->getEmail(),
+                'facebook_id' => $fbUser->getId(),
+                'provider'    => 'facebook',
+                'avatar_url'  => $fbUser->getAvatar(),
+                'password'    => null,
+            ]);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        $state       = $request->query('state', '');
+        $redirectUri = $state ? urldecode($state) : env('FRONTEND_URL', 'http://localhost:3000') . '/auth/callback';
+
+        return redirect($redirectUri . '?token=' . $token)
+            ->cookie('refresh_token', $token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
+    }
+
     public function forgotPassword(Request $request)
     {
         $request->validate(['email' => 'required|email']);

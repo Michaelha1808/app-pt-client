@@ -21,6 +21,9 @@ Route::prefix('auth')->group(function () {
     Route::get('/google', [AuthController::class, 'googleRedirect']);
     Route::get('/google/callback', [AuthController::class, 'googleCallback']);
 
+    Route::get('/facebook', [AuthController::class, 'facebookRedirect']);
+    Route::get('/facebook/callback', [AuthController::class, 'facebookCallback']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);

@@ -58,6 +58,11 @@ export function useAuth() {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
 
+  function loginWithFacebook(): void {
+    const redirectUri = `${window.location.origin}/auth/callback`
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/facebook?redirect_uri=${encodeURIComponent(redirectUri)}`
+  }
+
   async function handleOAuthCallback(oauthToken: string): Promise<void> {
     store.token = oauthToken; store.isGuest = false
     const res = await apiFetch<{ user: User }>('/auth/me')
@@ -79,5 +84,5 @@ export function useAuth() {
     router.push('/auth/login')
   }
 
-  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, loginWithGoogle, handleOAuthCallback, loginAsGuest, logout, extractError }
+  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, loginWithGoogle, loginWithFacebook, handleOAuthCallback, loginAsGuest, logout, extractError }
 }

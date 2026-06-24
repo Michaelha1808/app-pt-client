@@ -131,9 +131,9 @@ async function handleSave() {
 
 // ── Field input helper ─────────────────────────────────────────────────────
 const genderOptions = [
-  { value: 'male',   label: 'Nam' },
-  { value: 'female', label: 'Nữ' },
-  { value: 'other',  label: 'Khác' },
+  { value: 'male',   label: 'Nam',  icon: '👨' },
+  { value: 'female', label: 'Nữ',   icon: '👩' },
+  { value: 'other',  label: 'Khác', icon: '🌈' },
 ]
 </script>
 
@@ -260,7 +260,9 @@ const genderOptions = [
                 ? 'bg-calor-green text-white'
                 : 'bg-ios-gray5 text-ios-gray'"
               @click="form.gender = opt.value as 'male' | 'female' | 'other'"
-            >{{ opt.label }}</button>
+            >
+              <span class="mr-1">{{ opt.icon }}</span>{{ opt.label }}
+            </button>
           </div>
         </div>
         <div class="ios-separator mx-4"/>

@@ -3,7 +3,7 @@ export interface User {
   email: string
   name: string
   avatar_url: string | null
-  provider: 'email' | 'google' | 'apple'
+  provider: 'email' | 'google' | 'apple' | 'facebook'
   birth_year: number | null
   gender: 'male' | 'female' | 'other' | null
   height_cm: number | null

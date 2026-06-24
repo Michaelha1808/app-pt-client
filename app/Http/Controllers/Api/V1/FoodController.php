@@ -52,10 +52,19 @@ class FoodController extends Controller
                     echo "data: " . json_encode(['type' => 'result', 'data' => $result]) . "\n\n";
                     flush();
 
-                    // Phase B: stream lời khuyên
-                    foreach ($service->streamAdvice($result['food_name'], $result['calories'], $context) as $delta) {
-                        echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                    // Không phải món ăn → không stream lời khuyên dinh dưỡng
+                    if ($result['food_name'] === 'Không phải món ăn' || $result['confidence'] <= 0) {
+                        echo "data: " . json_encode([
+                            'type'  => 'text',
+                            'delta' => 'Mình chỉ nhận diện được món ăn hoặc đồ uống thôi nhé. Bạn vui lòng chụp/nhập lại một món ăn để mình phân tích dinh dưỡng. 🥗',
+                        ]) . "\n\n";
                         flush();
+                    } else {
+                        // Phase B: stream lời khuyên
+                        foreach ($service->streamAdvice($result['food_name'], $result['calories'], $context) as $delta) {
+                            echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                            flush();
+                        }
                     }
                 } catch (\Throwable $e) {
                     echo "data: " . json_encode([

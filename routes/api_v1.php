@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -40,6 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
 });
+
+// AI chat tư vấn — auth required, rate limit 15/min
+Route::middleware(['auth:sanctum', 'throttle:15,1'])->post('/chat', [ChatController::class, 'send']);
 
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);

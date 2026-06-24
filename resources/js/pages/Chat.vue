@@ -1,72 +1,70 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import { useChat } from '@/composables/useChat'
+import { useAuthStore } from '@/stores/auth'
+import type { ChatMessage } from '@/types/chat'
 
-interface Message {
-  id: number
-  role: 'user' | 'ai'
-  text: string
-  time: string
-}
+const auth = useAuthStore()
+const { streaming, send } = useChat()
 
 const inputText = ref('')
 const isTyping = ref(false)
 const messagesEnd = ref<HTMLElement | null>(null)
 
-const messages = ref<Message[]>([
+function nowTime() {
+  return new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+}
+
+const firstName = computed(() => {
+  const name = auth.user?.name?.trim()
+  if (!name) return 'bạn'
+  return name.split(' ').pop() || name
+})
+
+const messages = ref<ChatMessage[]>([
   {
     id: 1, role: 'ai',
-    text: 'Xin chào Minh! 👋 Tôi là trợ lý AI của bạn. Hôm nay bạn đã ăn 1,340 kcal, còn 660 kcal cho bữa tối. Tôi có thể giúp gì cho bạn?',
-    time: '09:00',
-  },
-  {
-    id: 2, role: 'user',
-    text: 'Tối nay nên ăn gì để đủ calo mà không bị béo?',
-    time: '09:05',
-  },
-  {
-    id: 3, role: 'ai',
-    text: 'Với 660 kcal còn lại, bạn có thể chọn:\n\n🥗 **Salad gà nướng** (~350 kcal) + cơm gạo lứt nửa chén (~120 kcal)\n🐟 **Cá hồi nướng** (~300 kcal) + rau xào dầu oliu (~80 kcal)\n\nCả hai đều giàu protein giúp duy trì cơ bắp và no lâu. Bạn thích loại nào hơn?',
-    time: '09:05',
+    text: `Xin chào ${firstName.value}! 👋 Mình là trợ lý dinh dưỡng của CaloEye. Mình có thể gợi ý kế hoạch ăn uống & tập luyện cho ngày mai hoặc cả tháng này dựa trên dữ liệu bạn đã ghi. Bạn muốn bắt đầu từ đâu?`,
+    time: nowTime(),
   },
 ])
 
 const suggestions = [
+  'Lên kế hoạch ăn uống cho ngày mai',
+  'Gợi ý lịch tập tháng này',
+  'Tối nay nên ăn gì với lượng calo còn lại?',
   'Tôi nên ăn bao nhiêu protein mỗi ngày?',
-  'Bài tập nào phù hợp cho người mới?',
-  'Phở có lành mạnh không?',
-  'Cách tính BMR của tôi?',
 ]
-
-const aiResponses = [
-  'Dựa trên thông tin của bạn (nam, 70kg, 170cm), nhu cầu protein hàng ngày là khoảng **112-140g**. Bạn đã nạp được 82g hôm nay rồi, cố gắng thêm 30-58g nữa nhé! 💪',
-  'Với người mới bắt đầu, tôi gợi ý:\n\n🏃 **Tuần 1-2:** Đi bộ nhanh 30 phút/ngày\n💪 **Tuần 3-4:** Thêm bài tập thể dục nhẹ tại nhà\n\nKhởi đầu từ từ sẽ giúp bạn duy trì lâu dài hơn!',
-  'Phở bò trung bình **400-500 kcal**/tô, khá cân bằng! Điểm cộng: nhiều protein từ thịt, ít chất béo. Điểm trừ: hàm lượng natri cao (~1200mg). Nên ăn 3-4 lần/tuần là hợp lý. 🍜',
-  `BMR của bạn (nam, 26 tuổi, 170cm, 70kg) theo công thức Mifflin-St Jeor:\n\n**BMR = 1,703 kcal/ngày**\n\nNhân với hệ số hoạt động (~1.55 nếu tập luyện vừa phải) = **2,640 kcal** để duy trì cân nặng.`,
-]
-
-let aiResponseIndex = 0
 
 async function sendMessage() {
   const text = inputText.value.trim()
-  if (!text) return
+  if (!text || streaming.value) return
 
-  messages.value.push({
-    id: Date.now(), role: 'user', text,
-    time: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
-  })
+  messages.value.push({ id: Date.now(), role: 'user', text, time: nowTime() })
   inputText.value = ''
   scrollToBottom()
 
-  isTyping.value = true
-  await new Promise(r => setTimeout(r, 1400 + Math.random() * 800))
-  isTyping.value = false
+  // Lịch sử gửi lên (bỏ id/time, chỉ role + text) — gồm cả tin vừa nhập
+  const history = messages.value.map(m => ({ role: m.role, text: m.text }))
 
-  messages.value.push({
-    id: Date.now() + 1, role: 'ai',
-    text: aiResponses[aiResponseIndex % aiResponses.length],
-    time: new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' }),
+  // Placeholder cho phản hồi AI sẽ stream dần
+  const aiMsg: ChatMessage = { id: Date.now() + 1, role: 'ai', text: '', time: nowTime() }
+  isTyping.value = true
+
+  await send(history, (delta) => {
+    if (isTyping.value) {
+      isTyping.value = false
+      messages.value.push(aiMsg)
+    }
+    aiMsg.text += delta
+    scrollToBottom()
   })
-  aiResponseIndex++
+
+  isTyping.value = false
+  if (!aiMsg.text) {
+    aiMsg.text = 'Xin lỗi, mình chưa thể phản hồi lúc này. Bạn thử lại nhé! 🙏'
+    if (!messages.value.includes(aiMsg)) messages.value.push(aiMsg)
+  }
   await nextTick()
   scrollToBottom()
 }
@@ -79,6 +77,16 @@ function useSuggestion(s: string) {
 function scrollToBottom() {
   nextTick(() => messagesEnd.value?.scrollIntoView({ behavior: 'smooth' }))
 }
+
+// Câu hỏi mồi khi đi từ Home (vd: "Lên kế hoạch ăn uống cho ngày mai")
+const route = useRoute()
+onMounted(() => {
+  const ask = route.query.ask
+  if (typeof ask === 'string' && ask.trim()) {
+    inputText.value = ask.trim()
+    sendMessage()
+  }
+})
 </script>
 
 <template>
@@ -137,7 +145,7 @@ function scrollToBottom() {
 
     <!-- Suggestions (shown when no user messages yet or after AI) -->
     <div
-      v-if="messages.length <= 3"
+      v-if="messages.length <= 1"
       class="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide"
     >
       <button
@@ -154,16 +162,17 @@ function scrollToBottom() {
         <div class="flex-1 bg-white rounded-[22px] border border-ios-gray5 px-4 py-2.5 flex items-end gap-2 min-h-[44px]">
           <textarea
             v-model="inputText"
-            placeholder="Hỏi về dinh dưỡng, sức khỏe..."
+            :disabled="streaming"
+            placeholder="Hỏi về dinh dưỡng, kế hoạch ăn/tập..."
             rows="1"
-            class="flex-1 bg-transparent text-[15px] text-black placeholder-ios-gray3 outline-none resize-none max-h-24 leading-5"
+            class="flex-1 bg-transparent text-[15px] text-black placeholder-ios-gray3 outline-none resize-none max-h-24 leading-5 disabled:opacity-60"
             @keydown.enter.exact.prevent="sendMessage"
           />
         </div>
         <button
           class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ios-press transition-colors"
-          :class="inputText.trim() ? 'bg-ios-blue' : 'bg-ios-gray5'"
-          :disabled="!inputText.trim()"
+          :class="inputText.trim() && !streaming ? 'bg-ios-blue' : 'bg-ios-gray5'"
+          :disabled="!inputText.trim() || streaming"
           @click="sendMessage"
         >
           <svg viewBox="0 0 24 24" class="w-5 h-5 rotate-90" :fill="inputText.trim() ? 'white' : '#8E8E93'">

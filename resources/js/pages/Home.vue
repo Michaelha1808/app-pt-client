@@ -263,22 +263,28 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- AI suggestion -->
-    <div class="mx-5 mt-4 bg-gradient-to-r from-ios-blue/5 to-ios-purple/5 border border-ios-blue/15 rounded-[18px] p-4 animate-fadeInUp delay-5" style="opacity:0">
-      <div class="flex gap-3">
-        <div class="w-8 h-8 rounded-full bg-ios-blue flex items-center justify-center flex-shrink-0 mt-0.5">
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="white">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-[13px] font-semibold text-black">Gợi ý từ AI</p>
-          <p class="text-[13px] text-ios-gray mt-0.5 leading-relaxed">
-            Bạn còn <span class="text-black font-semibold">{{ (goal - consumed).toLocaleString('vi') }} kcal</span> cho bữa tối. Hãy thử <span class="text-ios-blue font-medium">salad gà</span> để đảm bảo đủ protein nhé!
-          </p>
-        </div>
+    <!-- AI plan suggestion → mở chat tư vấn với câu hỏi mồi -->
+    <NuxtLink
+      to="/chat?ask=L%C3%AAn%20k%E1%BA%BF%20ho%E1%BA%A1ch%20%C4%83n%20u%E1%BB%91ng%20%26%20t%E1%BA%ADp%20luy%E1%BB%87n%20cho%20ng%C3%A0y%20mai"
+      class="mx-5 mt-4 bg-gradient-to-r from-ios-blue/5 to-ios-purple/5 border border-ios-blue/15 rounded-[18px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5"
+      style="opacity:0"
+    >
+      <div class="w-8 h-8 rounded-full bg-ios-blue flex items-center justify-center flex-shrink-0 mt-0.5">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="white">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+        </svg>
       </div>
-    </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] font-semibold text-black">Tư vấn kế hoạch ngày mai</p>
+        <p class="text-[13px] text-ios-gray mt-0.5 leading-relaxed">
+          Bạn còn <span class="text-black font-semibold">{{ (goal - consumed).toLocaleString('vi') }} kcal</span> hôm nay. Để AI gợi ý kế hoạch ăn uống &amp; tập luyện cho ngày mai dựa trên dữ liệu của bạn.
+        </p>
+        <span class="inline-flex items-center gap-1 text-[13px] text-ios-blue font-medium mt-1.5">
+          Hỏi trợ lý AI
+          <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </span>
+      </div>
+    </NuxtLink>
   </div>
 
   <NotificationPanel v-model:open="panelOpen" />

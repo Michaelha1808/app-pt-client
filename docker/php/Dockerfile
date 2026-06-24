@@ -47,6 +47,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/php/entrypoint.sh /entrypoint.sh
 # Strip Windows CRLF line endings in case the file was edited on Windows
 RUN sed -i 's/\r//' /entrypoint.sh && chmod +x /entrypoint.sh

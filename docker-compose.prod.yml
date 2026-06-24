@@ -2,6 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    mem_limit: 256m
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c max_connections=20
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -19,6 +25,7 @@ services:
     # Image được build bởi GitHub Actions và push lên Docker Hub
     image: ${DOCKER_IMAGE}
     restart: unless-stopped
+    mem_limit: 256m
     volumes:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
       - app_storage:/var/www/storage
@@ -36,6 +43,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - FRONTEND_URL=${APP_URL}
       - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +58,7 @@ services:
   scheduler:
     image: ${DOCKER_IMAGE}
     restart: unless-stopped
+    mem_limit: 128m
     entrypoint: ["php", "/var/www/artisan", "schedule:work", "--verbose"]
     volumes:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
@@ -78,6 +88,7 @@ services:
   queue:
     image: ${DOCKER_IMAGE}
     restart: unless-stopped
+    mem_limit: 128m
     entrypoint: ["php", "/var/www/artisan", "queue:work", "--tries=3", "--timeout=90", "--verbose"]
     volumes:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
@@ -106,6 +117,7 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    mem_limit: 64m
     ports:
       - "80:80"
       - "443:443"

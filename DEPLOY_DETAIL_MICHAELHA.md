@@ -573,16 +573,16 @@ docker compose -f /var/www/app/docker-compose.prod.yml exec -T nginx nginx -s re
 
 ### Phần C — Setup VPS
 - [x] C1 — Tạo SSH deploy key, thêm public key vào `authorized_keys`, copy private key vào GitHub Secret
-- [ ] C2 — Cài Docker và Docker Compose plugin
-- [ ] C3 — Cài Node.js 20 và PM2
-- [ ] C4 — Clone repo về `/var/www/app`, chmod `scripts/start.sh`
-- [ ] C5 — Mở firewall (22, 80, 443)
-- [ ] C5b — Trỏ A record `caloeye.xyz` và `www.caloeye.xyz` về IP VPS tại Mắt Bão, chờ DNS propagate
-- [ ] C6 — Lấy SSL cert Let's Encrypt (`caloeye.xyz` + `www.caloeye.xyz`), tạo `certbot/www`, thêm cron gia hạn
-- [ ] C7 — Tạo file `.env` production, điền đầy đủ tất cả biến
-- [ ] C8 — Sinh `APP_KEY`, điền vào `.env`
-- [ ] C9 — `docker login` bằng Access Token
-- [ ] C10 — Build và push image lần đầu (trigger GitHub Actions hoặc build thủ công)
+- [x] C2 — Cài Docker và Docker Compose plugin
+- [x] C3 — Cài Node.js 20 và PM2
+- [x] C4 — Clone repo về `/var/www/app`, chmod `scripts/start.sh`
+- [x] C5 — Mở firewall (22, 80, 443)
+- [x] C5b — Trỏ A record `caloeye.xyz` và `www.caloeye.xyz` về IP VPS tại Mắt Bão, chờ DNS propagate
+- [x] C6 — Lấy SSL cert Let's Encrypt (`caloeye.xyz` + `www.caloeye.xyz`), tạo `certbot/www`, thêm cron gia hạn
+- [x] C7 — Tạo file `.env` production, điền đầy đủ tất cả biến
+- [x] C8 — Sinh `APP_KEY`, điền vào `.env`
+- [x] C9 — `docker login` bằng Access Token
+- [x] C10 — Build và push image lần đầu (trigger GitHub Actions hoặc build thủ công)
 - [ ] C11 — `docker pull` image về VPS
 - [ ] C12 — `pm2 start`, `pm2 save`, `pm2 startup` (chạy lệnh PM2 in ra)
 - [ ] C13 — Kiểm tra: `pm2 status` online, 5 container healthy, mở được HTTPS

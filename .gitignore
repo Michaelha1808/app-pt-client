@@ -37,7 +37,11 @@ frontend/public/fallback-*.js
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+/public-shared/
 /storage/*.key
+/storage/app/firebase/
+*service_account*.json
+*-adminsdk-*.json
 /storage/pail
 /vendor
 /database/database.sqlite

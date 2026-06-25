@@ -78,7 +78,7 @@ async function capture() {
   sessionStorage.setItem('scan_image', canvas.toDataURL('image/jpeg', 0.80))
   await new Promise(r => setTimeout(r, 300))
   stream.value?.getTracks().forEach(t => t.stop())
-  navigateTo('/result')
+  navigateTo('/meal-picker')
 }
 
 function pickFromGallery() { galleryInput.value?.click() }
@@ -98,7 +98,7 @@ function onGalleryPick(e: Event) {
     URL.revokeObjectURL(url)
     sessionStorage.setItem('scan_image', canvas.toDataURL('image/jpeg', 0.80))
     stream.value?.getTracks().forEach(t => t.stop())
-    navigateTo('/result')
+    navigateTo('/meal-picker')
   }
   img.src = url
 }

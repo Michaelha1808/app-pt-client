@@ -1,16 +1,22 @@
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { apiFetch } from '@/utils/api'
+import { router } from '@/router'
 import { useToast } from '@/composables/useToast'
 import { useNotifications } from '@/composables/useNotifications'
 import type { User, AuthResponse, RegisterPayload } from '@/types/auth'
 
 export function useAuth() {
   const store = useAuthStore()
-  const router = useRouter()
   const { user, token, isGuest, sessionReady, isLoggedIn } = storeToRefs(store)
+
+  // Đọc & xóa đích đã lưu khi bị ép login (deep-link). Bỏ qua nếu trỏ vào /auth/*.
+  function consumePendingRedirect(): string {
+    const dest = sessionStorage.getItem('pending_redirect')
+    sessionStorage.removeItem('pending_redirect')
+    return dest && !dest.startsWith('/auth') ? dest : '/home'
+  }
 
   function extractError(err: unknown): string {
     const e = err as any
@@ -29,13 +35,13 @@ export function useAuth() {
   async function login(email: string, password: string): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } })
     store.token = res.access_token; store.user = res.user; store.isGuest = false
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function register(payload: RegisterPayload): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: payload })
     store.token = res.access_token; store.user = res.user; store.isGuest = false
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function forgotPassword(email: string): Promise<string> {
@@ -58,11 +64,16 @@ export function useAuth() {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
 
+  function loginWithFacebook(): void {
+    const redirectUri = `${window.location.origin}/auth/callback`
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/facebook?redirect_uri=${encodeURIComponent(redirectUri)}`
+  }
+
   async function handleOAuthCallback(oauthToken: string): Promise<void> {
     store.token = oauthToken; store.isGuest = false
     const res = await apiFetch<{ user: User }>('/auth/me')
     store.user = res.user
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function loginAsGuest(): Promise<void> {
@@ -71,7 +82,7 @@ export function useAuth() {
 
   async function logout(): Promise<void> {
     const { unsubscribeOnLogout } = useNotifications()
-    await unsubscribeOnLogout()
+    try { await unsubscribeOnLogout() } catch {}
     try { await apiFetch('/auth/logout', { method: 'POST' }) } catch {}
     store.token = null; store.user = null; store.isGuest = false
     const { success } = useToast()
@@ -79,5 +90,5 @@ export function useAuth() {
     router.push('/auth/login')
   }
 
-  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, loginWithGoogle, handleOAuthCallback, loginAsGuest, logout, extractError }
+  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, loginWithGoogle, loginWithFacebook, handleOAuthCallback, loginAsGuest, logout, extractError }
 }

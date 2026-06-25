@@ -1,9 +1,11 @@
 <?php
 
 use App\Console\Commands\Notifications\SendEveningNotifications;
+use App\Console\Commands\Notifications\SendFreezeSuggestions;
 use App\Console\Commands\Notifications\SendMiddayNotifications;
 use App\Console\Commands\Notifications\SendMorningNotifications;
 use App\Console\Commands\Notifications\SendReengagementEmails;
+use App\Console\Commands\Notifications\SendStreakRiskReminders;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -23,3 +25,9 @@ Schedule::command(SendEveningNotifications::class)->everyMinute();
 
 // Email re-engagement — chạy mỗi ngày lúc 09:00
 Schedule::command(SendReengagementEmails::class)->dailyAt('09:00');
+
+// Streak at-risk — chạy mỗi phút, tự filter theo 21:00 từng user
+Schedule::command(SendStreakRiskReminders::class)->everyMinute();
+
+// Gợi ý freeze token — chạy mỗi ngày lúc 09:00
+Schedule::command(SendFreezeSuggestions::class)->dailyAt('09:00');

@@ -12,6 +12,9 @@ use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
+    /** Thời hạn cookie refresh_token (phút). Gia hạn lăn mỗi lần /auth/refresh. */
+    private const REFRESH_TOKEN_MINUTES = 60 * 24 * 30; // 30 ngày
+
     public function register(Request $request)
     {
         $request->validate([
@@ -46,7 +49,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'Bearer',
             'user'         => $this->formatUser($user),
-        ], 201)->cookie('refresh_token', $token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
+        ], 201)->cookie('refresh_token', $token, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
     }
 
     public function login(Request $request)
@@ -67,7 +70,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'Bearer',
             'user'         => $this->formatUser($user),
-        ])->cookie('refresh_token', $token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
+        ])->cookie('refresh_token', $token, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
     }
 
     public function me(Request $request)
@@ -106,7 +109,7 @@ class AuthController extends Controller
 
         return response()->json([
             'access_token' => $newToken,
-        ])->cookie('refresh_token', $newToken, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
+        ])->cookie('refresh_token', $newToken, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
     }
 
     public function googleRedirect(Request $request)
@@ -159,7 +162,58 @@ class AuthController extends Controller
         $redirectUri = $state ? urldecode($state) : env('FRONTEND_URL', 'http://localhost:3000') . '/auth/callback';
 
         return redirect($redirectUri . '?token=' . $token)
-            ->cookie('refresh_token', $token, 60 * 24 * 7, '/', null, false, true, false, 'Lax');
+            ->cookie('refresh_token', $token, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
+    }
+
+    public function facebookRedirect(Request $request)
+    {
+        $redirectUri = $request->query('redirect_uri', env('FRONTEND_URL') . '/auth/callback');
+
+        return Socialite::driver('facebook')
+            ->stateless()
+            ->with(['state' => urlencode($redirectUri)])
+            ->redirect();
+    }
+
+    public function facebookCallback(Request $request)
+    {
+        try {
+            $fbUser = Socialite::driver('facebook')->stateless()->user();
+        } catch (\Exception $e) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=facebook_failed');
+        }
+
+        $user = User::where('facebook_id', $fbUser->getId())
+            ->orWhere('email', $fbUser->getEmail())
+            ->first();
+
+        if ($user) {
+            if (!$user->facebook_id) {
+                $user->update([
+                    'facebook_id' => $fbUser->getId(),
+                    'provider'    => 'facebook',
+                    'avatar_url'  => $user->avatar_url ?? $fbUser->getAvatar(),
+                ]);
+            }
+        } else {
+            $user = User::create([
+                'name'        => $fbUser->getName(),
+                'email'       => $fbUser->getEmail(),
+                'facebook_id' => $fbUser->getId(),
+                'provider'    => 'facebook',
+                'avatar_url'  => $fbUser->getAvatar(),
+                'password'    => null,
+            ]);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        $state       = $request->query('state', '');
+        $redirectUri = $state ? urldecode($state) : env('FRONTEND_URL', 'http://localhost:3000') . '/auth/callback';
+
+        return redirect($redirectUri . '?token=' . $token)
+            ->cookie('refresh_token', $token, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
     }
 
     public function forgotPassword(Request $request)

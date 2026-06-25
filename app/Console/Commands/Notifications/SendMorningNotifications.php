@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands\Notifications;
 
+use App\Models\NotificationLog;
 use App\Models\NotificationSubscription;
 use App\Models\User;
 use App\Services\FcmService;
@@ -25,15 +26,21 @@ class SendMorningNotifications extends Command
 
         $this->info("[notify:morning] {$now} — {$users->count()} users");
 
+        $title = 'Chào buổi sáng! ☀️';
+        $body  = 'Đừng quên log bữa sáng để theo dõi calo hôm nay nhé!';
+
         foreach ($users as $user) {
-            $tokens       = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
-            $invalidTokens = $fcm->sendMulticast(
-                $tokens,
-                'Chào buổi sáng! ☀️',
-                'Đừng quên log bữa sáng để theo dõi calo hôm nay nhé!',
-                ['url' => '/scan'],
-            );
+            $tokens        = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
+            $invalidTokens = $fcm->sendMulticast($tokens, $title, $body, ['url' => '/scan']);
             $this->removeInvalidTokens($invalidTokens);
+
+            NotificationLog::create([
+                'user_id' => $user->id,
+                'type'    => 'morning',
+                'title'   => $title,
+                'body'    => $body,
+                'url'     => '/scan',
+            ]);
         }
     }
 

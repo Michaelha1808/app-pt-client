@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
-    'name', 'email', 'password', 'google_id', 'provider',
+    'name', 'email', 'password', 'google_id', 'facebook_id', 'provider',
     'avatar_url', 'birth_year', 'gender', 'height_cm', 'weight_kg',
     'calorie_goal', 'morning_notify', 'evening_notify', 'calorie_streak',
     'morning_notify_enabled', 'midday_notify_enabled', 'evening_notify_enabled',
@@ -35,9 +36,34 @@ class User extends Authenticatable
         return $this->hasMany(MealLog::class);
     }
 
+    public function mealPlans(): HasMany
+    {
+        return $this->hasMany(MealPlan::class);
+    }
+
     public function notificationSubscriptions(): HasMany
     {
         return $this->hasMany(NotificationSubscription::class);
+    }
+
+    public function webauthnCredentials(): HasMany
+    {
+        return $this->hasMany(WebauthnCredential::class);
+    }
+
+    public function streak(): HasOne
+    {
+        return $this->hasOne(UserStreak::class);
+    }
+
+    public function waterLogs(): HasMany
+    {
+        return $this->hasMany(WaterLog::class);
+    }
+
+    public function streakMilestones(): HasMany
+    {
+        return $this->hasMany(StreakMilestone::class);
     }
 
     protected function casts(): array

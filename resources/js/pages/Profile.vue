@@ -2,6 +2,8 @@
 const { user } = useAuth()
 const { loading, bmi, bmr, bmiLabel, age, fetchProfile, uploadAvatar, deleteAvatar } = useProfile()
 const { success, error: toastError } = useToast()
+const { supported: bioSupported, enabled: bioEnabled, checkSupport, fetchStatus, register: registerPasskey, disable: disablePasskey } = usePasskey()
+const bioBusy = ref(false)
 
 const avatarPicker = ref<{ open: () => void } | null>(null)
 const avatarUploading = ref(false)
@@ -21,9 +23,27 @@ const displayEmail = computed(() => user.value?.email ?? '')
 const displayAvatar = computed(() => displayName.value.charAt(0).toUpperCase())
 
 onMounted(async () => {
+  if (await checkSupport()) fetchStatus()
   await fetchProfile()
   if (user.value?.calorie_goal) calorieGoal.value = user.value.calorie_goal
 })
+
+async function toggleBiometric() {
+  if (bioBusy.value) return
+  bioBusy.value = true
+  try {
+    if (bioEnabled.value) {
+      await disablePasskey()
+      success('Đã tắt đăng nhập bằng vân tay / Face ID')
+    } else {
+      const ok = await registerPasskey()
+      if (ok) success('Đã bật đăng nhập bằng vân tay / Face ID')
+      else toastError('Không thể đăng ký. Thiết bị từ chối hoặc chưa hỗ trợ.')
+    }
+  } finally {
+    bioBusy.value = false
+  }
+}
 
 function toggleDevice(id: string) {
   const d = connectedDevices.value.find(d => d.id === id)
@@ -199,6 +219,35 @@ async function handleLogout() {
             <span class="flex-1 text-left text-[15px] text-black">Cài đặt thông báo</span>
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
+        </div>
+      </div>
+
+      <!-- Bảo mật (chỉ hiện nếu thiết bị hỗ trợ vân tay/Face ID) -->
+      <div v-if="bioSupported" class="px-5 mb-2 animate-fadeInUp delay-3" style="opacity:0">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Bảo mật</p>
+        <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+          <div class="flex items-center gap-3 px-4 py-3.5">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-purple/10 flex items-center justify-center">
+              <span class="text-base">🔒</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] text-black">Đăng nhập bằng vân tay / Face ID</p>
+              <p class="text-[12px] text-ios-gray">Đăng nhập nhanh lần sau, không cần mật khẩu</p>
+            </div>
+            <button
+              role="switch"
+              :aria-checked="bioEnabled"
+              :disabled="bioBusy"
+              class="relative w-[51px] h-[31px] rounded-full transition-colors flex-shrink-0 disabled:opacity-50"
+              :class="bioEnabled ? 'bg-ios-green' : 'bg-ios-gray5'"
+              @click="toggleBiometric"
+            >
+              <span
+                class="absolute top-[2px] left-[2px] w-[27px] h-[27px] rounded-full bg-white shadow transition-transform"
+                :class="bioEnabled ? 'translate-x-[20px]' : ''"
+              />
+            </button>
+          </div>
         </div>
       </div>
 

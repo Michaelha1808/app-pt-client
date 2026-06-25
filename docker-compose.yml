@@ -27,6 +27,7 @@ services:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
     environment:
       - APP_ENV=local
+      - SKIP_MIGRATIONS=${SKIP_MIGRATIONS:-0}
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -38,11 +39,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"$$fp=@fsockopen('127.0.0.1',9000,$$e,$$m,3);if(!$$fp)exit(1);fclose($$fp);exit(0);\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   scheduler:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
+    image: app-pt-client-backend:latest
     restart: unless-stopped
     entrypoint: ["php", "/var/www/artisan", "schedule:work", "--verbose"]
     volumes:
@@ -56,15 +61,12 @@ services:
       - DB_DATABASE=${POSTGRES_DB:-pt_client}
       - DB_USERNAME=${POSTGRES_USER:-pt_user}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-secret}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
 
   queue:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
+    image: app-pt-client-backend:latest
     restart: unless-stopped
     entrypoint: ["php", "/var/www/artisan", "queue:work", "--tries=3", "--timeout=90", "--verbose"]
     volumes:

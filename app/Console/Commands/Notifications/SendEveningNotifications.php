@@ -3,6 +3,7 @@
 namespace App\Console\Commands\Notifications;
 
 use App\Models\MealLog;
+use App\Models\NotificationLog;
 use App\Models\NotificationSubscription;
 use App\Models\User;
 use App\Services\FcmService;
@@ -36,14 +37,23 @@ class SendEveningNotifications extends Command
                 ? "Bạn đã nạp {$consumed}/{$goal} kcal. Đã đạt mục tiêu hôm nay! 🎉"
                 : "Bạn đã nạp {$consumed}/{$goal} kcal. Còn thiếu " . ($goal - $consumed) . " kcal.";
 
+            $title         = 'Tổng kết hôm nay 🌙';
             $tokens        = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
             $invalidTokens = $fcm->sendMulticast(
                 $tokens,
-                'Tổng kết hôm nay 🌙',
+                $title,
                 $body,
                 ['url' => '/history'],
             );
             $this->removeInvalidTokens($invalidTokens);
+
+            NotificationLog::create([
+                'user_id' => $user->id,
+                'type'    => 'evening',
+                'title'   => $title,
+                'body'    => $body,
+                'url'     => '/history',
+            ]);
         }
     }
 

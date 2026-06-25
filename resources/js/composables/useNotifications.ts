@@ -1,5 +1,6 @@
 import { apiFetch } from '@/utils/api'
 import { getFirebaseMessaging, getToken, onMessage, VAPID_KEY } from '@/plugins/firebase'
+import { goWithAuth, safePath } from '@/utils/deeplink'
 
 export interface NotificationSettings {
   morning: { enabled: boolean; time: string }
@@ -54,8 +55,13 @@ export function useNotifications() {
 
     onMessage(messaging, (payload) => {
       const { title = 'CaloEye', body } = payload.notification ?? {}
-      if (Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/logo/caloreye_icon_192.png' })
+      const data = payload.data ?? {}
+      if (Notification.permission !== 'granted') return
+      const notif = new Notification(title, { body, icon: '/logo/caloreye_icon_192.png', data })
+      notif.onclick = () => {
+        window.focus()
+        goWithAuth(safePath(data.url))
+        notif.close()
       }
     })
   }

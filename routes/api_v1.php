@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WaterController;
+use App\Http\Controllers\Api\V1\WebAuthnController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
@@ -19,6 +24,9 @@ Route::prefix('auth')->group(function () {
     Route::get('/google', [AuthController::class, 'googleRedirect']);
     Route::get('/google/callback', [AuthController::class, 'googleCallback']);
 
+    Route::get('/facebook', [AuthController::class, 'facebookRedirect']);
+    Route::get('/facebook/callback', [AuthController::class, 'facebookCallback']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -28,20 +36,66 @@ Route::prefix('auth')->group(function () {
 // Food analysis — public (guest được phép), rate limit 10/min
 Route::middleware('throttle:10,1')->post('/food/analyze', [FoodController::class, 'analyze']);
 
+// Multi-dish detect — public (guest được phép), rate limit 10/min
+Route::middleware('throttle:10,1')->post('/food/detect', [FoodController::class, 'detect']);
+
+// Nhận xét AI cho cả bữa (SSE) — public, rate limit 10/min
+Route::middleware('throttle:10,1')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
+
 // Food log — auth required
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/food/log', [FoodController::class, 'log']);
+    Route::post('/food/log-batch', [FoodController::class, 'logBatch']);
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
 });
+
+// Kế hoạch ăn uống & tập luyện (AI) — auth required
+Route::middleware('auth:sanctum')->prefix('plan')->group(function () {
+    Route::get('/', [PlanController::class, 'show']);
+    Route::get('/history', [PlanController::class, 'history']);
+    Route::middleware('throttle:5,1')->post('/generate', [PlanController::class, 'generate']);
+});
+
+// Passkey / WebAuthn (vân tay, Face ID)
+Route::prefix('webauthn')->group(function () {
+    // Đăng nhập bằng passkey — công khai
+    Route::middleware('throttle:10,1')->post('/login/options', [WebAuthnController::class, 'loginOptions']);
+    Route::middleware('throttle:10,1')->post('/login/verify', [WebAuthnController::class, 'loginVerify']);
+    // Đăng ký / quản lý passkey — yêu cầu đăng nhập
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/register/options', [WebAuthnController::class, 'registerOptions']);
+        Route::post('/register/verify', [WebAuthnController::class, 'registerVerify']);
+        Route::get('/status', [WebAuthnController::class, 'status']);
+        Route::delete('/', [WebAuthnController::class, 'disable']);
+    });
+});
+
+// AI chat tư vấn — cho phép khách (quota client-side), rate limit 15/min
+// User đăng nhập gửi kèm Bearer token → có ngữ cảnh cá nhân hóa; khách → tư vấn chung.
+Route::middleware('throttle:15,1')->post('/chat', [ChatController::class, 'send']);
 
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);
     Route::delete('/subscribe', [NotificationController::class, 'unsubscribe']);
     Route::get('/settings', [NotificationController::class, 'getSettings']);
     Route::put('/settings', [NotificationController::class, 'updateSettings']);
+    Route::get('/history', [NotificationController::class, 'history']);
+    Route::patch('/read-all', [NotificationController::class, 'markAllRead']);
+    Route::patch('/{notificationLog}/read', [NotificationController::class, 'markRead']);
     Route::post('/test', [NotificationController::class, 'sendTest']);
+});
+
+Route::middleware('auth:sanctum')->prefix('streak')->group(function () {
+    Route::get('/',       [StreakController::class, 'show']);
+    Route::post('/freeze', [StreakController::class, 'useFreeze']);
+});
+
+Route::middleware('auth:sanctum')->prefix('water')->group(function () {
+    Route::get('/today',        [WaterController::class, 'today']);
+    Route::post('/log',         [WaterController::class, 'log']);
+    Route::delete('/log/{waterLog}', [WaterController::class, 'delete']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

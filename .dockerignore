@@ -9,7 +9,8 @@
 .claude
 
 frontend/
-docker/
+docker/nginx/
+docker/postgres/
 docs/
 memory/
 *.md

@@ -10,9 +10,11 @@
     <meta name="description" content="Track calories and get AI-powered nutrition advice" />
 
     <!-- PWA -->
-    <link rel="manifest" href="/build/manifest.webmanifest" />
+    <link rel="manifest" href="/build/manifest.webmanifest" crossorigin="use-credentials" />
     <link rel="apple-touch-icon" href="/logo/caloreye_icon_192.png" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/logo/caloreye_icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo/caloreye_icon_192.png" />
+    <link rel="shortcut icon" href="/logo/caloreye_icon_192.png" />
 
     <title>CaloEye – AI Nutrition Tracker</title>
 

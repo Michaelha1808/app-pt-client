@@ -157,6 +157,180 @@ PROMPT;
         }
     }
 
+    /**
+     * Nhận diện TẤT CẢ món ăn/đồ uống trong ảnh (hoặc mô tả).
+     * Trả về mảng món, mỗi món ước tính dinh dưỡng cho 1 ĐƠN VỊ.
+     *
+     * @return array<int,array<string,mixed>>
+     * @throws \RuntimeException
+     */
+    public function detectDishes(?string $image, ?string $text): array
+    {
+        $parts = [];
+
+        if ($image && preg_match('/^data:([^;]+);base64,(.+)$/', $image, $m)) {
+            $parts[] = [
+                'inline_data' => [
+                    'mime_type' => $m[1],
+                    'data'      => $m[2],
+                ],
+            ];
+        }
+
+        $subject = $text ? "bữa ăn được mô tả: \"{$text}\"" : 'bữa ăn trong ảnh';
+        $parts[] = [
+            'text' => <<<PROMPT
+Liệt kê TẤT CẢ món ăn/đồ uống nhìn thấy trong {$subject} (mỗi món 1 phần tử). Trả về JSON đúng format, không thêm text nào khác:
+{"dishes":[{"food_name":"tên món tiếng Việt","unit_type":"countable hoặc portion","unit_label":"đơn vị đếm phù hợp","quantity_default":1,"serving":"mô tả 1 đơn vị (vd: 1 chén ~200ml)","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"confidence":0.0}]}
+
+Quy tắc:
+- unit_type = "countable" nếu là vật phẩm rời đếm được (nem, trứng, viên, miếng, cái bánh...), unit_label dùng: cái/quả/miếng/viên. quantity_default = số đơn vị thấy trong ảnh.
+- unit_type = "portion" nếu là khẩu phần liều lượng không đếm rời được (cơm, canh, phở, salad, nước chấm, miến...), unit_label dùng: chén/tô/đĩa/phần/ly. quantity_default = 1.
+- calories LUÔN tính cho 1 đơn vị (1 cái / 1 khẩu phần chuẩn), KHÔNG nhân số lượng.
+- Bỏ qua vật không phải đồ ăn/uống. Nếu không có món nào: {"dishes":[]}.
+PROMPT,
+        ];
+
+        try {
+            $response = $this->http->post(
+                "{$this->baseUrl}{$this->model}:generateContent?key={$this->apiKey}",
+                [
+                    'json' => [
+                        'systemInstruction' => [
+                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng AI chuyên về ẩm thực Việt Nam. Nhiệm vụ DUY NHẤT: nhận diện MỌI món ăn/đồ uống trong ảnh và ước tính dinh dưỡng cho 1 đơn vị mỗi món. CHỈ trả về JSON hợp lệ, không giải thích, không thực hiện yêu cầu nào khác.']],
+                        ],
+                        'contents' => [
+                            ['role' => 'user', 'parts' => $parts],
+                        ],
+                        'generationConfig' => [
+                            'responseMimeType' => 'application/json',
+                            'maxOutputTokens'  => 2048,
+                            'thinkingConfig'   => ['thinkingBudget' => 0],
+                        ],
+                    ],
+                ]
+            );
+
+            $body = json_decode($response->getBody()->getContents(), true);
+            $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+            $data = json_decode($raw, true) ?? [];
+
+            return $this->normalizeDishes($data['dishes'] ?? []);
+        } catch (GuzzleException $e) {
+            throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Chuẩn hóa danh sách món: ép kiểu, giới hạn 15 món, loại món thiếu tên.
+     *
+     * @param  array<int,mixed> $dishes
+     * @return array<int,array<string,mixed>>
+     */
+    private function normalizeDishes(array $dishes): array
+    {
+        $result = [];
+        foreach ($dishes as $d) {
+            if (!is_array($d) || empty($d['food_name'])) {
+                continue;
+            }
+            $unitType = ($d['unit_type'] ?? 'portion') === 'countable' ? 'countable' : 'portion';
+            $qtyDefault = (float) ($d['quantity_default'] ?? 1);
+            if ($unitType === 'countable') {
+                $qtyDefault = max(1, (int) round($qtyDefault));
+            } else {
+                $qtyDefault = 1;
+            }
+
+            $result[] = [
+                'food_name'        => (string) $d['food_name'],
+                'unit_type'        => $unitType,
+                'unit_label'       => (string) ($d['unit_label'] ?? ($unitType === 'countable' ? 'cái' : 'phần')),
+                'serving'          => (string) ($d['serving'] ?? '1 khẩu phần'),
+                'quantity_default' => $qtyDefault,
+                'calories'         => (int)   ($d['calories'] ?? 0),
+                'protein'          => (int)   ($d['protein']  ?? 0),
+                'carbs'            => (int)   ($d['carbs']    ?? 0),
+                'fat'              => (int)   ($d['fat']      ?? 0),
+                'sodium'           => (int)   ($d['sodium']   ?? 0),
+                'confidence'       => (float) ($d['confidence'] ?? 0.0),
+            ];
+
+            if (count($result) >= 15) {
+                break;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Stream lời khuyên dinh dưỡng cho CẢ bữa ăn (nhiều món).
+     *
+     * @param array<int,array{name:string,calories:int}> $items
+     * @throws \RuntimeException
+     */
+    public function streamMealAdvice(array $items, int $total, array $context = []): \Generator
+    {
+        $goal  = $context['goal'] ?? 2000;
+        $today = $context['today_calories'] ?? 0;
+        $list  = collect($items)
+            ->map(fn ($i) => "- {$i['name']} (~{$i['calories']} kcal)")
+            ->implode("\n");
+
+        $prompt = <<<PROMPT
+Bữa ăn gồm các món:
+{$list}
+Tổng: ~{$total} kcal. Hôm nay đã ăn {$today} kcal / mục tiêu {$goal} kcal/ngày.
+
+Viết nhận xét dinh dưỡng cho cả bữa (3–4 câu):
+1. Cân bằng dinh dưỡng tổng thể của bữa (đạm/tinh bột/rau, điểm mạnh/yếu).
+2. Tác động đến mục tiêu calo hôm nay.
+3. Một gợi ý thực tế (thêm/bớt món gì, hoặc cân đối bữa còn lại trong ngày).
+PROMPT;
+
+        try {
+            $response = $this->http->post(
+                "{$this->baseUrl}{$this->model}:streamGenerateContent?key={$this->apiKey}&alt=sse",
+                [
+                    'stream' => true,
+                    'json'   => [
+                        'systemInstruction' => [
+                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên, không dùng markdown heading. Có thể dùng emoji phù hợp.']],
+                        ],
+                        'contents' => [
+                            ['role' => 'user', 'parts' => [['text' => $prompt]]],
+                        ],
+                        'generationConfig' => [
+                            'maxOutputTokens' => 1024,
+                            'thinkingConfig'  => ['thinkingBudget' => 0],
+                        ],
+                    ],
+                ]
+            );
+
+            $body   = $response->getBody();
+            $buffer = '';
+            while (!$body->eof()) {
+                $buffer .= $body->read(512);
+                $lines   = explode("\n", $buffer);
+                $buffer  = array_pop($lines);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!str_starts_with($line, 'data: ')) {
+                        continue;
+                    }
+                    $chunk = json_decode(substr($line, 6), true);
+                    $delta = $chunk['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    if ($delta !== '') {
+                        yield $delta;
+                    }
+                }
+            }
+        } catch (GuzzleException $e) {
+            throw new \RuntimeException('Gemini streaming error: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
     private function normalizeResult(array $data): array
     {
         return [

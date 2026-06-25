@@ -49,6 +49,7 @@ class SendMiddayNotifications extends Command
                 'type'    => 'midday',
                 'title'   => $title,
                 'body'    => $body,
+                'url'     => '/scan',
             ]);
         }
     }

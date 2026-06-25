@@ -19,11 +19,15 @@ declare global {
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
   const defineStore: typeof import('pinia').defineStore
+  const dishCalories: typeof import('./utils/nutrition').dishCalories
+  const dishMacro: typeof import('./utils/nutrition').dishMacro
   const effectScope: typeof import('vue').effectScope
+  const formatQty: typeof import('./utils/nutrition').formatQty
   const getActivePinia: typeof import('pinia').getActivePinia
   const getCurrentInstance: typeof import('vue').getCurrentInstance
   const getCurrentScope: typeof import('vue').getCurrentScope
   const getCurrentWatcher: typeof import('vue').getCurrentWatcher
+  const goWithAuth: typeof import('./utils/deeplink').goWithAuth
   const h: typeof import('vue').h
   const inject: typeof import('vue').inject
   const isProxy: typeof import('vue').isProxy
@@ -37,6 +41,7 @@ declare global {
   const mapStores: typeof import('pinia').mapStores
   const mapWritableState: typeof import('pinia').mapWritableState
   const markRaw: typeof import('vue').markRaw
+  const minFor: typeof import('./utils/nutrition').minFor
   const navigateTo: typeof import('./utils/navigate').navigateTo
   const nextTick: typeof import('vue').nextTick
   const onActivated: typeof import('vue').onActivated
@@ -62,28 +67,38 @@ declare global {
   const resizeImage: typeof import('./utils/image').resizeImage
   const resolveComponent: typeof import('vue').resolveComponent
   const restoreSession: typeof import('./utils/session').restoreSession
+  const safePath: typeof import('./utils/deeplink').safePath
+  const selectedCount: typeof import('./utils/nutrition').selectedCount
   const setActivePinia: typeof import('pinia').setActivePinia
   const setMapStoreSuffix: typeof import('pinia').setMapStoreSuffix
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
+  const stepFor: typeof import('./utils/nutrition').stepFor
   const storeToRefs: typeof import('pinia').storeToRefs
   const toRaw: typeof import('vue').toRaw
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
   const toValue: typeof import('vue').toValue
+  const totalCalories: typeof import('./utils/nutrition').totalCalories
+  const totalMacro: typeof import('./utils/nutrition').totalMacro
   const triggerRef: typeof import('vue').triggerRef
   const unref: typeof import('vue').unref
   const useAttrs: typeof import('vue').useAttrs
   const useAuth: typeof import('./composables/useAuth').useAuth
   const useAuthStore: typeof import('./stores/auth').useAuthStore
+  const useChat: typeof import('./composables/useChat').useChat
   const useClock: typeof import('./composables/useClock').useClock
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
   const useFoodAnalysis: typeof import('./composables/useFoodAnalysis').useFoodAnalysis
+  const useFoodDetect: typeof import('./composables/useFoodDetect').useFoodDetect
+  const useGuestQuota: typeof import('./composables/useGuestQuota').useGuestQuota
   const useId: typeof import('vue').useId
   const useLink: typeof import('vue-router').useLink
+  const useMealAdvice: typeof import('./composables/useMealAdvice').useMealAdvice
   const useMealLog: typeof import('./composables/useMealLog').useMealLog
+  const useMealPlan: typeof import('./composables/useMealPlan').useMealPlan
   const useModel: typeof import('vue').useModel
   const useNotifications: typeof import('./composables/useNotifications').useNotifications
   const useProfile: typeof import('./composables/useProfile').useProfile
@@ -108,6 +123,12 @@ declare global {
   // @ts-ignore
   export type { ClockState } from './composables/useClock'
   import('./composables/useClock')
+  // @ts-ignore
+  export type { QuotaAction } from './composables/useGuestQuota'
+  import('./composables/useGuestQuota')
+  // @ts-ignore
+  export type { MealAdvicePayload } from './composables/useMealAdvice'
+  import('./composables/useMealAdvice')
   // @ts-ignore
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
@@ -137,11 +158,15 @@ declare module 'vue' {
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
+    readonly dishCalories: UnwrapRef<typeof import('./utils/nutrition')['dishCalories']>
+    readonly dishMacro: UnwrapRef<typeof import('./utils/nutrition')['dishMacro']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly formatQty: UnwrapRef<typeof import('./utils/nutrition')['formatQty']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getCurrentWatcher: UnwrapRef<typeof import('vue')['getCurrentWatcher']>
+    readonly goWithAuth: UnwrapRef<typeof import('./utils/deeplink')['goWithAuth']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
@@ -155,6 +180,7 @@ declare module 'vue' {
     readonly mapStores: UnwrapRef<typeof import('pinia')['mapStores']>
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
+    readonly minFor: UnwrapRef<typeof import('./utils/nutrition')['minFor']>
     readonly navigateTo: UnwrapRef<typeof import('./utils/navigate')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
@@ -180,28 +206,38 @@ declare module 'vue' {
     readonly resizeImage: UnwrapRef<typeof import('./utils/image')['resizeImage']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly restoreSession: UnwrapRef<typeof import('./utils/session')['restoreSession']>
+    readonly safePath: UnwrapRef<typeof import('./utils/deeplink')['safePath']>
+    readonly selectedCount: UnwrapRef<typeof import('./utils/nutrition')['selectedCount']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly stepFor: UnwrapRef<typeof import('./utils/nutrition')['stepFor']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
+    readonly totalCalories: UnwrapRef<typeof import('./utils/nutrition')['totalCalories']>
+    readonly totalMacro: UnwrapRef<typeof import('./utils/nutrition')['totalMacro']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAuth: UnwrapRef<typeof import('./composables/useAuth')['useAuth']>
     readonly useAuthStore: UnwrapRef<typeof import('./stores/auth')['useAuthStore']>
+    readonly useChat: UnwrapRef<typeof import('./composables/useChat')['useChat']>
     readonly useClock: UnwrapRef<typeof import('./composables/useClock')['useClock']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
     readonly useFoodAnalysis: UnwrapRef<typeof import('./composables/useFoodAnalysis')['useFoodAnalysis']>
+    readonly useFoodDetect: UnwrapRef<typeof import('./composables/useFoodDetect')['useFoodDetect']>
+    readonly useGuestQuota: UnwrapRef<typeof import('./composables/useGuestQuota')['useGuestQuota']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
+    readonly useMealAdvice: UnwrapRef<typeof import('./composables/useMealAdvice')['useMealAdvice']>
     readonly useMealLog: UnwrapRef<typeof import('./composables/useMealLog')['useMealLog']>
+    readonly useMealPlan: UnwrapRef<typeof import('./composables/useMealPlan')['useMealPlan']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>

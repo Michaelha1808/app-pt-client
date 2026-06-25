@@ -2,7 +2,7 @@
 
 > **App:** CaloEye — Vue 3 SPA + Laravel 13 + Tailwind CSS 4 (iOS-style PWA)
 > **Cập nhật lần cuối:** 2026-06-25
-> **Trạng thái tổng:** 🟢 Phase 1 đã implement — tích hợp vào **chức năng tư vấn Chat** (hội thoại), không dùng trang /plan riêng
+> **Trạng thái tổng:** 🟢 Đã implement CẢ HAI: (1) tư vấn hội thoại trong Chat, (2) trang `/plan` riêng + bảng `meal_plans` (daily + monthly). Còn lại: Phase 3 (activity_logs) + scheduled job.
 
 ---
 
@@ -518,30 +518,32 @@ export type PlanStreamEvent =
 
 ## 13. Checklist tổng
 
-### Phase 1 — Daily plan (P0) 🔴
+### Phase 1 — Daily plan (P0) ✅ HOÀN THÀNH
 
-- [ ] Spec viết xong
-- [ ] Migration `meal_plans` + `MealPlan` model + `User::mealPlans()`
-- [ ] `MealPlanService`
-  - [ ] `buildContext()` — BMR/TDEE (Mifflin) + avg/adherence/trend + data_hash
-  - [ ] `getStructuredPlan()` — Gemini JSON mode (daily schema)
-  - [ ] `streamReasoning()` — Gemini streaming Generator
-  - [ ] Validate profile đủ field → throw nếu thiếu
-- [ ] `PlanController`
-  - [ ] `show()` — trả plan + cờ is_stale/needs_generation
-  - [ ] `generate()` — SSE 2-phase + upsert DB + lưu reasoning
-  - [ ] `history()`
-- [ ] Routes nhóm `plan/*` (auth + throttle 5/min cho generate)
-- [ ] `resources/js/types/plan.ts`
-- [ ] `useMealPlan.ts` — fetch + SSE parser (tái dùng pattern useFoodAnalysis)
-- [ ] `MealPlan.vue` — tabs, overview ring, meals, workouts, reasoning stream, stale banner, skeleton, error
-- [ ] Đăng ký route `/plan` + điểm vào từ Home/BottomNav
+- [x] Spec viết xong
+- [x] Migration `meal_plans` + `MealPlan` model + `User::mealPlans()`
+- [x] `MealPlanService`
+  - [x] `buildContext()` — BMR/TDEE (Mifflin) + avg/adherence/trend + data_hash
+  - [x] `getStructuredPlan()` — Gemini JSON mode (daily schema)
+  - [x] `streamReasoning()` — Gemini streaming Generator
+  - [x] Validate profile đủ field → throw nếu thiếu
+- [x] `PlanController`
+  - [x] `show()` — trả plan + cờ is_stale/needs_generation
+  - [x] `generate()` — SSE 2-phase + upsert DB + lưu reasoning
+  - [x] `history()`
+- [x] Routes nhóm `plan/*` (auth + throttle 5/min cho generate)
+- [x] `resources/js/types/plan.ts`
+- [x] `useMealPlan.ts` — fetch + SSE parser
+- [x] `MealPlan.vue` — tabs, overview, meals, workouts, reasoning stream, stale banner, skeleton, error
+- [x] Đăng ký route `/plan` + điểm vào từ Home (card "Tư vấn kế hoạch ngày mai")
 
-### Phase 2 — Monthly plan + auto refresh (P1) 🔴
+> **Lưu ý:** cần chạy `php artisan migrate` (PHP 8.4 của Laragon) để tạo bảng `meal_plans`.
 
-- [ ] Monthly schema (`weekly_focus`, `expected_weight_change_kg`, `weekly_workout_split`)
-- [ ] `getStructuredPlan()` nhánh monthly + prompt riêng (30 ngày dữ liệu)
-- [ ] MealPlan.vue tab "Tháng này" bật
+### Phase 2 — Monthly plan ✅ HOÀN THÀNH (trừ scheduled job)
+
+- [x] Monthly schema (`weekly_focus`, `expected_weight_change_kg`, `weekly_workout_split`)
+- [x] `getStructuredPlan()` nhánh monthly + prompt riêng (30 ngày dữ liệu)
+- [x] MealPlan.vue tab "Tháng này" bật
 - [ ] (Tùy chọn) Scheduled job tối tạo daily plan cho user có streak — dùng cron đã có
 
 ### Phase 3 — Đối chiếu thực hiện (P2) 🔴

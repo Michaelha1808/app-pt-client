@@ -12,6 +12,13 @@ export function useAuth() {
   const router = useRouter()
   const { user, token, isGuest, sessionReady, isLoggedIn } = storeToRefs(store)
 
+  // Đọc & xóa đích đã lưu khi bị ép login (deep-link). Bỏ qua nếu trỏ vào /auth/*.
+  function consumePendingRedirect(): string {
+    const dest = sessionStorage.getItem('pending_redirect')
+    sessionStorage.removeItem('pending_redirect')
+    return dest && !dest.startsWith('/auth') ? dest : '/home'
+  }
+
   function extractError(err: unknown): string {
     const e = err as any
     // Sentinel thrown by api.ts after redirect — suppress
@@ -29,13 +36,13 @@ export function useAuth() {
   async function login(email: string, password: string): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } })
     store.token = res.access_token; store.user = res.user; store.isGuest = false
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function register(payload: RegisterPayload): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: payload })
     store.token = res.access_token; store.user = res.user; store.isGuest = false
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function forgotPassword(email: string): Promise<string> {
@@ -67,7 +74,7 @@ export function useAuth() {
     store.token = oauthToken; store.isGuest = false
     const res = await apiFetch<{ user: User }>('/auth/me')
     store.user = res.user
-    router.push('/home')
+    router.push(consumePendingRedirect())
   }
 
   async function loginAsGuest(): Promise<void> {

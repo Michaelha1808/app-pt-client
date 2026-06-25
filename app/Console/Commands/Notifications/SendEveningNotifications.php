@@ -52,6 +52,7 @@ class SendEveningNotifications extends Command
                 'type'    => 'evening',
                 'title'   => $title,
                 'body'    => $body,
+                'url'     => '/history',
             ]);
         }
     }

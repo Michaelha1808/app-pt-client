@@ -60,15 +60,33 @@ onBackgroundMessage(messaging, (payload) => {
 })
 
 // ── Notification click → deep link ─────────────────────────────────────────
+const ALLOWED_PREFIXES = ['/home', '/scan', '/history', '/plan', '/chat', '/profile', '/result', '/meal-picker']
+
+function safePath(raw?: string): string {
+  if (!raw || !raw.startsWith('/')) return '/home'
+  return ALLOWED_PREFIXES.some(p => raw === p || raw.startsWith(p + '?') || raw.startsWith(p + '/'))
+    ? raw
+    : '/home'
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = (event.notification.data as Record<string, string>)?.url ?? '/'
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) return client.focus()
+  const data = (event.notification.data ?? {}) as Record<string, string>
+  const path = safePath(data.url)
+
+  event.waitUntil((async () => {
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+
+    // 1) Có cửa sổ PWA đang mở (cùng origin) → focus + nhờ SPA điều hướng client-side
+    for (const client of allClients) {
+      if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+        await client.focus()
+        client.postMessage({ source: 'caloeye-sw', type: 'NAVIGATE', path, data })
+        return
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url)
-    }),
-  )
+    }
+
+    // 2) Chưa mở → mở cửa sổ mới thẳng vào path (cold start)
+    if (self.clients.openWindow) await self.clients.openWindow(path)
+  })())
 })

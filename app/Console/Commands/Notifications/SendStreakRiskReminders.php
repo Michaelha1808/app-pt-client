@@ -55,6 +55,7 @@ class SendStreakRiskReminders extends Command
                 'type'    => 'streak_risk',
                 'title'   => $title,
                 'body'    => $body,
+                'url'     => '/home',
             ]);
         }
     }

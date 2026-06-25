@@ -263,9 +263,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- AI plan suggestion → mở chat tư vấn với câu hỏi mồi -->
+    <!-- AI plan suggestion → mở trang kế hoạch ngày mai -->
     <NuxtLink
-      to="/chat?ask=L%C3%AAn%20k%E1%BA%BF%20ho%E1%BA%A1ch%20%C4%83n%20u%E1%BB%91ng%20%26%20t%E1%BA%ADp%20luy%E1%BB%87n%20cho%20ng%C3%A0y%20mai"
+      to="/plan"
       class="mx-5 mt-4 bg-gradient-to-r from-ios-blue/5 to-ios-purple/5 border border-ios-blue/15 rounded-[18px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5"
       style="opacity:0"
     >
@@ -280,7 +280,7 @@ onMounted(() => {
           Bạn còn <span class="text-black font-semibold">{{ (goal - consumed).toLocaleString('vi') }} kcal</span> hôm nay. Để AI gợi ý kế hoạch ăn uống &amp; tập luyện cho ngày mai dựa trên dữ liệu của bạn.
         </p>
         <span class="inline-flex items-center gap-1 text-[13px] text-ios-blue font-medium mt-1.5">
-          Hỏi trợ lý AI
+          Xem kế hoạch
           <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
         </span>
       </div>

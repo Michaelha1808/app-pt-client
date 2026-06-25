@@ -16,6 +16,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/history', component: () => import('@/pages/History.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/scan', component: () => import('@/pages/Scan.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/result', component: () => import('@/pages/Result.vue'), meta: { layout: 'app', middleware: 'auth' } },
+  { path: '/meal-picker', component: () => import('@/pages/MealPicker.vue'), meta: { layout: 'app', middleware: 'auth' } },
+  { path: '/plan', component: () => import('@/pages/MealPlan.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile', component: () => import('@/pages/Profile.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/profile/edit', component: () => import('@/pages/profile/Edit.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/change-password', component: () => import('@/pages/profile/ChangePassword.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
@@ -29,6 +31,8 @@ export const router = createRouter({
 
 let sessionInitialized = false
 
+const PENDING_KEY = 'pending_redirect'
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (!sessionInitialized) {
@@ -37,8 +41,18 @@ router.beforeEach(async (to) => {
   }
   const mw = to.meta.middleware as string | undefined
   if (mw === 'guest' && auth.isLoggedIn) return '/home'
-  if (mw === 'auth' && !auth.isLoggedIn && !auth.isGuest) return '/auth/login'
-  if (mw === 'auth-strict' && !auth.isLoggedIn) return '/auth/login'
+
+  const needAuth =
+    (mw === 'auth' && !auth.isLoggedIn && !auth.isGuest) ||
+    (mw === 'auth-strict' && !auth.isLoggedIn)
+
+  if (needAuth) {
+    // Lưu đích đang muốn vào (trừ trang auth) để mở lại sau khi đăng nhập
+    if (!to.path.startsWith('/auth')) {
+      sessionStorage.setItem(PENDING_KEY, to.fullPath)
+    }
+    return '/auth/login'
+  }
 })
 
 export default router

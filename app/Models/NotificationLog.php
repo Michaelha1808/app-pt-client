@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'type', 'title', 'body', 'read_at'])]
+#[Fillable(['user_id', 'type', 'title', 'body', 'url', 'read_at'])]
 class NotificationLog extends Model
 {
     protected function casts(): array

@@ -96,7 +96,7 @@ class NotificationController extends Controller
         $logs = NotificationLog::where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->limit(50)
-            ->get(['id', 'type', 'title', 'body', 'read_at', 'created_at']);
+            ->get(['id', 'type', 'title', 'body', 'url', 'read_at', 'created_at']);
 
         return response()->json($logs);
     }
@@ -106,6 +106,17 @@ class NotificationController extends Controller
         NotificationLog::where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        return response()->noContent();
+    }
+
+    public function markRead(Request $request, NotificationLog $notificationLog)
+    {
+        abort_unless($notificationLog->user_id === $request->user()->id, 403);
+
+        if (is_null($notificationLog->read_at)) {
+            $notificationLog->update(['read_at' => now()]);
+        }
 
         return response()->noContent();
     }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { apiFetch } from '@/utils/api'
+import { goWithAuth } from '@/utils/deeplink'
 
 const props = defineProps<{ open: boolean }>()
 const emit  = defineEmits<{ 'update:open': [v: boolean] }>()
@@ -9,6 +10,7 @@ interface NotifLog {
   type: 'morning' | 'midday' | 'evening' | 'reengagement'
   title: string
   body: string
+  url: string | null
   read_at: string | null
   created_at: string
 }
@@ -34,6 +36,16 @@ async function fetchHistory() {
   } finally {
     loading.value = false
   }
+}
+
+async function openItem(log: NotifLog) {
+  // Đánh dấu đã đọc (optimistic) rồi điều hướng + đóng panel
+  if (!log.read_at) {
+    log.read_at = new Date().toISOString()
+    apiFetch(`/notifications/${log.id}/read`, { method: 'PATCH' }).catch(() => {})
+  }
+  emit('update:open', false)
+  goWithAuth(log.url ?? '/home')
 }
 
 async function markAllRead() {
@@ -124,9 +136,11 @@ watch(() => props.open, (v) => { if (v) fetchHistory() })
               v-for="(log, idx) in logs"
               :key="log.id"
             >
-              <div
-                class="flex items-start gap-3 px-5 py-3.5"
+              <button
+                type="button"
+                class="w-full text-left flex items-start gap-3 px-5 py-3.5 active:bg-ios-gray5 transition-colors"
                 :class="!log.read_at ? 'bg-ios-blue/[0.04]' : ''"
+                @click="openItem(log)"
               >
                 <!-- Icon -->
                 <div class="w-10 h-10 rounded-[12px] flex items-center justify-center text-xl flex-shrink-0 mt-0.5"
@@ -153,7 +167,7 @@ watch(() => props.open, (v) => { if (v) fetchHistory() })
 
                 <!-- Unread dot -->
                 <div v-if="!log.read_at" class="w-2 h-2 rounded-full bg-ios-blue flex-shrink-0 mt-2" />
-              </div>
+              </button>
               <div v-if="idx < logs.length - 1" class="ios-separator ml-[72px] mr-5" />
             </div>
           </div>

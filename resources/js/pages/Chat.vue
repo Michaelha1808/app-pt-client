@@ -1,15 +1,35 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import { useChat } from '@/composables/useChat'
+import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatMessage } from '@/types/chat'
 
 const auth = useAuthStore()
 const { streaming, send } = useChat()
+const { canUse, increment } = useGuestQuota()
+const gateOpen = ref(false)
 
 const inputText = ref('')
 const isTyping = ref(false)
 const messagesEnd = ref<HTMLElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+
+// Auto-grow ô nhập theo nội dung, tối đa 5 dòng rồi mới cuộn (tránh vỡ layout)
+const MAX_LINES = 5
+const LINE_HEIGHT = 20 // px, khớp class leading-5
+
+function autoResize() {
+  const el = textareaRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  const maxH = LINE_HEIGHT * MAX_LINES
+  el.style.height = `${Math.min(el.scrollHeight, maxH)}px`
+  el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden'
+}
+
+watch(inputText, () => nextTick(autoResize))
 
 function nowTime() {
   return new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
@@ -40,6 +60,13 @@ async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || streaming.value) return
 
+  // Giới hạn lượt tư vấn cho khách
+  if (!canUse('chat')) {
+    gateOpen.value = true
+    return
+  }
+  increment('chat')
+
   messages.value.push({ id: Date.now(), role: 'user', text, time: nowTime() })
   inputText.value = ''
   scrollToBottom()
@@ -50,20 +77,43 @@ async function sendMessage() {
   // Placeholder cho phản hồi AI sẽ stream dần
   const aiMsg: ChatMessage = { id: Date.now() + 1, role: 'ai', text: '', time: nowTime() }
   isTyping.value = true
+  let aiIndex = -1
+  let pending = ''          // text đã nhận từ server nhưng chưa "gõ" ra màn hình
+  let streamDone = false
+
+  // Typewriter: nhả buffer ra từng ít ký tự một → hiệu ứng gõ chữ mượt,
+  // không phụ thuộc kích thước chunk server trả (Gemini hay trả nguyên cụm/câu).
+  // Buffer càng nhiều thì rút càng nhanh để bám kịp, không bị trễ.
+  const typing = new Promise<void>((resolve) => {
+    const step = () => {
+      if (aiIndex !== -1 && pending) {
+        const n = Math.max(1, Math.round(pending.length / 6))
+        messages.value[aiIndex].text += pending.slice(0, n)
+        pending = pending.slice(n)
+        scrollToBottom()
+      }
+      if (streamDone && !pending) { resolve(); return }
+      setTimeout(step, 16)
+    }
+    step()
+  })
 
   await send(history, (delta) => {
     if (isTyping.value) {
       isTyping.value = false
       messages.value.push(aiMsg)
+      aiIndex = messages.value.length - 1
     }
-    aiMsg.text += delta
-    scrollToBottom()
+    pending += delta
   })
 
+  streamDone = true
+  await typing
+
   isTyping.value = false
-  if (!aiMsg.text) {
+  if (aiIndex === -1) {
     aiMsg.text = 'Xin lỗi, mình chưa thể phản hồi lúc này. Bạn thử lại nhé! 🙏'
-    if (!messages.value.includes(aiMsg)) messages.value.push(aiMsg)
+    messages.value.push(aiMsg)
   }
   await nextTick()
   scrollToBottom()
@@ -130,10 +180,11 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Typing indicator -->
+      <!-- Typing indicator — giữ avatar như tin AI thường (mood normal, cùng SVG đã cache),
+           chỉ bong bóng chat hiển thị loading, không reload icon nhân vật -->
       <div v-if="isTyping" class="flex items-end gap-2 animate-fadeIn">
-        <div class="flex-shrink-0">
-          <CaloeyeCharacter mood="thinking" :size="32" />
+        <div class="mr-0 mt-auto mb-1 flex-shrink-0">
+          <CaloeyeCharacter mood="normal" :size="32" />
         </div>
         <div class="bg-white rounded-[18px] rounded-bl-[6px] px-4 py-3 shadow-sm flex gap-1.5 items-center">
           <div v-for="i in 3" :key="i" class="w-2 h-2 rounded-full bg-ios-gray3" :class="`typing-dot-${i}`"/>
@@ -161,11 +212,12 @@ onMounted(() => {
       <div class="flex items-end gap-2">
         <div class="flex-1 bg-white rounded-[22px] border border-ios-gray5 px-4 py-2.5 flex items-end gap-2 min-h-[44px]">
           <textarea
+            ref="textareaRef"
             v-model="inputText"
             :disabled="streaming"
             placeholder="Hỏi về dinh dưỡng, kế hoạch ăn/tập..."
             rows="1"
-            class="flex-1 bg-transparent text-[15px] text-black placeholder-ios-gray3 outline-none resize-none max-h-24 leading-5 disabled:opacity-60"
+            class="flex-1 bg-transparent text-[15px] text-black placeholder-ios-gray3 outline-none resize-none leading-5 disabled:opacity-60"
             @keydown.enter.exact.prevent="sendMessage"
           />
         </div>
@@ -175,11 +227,13 @@ onMounted(() => {
           :disabled="!inputText.trim() || streaming"
           @click="sendMessage"
         >
-          <svg viewBox="0 0 24 24" class="w-5 h-5 rotate-90" :fill="inputText.trim() ? 'white' : '#8E8E93'">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" :fill="inputText.trim() ? 'white' : '#8E8E93'">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
         </button>
       </div>
     </div>
+
+    <GuestGateModal v-model:open="gateOpen" feature="tư vấn AI" />
   </div>
 </template>

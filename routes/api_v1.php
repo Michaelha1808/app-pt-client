@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WaterController;
@@ -34,16 +35,31 @@ Route::prefix('auth')->group(function () {
 // Food analysis — public (guest được phép), rate limit 10/min
 Route::middleware('throttle:10,1')->post('/food/analyze', [FoodController::class, 'analyze']);
 
+// Multi-dish detect — public (guest được phép), rate limit 10/min
+Route::middleware('throttle:10,1')->post('/food/detect', [FoodController::class, 'detect']);
+
+// Nhận xét AI cho cả bữa (SSE) — public, rate limit 10/min
+Route::middleware('throttle:10,1')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
+
 // Food log — auth required
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/food/log', [FoodController::class, 'log']);
+    Route::post('/food/log-batch', [FoodController::class, 'logBatch']);
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
 });
 
-// AI chat tư vấn — auth required, rate limit 15/min
-Route::middleware(['auth:sanctum', 'throttle:15,1'])->post('/chat', [ChatController::class, 'send']);
+// Kế hoạch ăn uống & tập luyện (AI) — auth required
+Route::middleware('auth:sanctum')->prefix('plan')->group(function () {
+    Route::get('/', [PlanController::class, 'show']);
+    Route::get('/history', [PlanController::class, 'history']);
+    Route::middleware('throttle:5,1')->post('/generate', [PlanController::class, 'generate']);
+});
+
+// AI chat tư vấn — cho phép khách (quota client-side), rate limit 15/min
+// User đăng nhập gửi kèm Bearer token → có ngữ cảnh cá nhân hóa; khách → tư vấn chung.
+Route::middleware('throttle:15,1')->post('/chat', [ChatController::class, 'send']);
 
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);
@@ -52,6 +68,7 @@ Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::put('/settings', [NotificationController::class, 'updateSettings']);
     Route::get('/history', [NotificationController::class, 'history']);
     Route::patch('/read-all', [NotificationController::class, 'markAllRead']);
+    Route::patch('/{notificationLog}/read', [NotificationController::class, 'markRead']);
     Route::post('/test', [NotificationController::class, 'sendTest']);
 });
 

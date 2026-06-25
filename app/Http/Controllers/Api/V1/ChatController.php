@@ -21,7 +21,8 @@ class ChatController extends Controller
             'messages.*.text' => 'required|string|max:2000',
         ]);
 
-        $user     = $request->user();
+        // Không bắt buộc auth: resolve user qua sanctum guard nếu có Bearer token (khách → null)
+        $user     = $request->user('sanctum');
         $messages = $request->input('messages');
 
         return response()->stream(
@@ -31,9 +32,18 @@ class ChatController extends Controller
                 }
 
                 try {
-                    foreach ($service->streamReply($user, $messages) as $delta) {
-                        echo 'data: ' . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                    // Cổng phân loại: chặn sớm yêu cầu ngoài phạm vi dinh dưỡng/tập luyện
+                    if (!$service->isInScope($messages)) {
+                        echo 'data: ' . json_encode([
+                            'type'  => 'text',
+                            'delta' => 'Mình là trợ lý dinh dưỡng của CaloEye nên chỉ hỗ trợ về ăn uống, dinh dưỡng và tập luyện thôi nhé 🥗 Bạn muốn mình gợi ý kế hoạch ăn uống cho ngày mai không?',
+                        ]) . "\n\n";
                         flush();
+                    } else {
+                        foreach ($service->streamReply($user, $messages) as $delta) {
+                            echo 'data: ' . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                            flush();
+                        }
                     }
                 } catch (\Throwable $e) {
                     echo 'data: ' . json_encode([

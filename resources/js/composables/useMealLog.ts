@@ -52,6 +52,31 @@ export function useMealLog() {
     }
   }
 
+  /** Log nhiều món (mâm/bàn tiệc) trong 1 request — streak cập nhật 1 lần. Trả số bản ghi đã lưu. */
+  async function logMeals(results: FoodAnalysisResult[]): Promise<number> {
+    if (results.length === 0) return 0
+    try {
+      const res = await apiFetch<{ ids: number[]; streak: MealStreakResult }>('/food/log-batch', {
+        method: 'POST',
+        body: {
+          meals: results.map(r => ({
+            food_name: r.food_name,
+            serving:   r.serving,
+            calories:  r.calories,
+            protein:   r.protein,
+            carbs:     r.carbs,
+            fat:       r.fat,
+            sodium:    r.sodium,
+          })),
+        },
+      })
+      if (res.streak) onMealLogged(res.streak)
+      return res.ids?.length ?? 0
+    } catch {
+      return 0
+    }
+  }
+
   async function deleteLog(id: number): Promise<boolean> {
     try {
       await apiFetch(`/food/log/${id}`, { method: 'DELETE' })
@@ -61,5 +86,5 @@ export function useMealLog() {
     }
   }
 
-  return { todayStats, historyStats, loading, fetchTodayStats, fetchHistory, logMeal, deleteLog }
+  return { todayStats, historyStats, loading, fetchTodayStats, fetchHistory, logMeal, logMeals, deleteLog }
 }

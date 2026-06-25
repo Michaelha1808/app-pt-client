@@ -8,6 +8,7 @@ use App\Services\FoodAnalysisService;
 use App\Services\StreakService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -82,6 +83,68 @@ class FoodController extends Controller
         );
     }
 
+    public function detect(Request $request, FoodAnalysisService $service): JsonResponse
+    {
+        $request->validate([
+            'image' => 'nullable|string',
+            'text'  => 'nullable|string|max:500',
+        ]);
+
+        if (!$request->filled('image') && !$request->filled('text')) {
+            return response()->json(['message' => 'Phải cung cấp ảnh hoặc mô tả bữa ăn'], 422);
+        }
+
+        try {
+            $dishes = $service->detectDishes($request->input('image'), $request->input('text'));
+            return response()->json(['dishes' => $dishes]);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Không thể nhận diện món ăn. Vui lòng thử lại.'], 500);
+        }
+    }
+
+    public function adviseMeal(Request $request, FoodAnalysisService $service): StreamedResponse
+    {
+        $request->validate([
+            'dishes'            => 'required|array|min:1|max:30',
+            'dishes.*.name'     => 'required|string|max:200',
+            'dishes.*.calories' => 'required|integer|min:0|max:10000',
+            'total_calories'    => 'nullable|integer|min:0',
+            'context.today_calories' => 'nullable|integer|min:0|max:10000',
+            'context.goal'           => 'nullable|integer|between:1000,5000',
+        ]);
+
+        $items = array_map(
+            fn ($d) => ['name' => (string) $d['name'], 'calories' => (int) $d['calories']],
+            $request->input('dishes')
+        );
+        $total   = (int) ($request->input('total_calories') ?? array_sum(array_column($items, 'calories')));
+        $context = [
+            'today_calories' => (int) $request->input('context.today_calories', 0),
+            'goal'           => (int) $request->input('context.goal', 2000),
+        ];
+
+        return response()->stream(
+            function () use ($service, $items, $total, $context) {
+                while (ob_get_level()) {
+                    ob_end_clean();
+                }
+                try {
+                    foreach ($service->streamMealAdvice($items, $total, $context) as $delta) {
+                        echo 'data: ' . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                        flush();
+                    }
+                } catch (\Throwable $e) {
+                    echo 'data: ' . json_encode(['type' => 'error', 'message' => 'Không thể tạo nhận xét.']) . "\n\n";
+                    flush();
+                }
+                echo "data: [DONE]\n\n";
+                flush();
+            },
+            200,
+            $this->sseHeaders()
+        );
+    }
+
     public function log(Request $request, StreakService $streakService): JsonResponse
     {
         $data = $request->validate([
@@ -102,6 +165,40 @@ class FoodController extends Controller
         return response()->json([
             'message' => 'Đã lưu bữa ăn',
             'id'      => $log->id,
+            'streak'  => $streak,
+        ], 201);
+    }
+
+    /**
+     * Lưu nhiều món cùng lúc (mâm/bàn tiệc) — atomic, cập nhật streak đúng 1 lần.
+     */
+    public function logBatch(Request $request, StreakService $streakService): JsonResponse
+    {
+        $data = $request->validate([
+            'meals'             => 'required|array|min:1|max:30',
+            'meals.*.food_name' => 'required|string|max:200',
+            'meals.*.serving'   => 'nullable|string|max:100',
+            'meals.*.calories'  => 'required|integer|min:0|max:10000',
+            'meals.*.protein'   => 'required|integer|min:0',
+            'meals.*.carbs'     => 'required|integer|min:0',
+            'meals.*.fat'       => 'required|integer|min:0',
+            'meals.*.sodium'    => 'required|integer|min:0',
+        ]);
+
+        $user = $request->user();
+
+        $ids = DB::transaction(function () use ($user, $data) {
+            return collect($data['meals'])
+                ->map(fn ($m) => $user->mealLogs()->create($m)->id)
+                ->all();
+        });
+
+        // recordMealActivity idempotent theo ngày → gọi 1 lần là đủ
+        $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
+
+        return response()->json([
+            'message' => 'Đã lưu ' . count($ids) . ' món',
+            'ids'     => $ids,
             'streak'  => $streak,
         ], 201);
     }

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import { useFoodAnalysis } from '@/composables/useFoodAnalysis'
+import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useMealLog } from '@/composables/useMealLog'
 import { useAuthStore } from '@/stores/auth'
 import type { FoodAnalysisResult } from '@/types/food'
 
 const route = useRoute()
 const store = useAuthStore()
+const { canUse, increment } = useGuestQuota()
+const gateOpen = ref(false)
 
 const isManual = computed(() => !!route.query.food)
 
@@ -71,6 +75,16 @@ function buildContext() {
   return { today_calories: todayConsumed.value, goal: todayGoal.value }
 }
 
+// Nhận diện có kiểm soát quota cho khách. Chỉ trừ lượt khi nhận diện thành công.
+async function runAnalyze(text?: string | null) {
+  if (!canUse('scan')) {
+    gateOpen.value = true
+    return
+  }
+  await analyze({ image: savedImage.value, text: text ?? null, context: buildContext() })
+  if (!error.value) increment('scan')
+}
+
 onMounted(async () => {
   const barcodeRaw = sessionStorage.getItem('barcode_result')
   if (barcodeRaw) {
@@ -90,11 +104,7 @@ onMounted(async () => {
 
   if (store.token) await fetchTodayStats()
 
-  await analyze({
-    image:   savedImage.value,
-    text:    text ?? null,
-    context: buildContext(),
-  })
+  await runAnalyze(text)
 })
 
 async function confirmMeal() {
@@ -118,11 +128,7 @@ async function retry() {
   displayedText.value = ''
   pendingChars        = ''
   const text = route.query.food as string | undefined
-  await analyze({
-    image:   savedImage.value,
-    text:    text ?? null,
-    context: buildContext(),
-  })
+  await runAnalyze(text)
 }
 
 onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
@@ -399,4 +405,10 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
       </div>
     </div>
   </div>
+
+  <GuestGateModal
+    v-model:open="gateOpen"
+    feature="nhận diện món ăn"
+    @dismiss="navigateTo('/home')"
+  />
 </template>

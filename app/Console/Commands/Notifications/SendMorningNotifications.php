@@ -39,6 +39,7 @@ class SendMorningNotifications extends Command
                 'type'    => 'morning',
                 'title'   => $title,
                 'body'    => $body,
+                'url'     => '/scan',
             ]);
         }
     }

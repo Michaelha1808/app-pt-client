@@ -53,6 +53,7 @@ class SendFreezeSuggestions extends Command
                 'type'    => 'streak_freeze_remind',
                 'title'   => $title,
                 'body'    => $body,
+                'url'     => '/home',
             ]);
         }
     }

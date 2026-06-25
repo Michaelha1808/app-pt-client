@@ -46,6 +46,11 @@ class User extends Authenticatable
         return $this->hasMany(NotificationSubscription::class);
     }
 
+    public function webauthnCredentials(): HasMany
+    {
+        return $this->hasMany(WebauthnCredential::class);
+    }
+
     public function streak(): HasOne
     {
         return $this->hasOne(UserStreak::class);

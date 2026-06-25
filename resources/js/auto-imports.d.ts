@@ -101,6 +101,7 @@ declare global {
   const useMealPlan: typeof import('./composables/useMealPlan').useMealPlan
   const useModel: typeof import('vue').useModel
   const useNotifications: typeof import('./composables/useNotifications').useNotifications
+  const usePasskey: typeof import('./composables/usePasskey').usePasskey
   const useProfile: typeof import('./composables/useProfile').useProfile
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
@@ -240,6 +241,7 @@ declare module 'vue' {
     readonly useMealPlan: UnwrapRef<typeof import('./composables/useMealPlan')['useMealPlan']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
+    readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>

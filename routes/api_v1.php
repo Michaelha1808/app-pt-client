@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WaterController;
+use App\Http\Controllers\Api\V1\WebAuthnController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
@@ -55,6 +56,20 @@ Route::middleware('auth:sanctum')->prefix('plan')->group(function () {
     Route::get('/', [PlanController::class, 'show']);
     Route::get('/history', [PlanController::class, 'history']);
     Route::middleware('throttle:5,1')->post('/generate', [PlanController::class, 'generate']);
+});
+
+// Passkey / WebAuthn (vân tay, Face ID)
+Route::prefix('webauthn')->group(function () {
+    // Đăng nhập bằng passkey — công khai
+    Route::middleware('throttle:10,1')->post('/login/options', [WebAuthnController::class, 'loginOptions']);
+    Route::middleware('throttle:10,1')->post('/login/verify', [WebAuthnController::class, 'loginVerify']);
+    // Đăng ký / quản lý passkey — yêu cầu đăng nhập
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/register/options', [WebAuthnController::class, 'registerOptions']);
+        Route::post('/register/verify', [WebAuthnController::class, 'registerVerify']);
+        Route::get('/status', [WebAuthnController::class, 'status']);
+        Route::delete('/', [WebAuthnController::class, 'disable']);
+    });
 });
 
 // AI chat tư vấn — cho phép khách (quota client-side), rate limit 15/min

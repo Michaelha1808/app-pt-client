@@ -1,15 +1,14 @@
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { apiFetch } from '@/utils/api'
+import { router } from '@/router'
 import { useToast } from '@/composables/useToast'
 import { useNotifications } from '@/composables/useNotifications'
 import type { User, AuthResponse, RegisterPayload } from '@/types/auth'
 
 export function useAuth() {
   const store = useAuthStore()
-  const router = useRouter()
   const { user, token, isGuest, sessionReady, isLoggedIn } = storeToRefs(store)
 
   // Đọc & xóa đích đã lưu khi bị ép login (deep-link). Bỏ qua nếu trỏ vào /auth/*.
@@ -83,7 +82,7 @@ export function useAuth() {
 
   async function logout(): Promise<void> {
     const { unsubscribeOnLogout } = useNotifications()
-    await unsubscribeOnLogout()
+    try { await unsubscribeOnLogout() } catch {}
     try { await apiFetch('/auth/logout', { method: 'POST' }) } catch {}
     store.token = null; store.user = null; store.isGuest = false
     const { success } = useToast()

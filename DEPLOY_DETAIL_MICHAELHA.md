@@ -130,7 +130,7 @@ Docker image chỉ chứa code PHP + Vue build. Các file cấu hình sau **khô
 - `docker/nginx/prod.conf` — cấu hình nginx
 - `docker/php/php.ini` — cấu hình PHP
 - `docker/postgres/init.sql` — script khởi tạo DB
-- `ecosystem.config.js` — cấu hình PM2
+- `ecosystem.config.cjs` — cấu hình PM2
 - `scripts/start.sh` — script PM2 chạy để khởi động toàn bộ stack
 
 Mỗi lần deploy, GitHub Actions chạy `git pull` trên VPS để cập nhật các file config này mà không cần rebuild image.
@@ -147,7 +147,7 @@ Kiểm tra:
 ls /var/www/app
 ```
 
-Kết quả mong đợi: thấy `docker-compose.prod.yml`, `ecosystem.config.js`, `scripts/`, `docker/`, v.v.
+Kết quả mong đợi: thấy `docker-compose.prod.yml`, `ecosystem.config.cjs`, `scripts/`, `docker/`, v.v.
 
 ---
 
@@ -382,7 +382,7 @@ Kết quả mong đợi: thấy `Pull complete` cho các layer, cuối cùng là
 ### C12 — Start toàn bộ stack qua PM2
 
 ```bash
-pm2 start /var/www/app/ecosystem.config.js
+pm2 start /var/www/app/ecosystem.config.cjs
 ```
 
 Kết quả mong đợi: thấy bảng process với `caloeye` ở status `online`.
@@ -583,11 +583,11 @@ docker compose -f /var/www/app/docker-compose.prod.yml exec -T nginx nginx -s re
 - [x] C8 — Sinh `APP_KEY`, điền vào `.env`
 - [x] C9 — `docker login` bằng Access Token
 - [x] C10 — Build và push image lần đầu (trigger GitHub Actions hoặc build thủ công)
-- [ ] C11 — `docker pull` image về VPS
-- [ ] C12 — `pm2 start`, `pm2 save`, `pm2 startup` (chạy lệnh PM2 in ra)
-- [ ] C13 — Kiểm tra: `pm2 status` online, 5 container healthy, mở được HTTPS
+- [x] C11 — `docker pull` image về VPS
+- [x] C12 — `pm2 start`, `pm2 save`, `pm2 startup` (chạy lệnh PM2 in ra)
+- [x] C13 — Kiểm tra: `pm2 status` online, 5 container healthy, mở được HTTPS
 
 ### Phần D — Test deploy tự động
-- [ ] Push 1 commit lên `main`, theo dõi GitHub Actions chạy thành công (dấu tích xanh)
-- [ ] SSH vào VPS: `pm2 status` → `online`
-- [ ] Mở `https://<yourdomain.com>` → app load đúng với code mới
+- [x] Push 1 commit lên `main`, theo dõi GitHub Actions chạy thành công (dấu tích xanh)
+- [x] SSH vào VPS: `pm2 status` → `online`
+- [x] Mở `https://<yourdomain.com>` → app load đúng với code mới

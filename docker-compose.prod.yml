@@ -127,6 +127,7 @@ services:
     volumes:
       - ./docker/nginx/prod.conf:/etc/nginx/templates/default.conf.template:ro
       - app_public:/var/www/public:ro
+      - app_storage:/var/www/storage:ro   # để symlink public/storage -> storage/app/public phục vụ được
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     environment:

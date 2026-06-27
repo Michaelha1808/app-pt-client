@@ -15,7 +15,7 @@ const route = useRoute()
 const store = useAuthStore()
 const { dishes, loading, error, detect } = useFoodDetect()
 const { canUse, increment } = useGuestQuota()
-const { logMeals } = useMealLog()
+const { todayStats, fetchTodayStats, logMeals } = useMealLog()
 const { advice, streaming: adviceStreaming, fetchAdvice } = useMealAdvice()
 
 const picks    = ref<DishPick[]>([])
@@ -25,6 +25,12 @@ const saving   = ref(false)
 const total      = computed(() => totalCalories(picks.value))
 const pickCount  = computed(() => selectedCount(picks.value))
 const savedImage = ref<string | null>(null)
+
+// ── Tác động calo hôm nay (cho nhân vật phản ứng) ──
+const todayConsumed = computed(() => todayStats.value?.total_calories ?? 0)
+const todayGoal     = computed(() => store.user?.calorie_goal ?? 2000)
+const afterEating   = computed(() => todayConsumed.value + total.value)
+const overGoal      = computed(() => afterEating.value > todayGoal.value)
 
 async function runDetect() {
   if (!canUse('scan')) {
@@ -36,12 +42,15 @@ async function runDetect() {
   if (!error.value) {
     increment('scan')
     picks.value = dishes.value.map(d => ({ ...d, selected: true, quantity: d.quantity_default }))
+    // Tự động hiển thị phân tích AI ngay sau khi nhận diện xong
+    if (pickCount.value > 0) askMealAdvice()
   }
 }
 
 onMounted(async () => {
   savedImage.value = sessionStorage.getItem('scan_image')
   sessionStorage.removeItem('scan_image')
+  if (store.token) await fetchTodayStats()
   await runDetect()
 })
 
@@ -54,7 +63,7 @@ function askMealAdvice() {
       calories: dishCalories(d, d.quantity),
     })),
     total_calories: total.value,
-    context: { goal: store.user?.calorie_goal ?? 2000 },
+    context: { goal: todayGoal.value, today_calories: todayConsumed.value },
   })
 }
 
@@ -147,6 +156,28 @@ async function confirmMeal() {
             @update:quantity="d.quantity = $event"
             @update:calories="d.calories = $event"
           />
+        </div>
+
+        <!-- Nhân vật phản ứng theo kết quả -->
+        <div
+          v-if="pickCount > 0"
+          class="mx-5 mt-4 rounded-[18px] px-4 py-4 flex items-center gap-4 animate-fadeInUp"
+          :class="overGoal ? 'bg-ios-orange/10 border border-ios-orange/25' : 'bg-calor-light border border-calor-mint/50'"
+        >
+          <CaloeyeCharacter
+            :mood="overGoal ? 'warning' : 'celebrate'"
+            :size="64"
+            :message="overGoal ? 'Cẩn thận nhé! 🔥' : 'Tuyệt vời! 🎉'"
+            bubble-dir="right"
+          />
+          <p class="flex-1 text-[14px] leading-relaxed" :class="overGoal ? 'text-ios-orange' : 'text-calor-deep'">
+            <template v-if="overGoal">
+              Bữa này khiến bạn vượt mục tiêu {{ (afterEating - todayGoal).toLocaleString('vi') }} kcal. Cân nhắc bớt món hoặc vận động thêm nhé!
+            </template>
+            <template v-else>
+              Bữa ăn này phù hợp với mục tiêu. Sau khi ăn bạn còn {{ (todayGoal - afterEating).toLocaleString('vi') }} kcal cho hôm nay.
+            </template>
+          </p>
         </div>
 
         <!-- AI nhận xét cả bữa -->

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\ChatService;
+use App\Support\UsageTracker;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,6 +25,8 @@ class ChatController extends Controller
         // Không bắt buộc auth: resolve user qua sanctum guard nếu có Bearer token (khách → null)
         $user     = $request->user('sanctum');
         $messages = $request->input('messages');
+
+        UsageTracker::record('chat', $user?->id);
 
         return response()->stream(
             function () use ($service, $user, $messages) {

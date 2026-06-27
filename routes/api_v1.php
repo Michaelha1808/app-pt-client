@@ -105,3 +105,26 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::delete('/avatar', [UserController::class, 'deleteAvatar']);
     Route::post('/change-password', [UserController::class, 'changePassword']);
 });
+
+// ── Admin (yêu cầu role = admin) ──
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/stats', [\App\Http\Controllers\Api\V1\Admin\StatsController::class, 'index']);
+
+    Route::get('/users', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'index']);
+    Route::get('/users/{user}', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'show']);
+    Route::patch('/users/{user}', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'update']);
+    Route::post('/users/{user}/suspend', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'suspend']);
+    Route::post('/users/{user}/restore', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'restore']);
+    Route::post('/users/{user}/reset-password', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'resetPassword']);
+    Route::delete('/users/{user}', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'destroy']);
+
+    Route::get('/settings', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'index']);
+    Route::put('/settings', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'update']);
+    Route::post('/settings/test/{service}', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'test']);
+
+    Route::get('/audit-logs', [\App\Http\Controllers\Api\V1\Admin\AuditLogController::class, 'index']);
+
+    Route::get('/notifications', [\App\Http\Controllers\Api\V1\Admin\NotificationController::class, 'index']);
+    Route::post('/notifications/preview', [\App\Http\Controllers\Api\V1\Admin\NotificationController::class, 'preview']);
+    Route::post('/notifications', [\App\Http\Controllers\Api\V1\Admin\NotificationController::class, 'send']);
+});

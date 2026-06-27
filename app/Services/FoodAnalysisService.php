@@ -5,17 +5,17 @@ namespace App\Services;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
-class FoodAnalysisService
+class FoodAnalysisService // cấu hình AI đọc qua SettingsService (fallback config)
 {
     private Client $http;
     private string $apiKey;
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-    public function __construct()
+    public function __construct(SettingsService $settings)
     {
-        $this->apiKey = config('services.gemini.key');
-        $this->model  = config('services.gemini.model', 'gemini-2.0-flash');
+        $this->apiKey = $settings->get('ai.api_key', config('services.gemini.key'));
+        $this->model  = $settings->get('ai.model', config('services.gemini.model', 'gemini-2.0-flash'));
         $this->http   = new Client(['timeout' => 30]);
     }
 

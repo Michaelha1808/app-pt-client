@@ -22,6 +22,15 @@ const routes: RouteRecordRaw[] = [
   { path: '/profile/edit', component: () => import('@/pages/profile/Edit.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/change-password', component: () => import('@/pages/profile/ChangePassword.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/settings/notifications', component: () => import('@/pages/settings/Notifications.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+
+  // ── Admin ──
+  { path: '/admin/login', component: () => import('@/pages/admin/Login.vue'), meta: { layout: false } },
+  { path: '/admin', component: () => import('@/pages/admin/Dashboard.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/users', component: () => import('@/pages/admin/Users.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/users/:id', component: () => import('@/pages/admin/UserDetail.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/notifications', component: () => import('@/pages/admin/Notifications.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/settings', component: () => import('@/pages/admin/Settings.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/audit-logs', component: () => import('@/pages/admin/AuditLogs.vue'), meta: { layout: 'admin', middleware: 'admin' } },
 ]
 
 export const router = createRouter({
@@ -41,6 +50,12 @@ router.beforeEach(async (to) => {
   }
   const mw = to.meta.middleware as string | undefined
   if (mw === 'guest' && auth.isLoggedIn) return '/home'
+
+  // Admin: phải đăng nhập thật + có role admin → dùng màn login admin riêng
+  if (mw === 'admin') {
+    if (!auth.isLoggedIn || !auth.isAdmin) return '/admin/login'
+    return
+  }
 
   const needAuth =
     (mw === 'auth' && !auth.isLoggedIn && !auth.isGuest) ||

@@ -372,6 +372,8 @@ Mỗi món **đã chọn** → 1 bản ghi `meal_log` (tái dùng `POST /food/lo
 
 ### Phase 2 — Polish 🟢 (phần lớn xong)
 - [x] Lời khuyên AI tổng hợp cho cả bữa — `POST /food/advise-meal` (SSE) + nút "Xem nhận xét" trong MealPicker
+- [x] **Tự động hiển thị phân tích AI** ngay sau khi nhận diện xong (không cần bấm "Xem nhận xét") — `runDetect()` gọi `askMealAdvice()`
+- [x] **Nhân vật AVO phản ứng theo kết quả** trong MealPicker (celebrate/warning theo `afterEating` vs mục tiêu calo; fetch `today` để so sánh)
 - [x] Sửa calo/đơn vị inline (chỉnh kcal/đơn vị, có affordance bút chì) trong `DishPickRow`
 - [x] Batch endpoint `POST /food/log-batch` (1 round-trip, 1 lần update streak, transaction)
 - [ ] Gộp món thành 1 "bữa" (`meal_group_id`) để xem/sửa/xóa theo cụm — chưa làm

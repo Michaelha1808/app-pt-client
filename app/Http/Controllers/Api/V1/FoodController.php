@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MealLog;
 use App\Services\FoodAnalysisService;
 use App\Services\StreakService;
+use App\Support\UsageTracker;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,8 @@ class FoodController extends Controller
                 echo "data: [DONE]\n\n";
             }, 400, $this->sseHeaders());
         }
+
+        UsageTracker::record('food_analyze', $request->user('sanctum')?->id);
 
         $image   = $request->input('image');
         $text    = $request->input('text');
@@ -93,6 +96,8 @@ class FoodController extends Controller
         if (!$request->filled('image') && !$request->filled('text')) {
             return response()->json(['message' => 'Phải cung cấp ảnh hoặc mô tả bữa ăn'], 422);
         }
+
+        UsageTracker::record('food_detect', $request->user('sanctum')?->id);
 
         try {
             $dishes = $service->detectDishes($request->input('image'), $request->input('text'));

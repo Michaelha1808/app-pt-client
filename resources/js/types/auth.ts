@@ -4,6 +4,8 @@ export interface User {
   name: string
   avatar_url: string | null
   provider: 'email' | 'google' | 'apple' | 'facebook'
+  role?: 'user' | 'admin'
+  status?: 'active' | 'suspended'
   birth_year: number | null
   gender: 'male' | 'female' | 'other' | null
   height_cm: number | null

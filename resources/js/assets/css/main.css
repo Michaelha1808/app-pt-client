@@ -60,6 +60,17 @@ html, body {
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
 
+/* ──── Admin mode: bỏ giới hạn 430px của #app để dùng layout desktop ──── */
+body.admin-mode { background: #f3f4f6; overflow: auto; }
+body.admin-mode #app {
+  max-width: 100%;
+  height: auto;
+  min-height: 100dvh;
+  background: #f3f4f6;
+  box-shadow: none;
+  overflow: visible;
+}
+
 /* ──── iOS Blur (tinted green) ──── */
 .ios-blur {
   backdrop-filter: saturate(180%) blur(20px);

@@ -26,5 +26,6 @@ storage/framework/sessions/*
 storage/framework/views/*
 public/storage
 public/hot
+public-shared/
 
 tests/

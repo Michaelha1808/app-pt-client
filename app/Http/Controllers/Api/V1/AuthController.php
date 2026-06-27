@@ -17,6 +17,10 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+        if (app(\App\Services\SettingsService::class)->get('features.registration_open', true) !== true) {
+            return response()->json(['detail' => 'Đăng ký tài khoản hiện đang tạm khoá.'], 403);
+        }
+
         $request->validate([
             'email'        => 'required|email',
             'password'     => 'required|min:8',
@@ -243,6 +247,8 @@ class AuthController extends Controller
             'name'           => $user->name,
             'avatar_url'     => $user->avatar_url,
             'provider'       => $user->provider ?? 'email',
+            'role'           => $user->role ?? 'user',
+            'status'         => $user->status ?? 'active',
             'birth_year'     => $user->birth_year,
             'gender'         => $user->gender,
             'height_cm'      => $user->height_cm !== null ? (float) $user->height_cm : null,

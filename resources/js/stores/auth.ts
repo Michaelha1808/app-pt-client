@@ -8,5 +8,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isGuest = ref(false)
   const sessionReady = ref(false)
   const isLoggedIn = computed(() => !!user.value)
-  return { user, token, isGuest, sessionReady, isLoggedIn }
+  const isAdmin = computed(() => user.value?.role === 'admin')
+  return { user, token, isGuest, sessionReady, isLoggedIn, isAdmin }
 })

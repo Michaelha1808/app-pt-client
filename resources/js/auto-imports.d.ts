@@ -12,6 +12,7 @@ declare global {
   const WATER_GOAL_ML: typeof import('./composables/useWater').WATER_GOAL_ML
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiFetch: typeof import('./utils/api').apiFetch
+  const clearAppBadge: typeof import('./utils/badge').clearAppBadge
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
   const createPinia: typeof import('pinia').createPinia
@@ -70,6 +71,7 @@ declare global {
   const safePath: typeof import('./utils/deeplink').safePath
   const selectedCount: typeof import('./utils/nutrition').selectedCount
   const setActivePinia: typeof import('pinia').setActivePinia
+  const setAppBadge: typeof import('./utils/badge').setAppBadge
   const setMapStoreSuffix: typeof import('pinia').setMapStoreSuffix
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
@@ -84,6 +86,7 @@ declare global {
   const totalMacro: typeof import('./utils/nutrition').totalMacro
   const triggerRef: typeof import('vue').triggerRef
   const unref: typeof import('vue').unref
+  const useAdmin: typeof import('./composables/useAdmin').useAdmin
   const useAttrs: typeof import('vue').useAttrs
   const useAuth: typeof import('./composables/useAuth').useAuth
   const useAuthStore: typeof import('./stores/auth').useAuthStore
@@ -152,6 +155,7 @@ declare module 'vue' {
     readonly WATER_GOAL_ML: UnwrapRef<typeof import('./composables/useWater')['WATER_GOAL_ML']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly apiFetch: UnwrapRef<typeof import('./utils/api')['apiFetch']>
+    readonly clearAppBadge: UnwrapRef<typeof import('./utils/badge')['clearAppBadge']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createPinia: UnwrapRef<typeof import('pinia')['createPinia']>
@@ -210,6 +214,7 @@ declare module 'vue' {
     readonly safePath: UnwrapRef<typeof import('./utils/deeplink')['safePath']>
     readonly selectedCount: UnwrapRef<typeof import('./utils/nutrition')['selectedCount']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
+    readonly setAppBadge: UnwrapRef<typeof import('./utils/badge')['setAppBadge']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
@@ -224,6 +229,7 @@ declare module 'vue' {
     readonly totalMacro: UnwrapRef<typeof import('./utils/nutrition')['totalMacro']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAdmin: UnwrapRef<typeof import('./composables/useAdmin')['useAdmin']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useAuth: UnwrapRef<typeof import('./composables/useAuth')['useAuth']>
     readonly useAuthStore: UnwrapRef<typeof import('./stores/auth')['useAuthStore']>

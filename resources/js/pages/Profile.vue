@@ -19,6 +19,7 @@ const connectedDevices = ref([
   { id: 'garmin', name: 'Garmin Connect', icon: '⌚', connected: false, color: '#007CC2' },
 ])
 
+const isAdmin = computed(() => user.value?.role === 'admin')
 const displayName = computed(() => user.value?.name ?? 'Người dùng')
 const displayEmail = computed(() => user.value?.email ?? '')
 const displayAvatar = computed(() => displayName.value.charAt(0).toUpperCase())
@@ -219,6 +220,20 @@ async function handleLogout() {
               <span class="text-base">🔔</span>
             </div>
             <span class="flex-1 text-left text-[15px] text-black">Cài đặt thông báo</span>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- Quản trị (chỉ hiện với admin) -->
+      <div v-if="isAdmin" class="px-5 mb-2 animate-fadeInUp delay-3" style="opacity:0">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Quản trị</p>
+        <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+          <NuxtLink to="/admin" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-8 h-8 rounded-[8px] bg-calor-green/10 flex items-center justify-center">
+              <span class="text-base">🛠️</span>
+            </div>
+            <span class="flex-1 text-left text-[15px] text-black">Trang quản trị</span>
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
         </div>

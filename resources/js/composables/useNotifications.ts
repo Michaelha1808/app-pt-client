@@ -90,7 +90,9 @@ export function useNotifications() {
 
     if (_saveTimer) clearTimeout(_saveTimer)
     _saveTimer = setTimeout(() => {
-      apiFetch('/notifications/settings', { method: 'PUT', body: flattenPatch(patch) }).catch(() => {})
+      // Gửi nguyên cấu trúc lồng nhau (vd { morning: { enabled: false } }) —
+      // backend đọc qua dot-notation $request->input('morning.enabled').
+      apiFetch('/notifications/settings', { method: 'PUT', body: patch }).catch(() => {})
     }, 400)
   }
 
@@ -132,18 +134,4 @@ function deepMerge<T extends object>(base: T, patch: Partial<T>): T {
     }
   }
   return result
-}
-
-// NotificationSettings → flat object cho API (vd: { 'morning.enabled': true })
-function flattenPatch(patch: Partial<NotificationSettings>): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
-  for (const section in patch) {
-    const val = (patch as any)[section]
-    if (typeof val === 'object') {
-      for (const key in val) {
-        out[`${section}.${key}`] = val[key]
-      }
-    }
-  }
-  return out
 }

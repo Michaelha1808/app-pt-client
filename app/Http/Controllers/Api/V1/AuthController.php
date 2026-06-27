@@ -250,7 +250,7 @@ class AuthController extends Controller
             'calorie_goal'   => $user->calorie_goal,
             'morning_notify' => $user->morning_notify ? substr($user->morning_notify, 0, 5) : null,
             'evening_notify' => $user->evening_notify ? substr($user->evening_notify, 0, 5) : null,
-            'calorie_streak' => $user->calorie_streak ?? 0,
+            'calorie_streak' => $user->streak?->current_streak ?? 0,
         ];
     }
 }

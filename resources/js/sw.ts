@@ -50,12 +50,13 @@ const firebaseApp = initializeApp({
 const messaging = getMessaging(firebaseApp)
 
 onBackgroundMessage(messaging, (payload) => {
-  const { title = 'CaloEye', body, icon } = payload.notification ?? {}
-  self.registration.showNotification(title, {
-    body,
-    icon: icon ?? '/logo/caloreye_icon_192.png',
+  // Message là data-only — title/body nằm trong payload.data
+  const data = (payload.data ?? {}) as Record<string, string>
+  self.registration.showNotification(data.title || 'CaloEye', {
+    body: data.body,
+    icon: '/logo/caloreye_icon_192.png',
     badge: '/logo/caloreye_icon_192.png',
-    data: payload.data,
+    data,
   })
 })
 

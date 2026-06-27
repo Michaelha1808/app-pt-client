@@ -8,7 +8,6 @@ use Kreait\Firebase\Exception\Messaging\InvalidArgument;
 use Kreait\Firebase\Exception\Messaging\InvalidMessage;
 use Kreait\Firebase\Exception\Messaging\NotFound;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 
 class FcmService
 {
@@ -60,9 +59,12 @@ class FcmService
     private function sendToToken(string $token, string $title, string $body, array $data = []): string
     {
         try {
+            // Data-only message (KHÔNG dùng notification payload) — để service worker
+            // luôn nhận onBackgroundMessage và tự gọi showNotification. Đây là cách
+            // đáng tin nhất cho web push trên iOS PWA (notification payload hay bị
+            // nuốt ở màn khóa khi app đóng).
             $message = CloudMessage::new()
-                ->withNotification(Notification::create($title, $body))
-                ->withData($data)
+                ->withData(array_merge($data, ['title' => $title, 'body' => $body]))
                 ->toToken($token);
 
             $this->messaging->send($message);

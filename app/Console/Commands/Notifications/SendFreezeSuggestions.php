@@ -2,14 +2,16 @@
 
 namespace App\Console\Commands\Notifications;
 
+use App\Console\Commands\Notifications\Concerns\DispatchesUserPush;
 use App\Models\NotificationLog;
-use App\Models\NotificationSubscription;
 use App\Models\UserStreak;
 use App\Services\FcmService;
 use Illuminate\Console\Command;
 
 class SendFreezeSuggestions extends Command
 {
+    use DispatchesUserPush;
+
     protected $signature   = 'notify:streak-freeze-remind';
     protected $description = 'Nhắc user dùng freeze token khi bỏ lỡ hôm qua và vẫn còn token';
 
@@ -41,27 +43,15 @@ class SendFreezeSuggestions extends Command
 
             if ($alreadySent) continue;
 
-            $title  = "💔 Ôi không! Chuỗi {$streak->current_streak} ngày bị gián đoạn";
-            $body   = "Bạn có {$streak->freeze_tokens} Freeze Token. Dùng ngay để cứu chuỗi! ❄️";
-            $tokens = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
+            $title = "💔 Ôi không! Chuỗi {$streak->current_streak} ngày bị gián đoạn";
+            $body  = "Bạn có {$streak->freeze_tokens} Freeze Token. Dùng ngay để cứu chuỗi! ❄️";
 
-            $invalid = $fcm->sendMulticast($tokens, $title, $body, ['url' => '/home', 'action' => 'freeze']);
-            $this->removeInvalidTokens($invalid);
-
-            NotificationLog::create([
-                'user_id' => $user->id,
-                'type'    => 'streak_freeze_remind',
-                'title'   => $title,
-                'body'    => $body,
-                'url'     => '/home',
-            ]);
-        }
-    }
-
-    private function removeInvalidTokens(array $tokens): void
-    {
-        if (!empty($tokens)) {
-            NotificationSubscription::whereIn('fcm_token', $tokens)->delete();
+            $this->dispatchPush($fcm, $user, [
+                'type'  => 'streak_freeze_remind',
+                'title' => $title,
+                'body'  => $body,
+                'url'   => '/home',
+            ], ['action' => 'freeze']);
         }
     }
 }

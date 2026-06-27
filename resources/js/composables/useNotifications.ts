@@ -1,6 +1,7 @@
 import { apiFetch } from '@/utils/api'
 import { getFirebaseMessaging, getToken, onMessage, VAPID_KEY } from '@/plugins/firebase'
 import { goWithAuth, safePath } from '@/utils/deeplink'
+import { setAppBadge } from '@/utils/badge'
 
 export interface NotificationSettings {
   morning: { enabled: boolean; time: string }
@@ -56,6 +57,8 @@ export function useNotifications() {
     onMessage(messaging, (payload) => {
       // Message là data-only — title/body nằm trong payload.data
       const data = payload.data ?? {}
+      // Cập nhật badge trên icon (backend gửi kèm số chưa đọc)
+      if (data.unread_count !== undefined) setAppBadge(Number(data.unread_count))
       if (Notification.permission !== 'granted') return
       const notif = new Notification(data.title || 'CaloEye', { body: data.body, icon: '/logo/caloreye_icon_192.png', data })
       notif.onclick = () => {

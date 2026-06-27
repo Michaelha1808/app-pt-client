@@ -2,14 +2,16 @@
 
 namespace App\Console\Commands\Notifications;
 
+use App\Console\Commands\Notifications\Concerns\DispatchesUserPush;
 use App\Models\NotificationLog;
-use App\Models\NotificationSubscription;
 use App\Models\UserStreak;
 use App\Services\FcmService;
 use Illuminate\Console\Command;
 
 class SendStreakRiskReminders extends Command
 {
+    use DispatchesUserPush;
+
     protected $signature   = 'notify:streak-risk';
     protected $description = 'Nhắc user chưa log bữa ăn hôm nay vào lúc 21:00 để giữ streak';
 
@@ -43,27 +45,15 @@ class SendStreakRiskReminders extends Command
 
             if ($alreadySent) continue;
 
-            $title  = "🥑 Chuỗi {$streak->current_streak} ngày sắp bị gián đoạn!";
-            $body   = 'Bạn chưa log bữa ăn nào hôm nay. Còn vài tiếng để giữ chuỗi nhé!';
-            $tokens = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
+            $title = "🥑 Chuỗi {$streak->current_streak} ngày sắp bị gián đoạn!";
+            $body  = 'Bạn chưa log bữa ăn nào hôm nay. Còn vài tiếng để giữ chuỗi nhé!';
 
-            $invalid = $fcm->sendMulticast($tokens, $title, $body, ['url' => '/home']);
-            $this->removeInvalidTokens($invalid);
-
-            NotificationLog::create([
-                'user_id' => $user->id,
-                'type'    => 'streak_risk',
-                'title'   => $title,
-                'body'    => $body,
-                'url'     => '/home',
+            $this->dispatchPush($fcm, $user, [
+                'type'  => 'streak_risk',
+                'title' => $title,
+                'body'  => $body,
+                'url'   => '/home',
             ]);
-        }
-    }
-
-    private function removeInvalidTokens(array $tokens): void
-    {
-        if (!empty($tokens)) {
-            NotificationSubscription::whereIn('fcm_token', $tokens)->delete();
         }
     }
 }

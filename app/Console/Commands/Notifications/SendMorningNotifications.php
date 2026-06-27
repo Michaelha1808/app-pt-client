@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands\Notifications;
 
-use App\Models\NotificationLog;
-use App\Models\NotificationSubscription;
+use App\Console\Commands\Notifications\Concerns\DispatchesUserPush;
 use App\Models\User;
 use App\Services\FcmService;
 use Illuminate\Console\Command;
 
 class SendMorningNotifications extends Command
 {
+    use DispatchesUserPush;
+
     protected $signature   = 'notify:morning';
     protected $description = 'Gửi thông báo đầu ngày cho users theo giờ đã cài';
 
@@ -30,24 +31,12 @@ class SendMorningNotifications extends Command
         $body  = 'Đừng quên log bữa sáng để theo dõi calo hôm nay nhé!';
 
         foreach ($users as $user) {
-            $tokens        = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
-            $invalidTokens = $fcm->sendMulticast($tokens, $title, $body, ['url' => '/scan']);
-            $this->removeInvalidTokens($invalidTokens);
-
-            NotificationLog::create([
-                'user_id' => $user->id,
-                'type'    => 'morning',
-                'title'   => $title,
-                'body'    => $body,
-                'url'     => '/scan',
+            $this->dispatchPush($fcm, $user, [
+                'type'  => 'morning',
+                'title' => $title,
+                'body'  => $body,
+                'url'   => '/scan',
             ]);
-        }
-    }
-
-    private function removeInvalidTokens(array $tokens): void
-    {
-        if (!empty($tokens)) {
-            NotificationSubscription::whereIn('fcm_token', $tokens)->delete();
         }
     }
 }

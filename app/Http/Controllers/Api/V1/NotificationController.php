@@ -145,7 +145,11 @@ class NotificationController extends Controller
 
         [$title, $body] = $messages[$request->type];
 
-        $invalidTokens = $fcm->sendMulticast($tokens, $title, $body, ['url' => '/home']);
+        $unread = NotificationLog::where('user_id', $user->id)->whereNull('read_at')->count();
+        $invalidTokens = $fcm->sendMulticast($tokens, $title, $body, [
+            'url'          => '/home',
+            'unread_count' => (string) $unread,
+        ]);
 
         if (!empty($invalidTokens)) {
             NotificationSubscription::whereIn('fcm_token', $invalidTokens)->delete();

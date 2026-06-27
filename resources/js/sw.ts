@@ -58,6 +58,13 @@ onBackgroundMessage(messaging, (payload) => {
     badge: '/logo/caloreye_icon_192.png',
     data,
   })
+
+  // Số chưa đọc trên icon app (App Badging API) — backend gửi kèm trong data.
+  // WorkerNavigator hỗ trợ setAppBadge ngay cả khi app đang đóng.
+  const nav = self.navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+  const unread = Number(data.unread_count ?? 0)
+  if (unread > 0) nav.setAppBadge?.(unread).catch(() => {})
+  else nav.clearAppBadge?.().catch(() => {})
 })
 
 // ── Notification click → deep link ─────────────────────────────────────────

@@ -1,16 +1,18 @@
 # ── Stage 1: Build frontend ───────────────────────────────────────────────────
 FROM node:20-alpine AS frontend-builder
 
-ARG VITE_API_URL
+ARG VITE_API_URL=/api/v1
 # Firebase web config — phải có lúc BUILD vì Vite nhúng import.meta.env.VITE_* vào bundle.
 # Thiếu các biến này thì FCM client không init được → không lấy được token → không nhận push.
-ARG VITE_FIREBASE_API_KEY
-ARG VITE_FIREBASE_AUTH_DOMAIN
-ARG VITE_FIREBASE_PROJECT_ID
-ARG VITE_FIREBASE_STORAGE_BUCKET
-ARG VITE_FIREBASE_MESSAGING_SENDER_ID
-ARG VITE_FIREBASE_APP_ID
-ARG VITE_FIREBASE_VAPID_KEY
+# Đây là config PUBLIC của Firebase web (đằng nào cũng lộ trong JS client) nên hardcode default
+# an toàn — build luôn có giá trị, không phụ thuộc GitHub Secrets.
+ARG VITE_FIREBASE_API_KEY=AIzaSyCnA_jvjTgTH5HIOUacBe7d3vUA6ffficQ
+ARG VITE_FIREBASE_AUTH_DOMAIN=app-pt-5464c.firebaseapp.com
+ARG VITE_FIREBASE_PROJECT_ID=app-pt-5464c
+ARG VITE_FIREBASE_STORAGE_BUCKET=app-pt-5464c.firebasestorage.app
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID=611776948824
+ARG VITE_FIREBASE_APP_ID=1:611776948824:web:2e68dc59d2da623d52f82d
+ARG VITE_FIREBASE_VAPID_KEY=BFH2Sw_J8o-u_cxndF-WBfu806cqtmrgKMfUTdzyHIIcYLAfFyM214_oubWkkzwiY8iXAzxRYHY37ZXP8dR2Bc4
 ENV VITE_API_URL=${VITE_API_URL} \
     VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY} \
     VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN} \

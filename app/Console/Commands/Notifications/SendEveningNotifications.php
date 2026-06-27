@@ -2,15 +2,16 @@
 
 namespace App\Console\Commands\Notifications;
 
+use App\Console\Commands\Notifications\Concerns\DispatchesUserPush;
 use App\Models\MealLog;
-use App\Models\NotificationLog;
-use App\Models\NotificationSubscription;
 use App\Models\User;
 use App\Services\FcmService;
 use Illuminate\Console\Command;
 
 class SendEveningNotifications extends Command
 {
+    use DispatchesUserPush;
+
     protected $signature   = 'notify:evening';
     protected $description = 'Gửi thông báo cuối ngày cho users theo giờ đã cài';
 
@@ -37,30 +38,13 @@ class SendEveningNotifications extends Command
                 ? "Bạn đã nạp {$consumed}/{$goal} kcal. Đã đạt mục tiêu hôm nay! 🎉"
                 : "Bạn đã nạp {$consumed}/{$goal} kcal. Còn thiếu " . ($goal - $consumed) . " kcal.";
 
-            $title         = 'Tổng kết hôm nay 🌙';
-            $tokens        = $user->notificationSubscriptions->pluck('fcm_token')->toArray();
-            $invalidTokens = $fcm->sendMulticast(
-                $tokens,
-                $title,
-                $body,
-                ['url' => '/history'],
-            );
-            $this->removeInvalidTokens($invalidTokens);
-
-            NotificationLog::create([
-                'user_id' => $user->id,
-                'type'    => 'evening',
-                'title'   => $title,
-                'body'    => $body,
-                'url'     => '/history',
+            $title = 'Tổng kết hôm nay 🌙';
+            $this->dispatchPush($fcm, $user, [
+                'type'  => 'evening',
+                'title' => $title,
+                'body'  => $body,
+                'url'   => '/history',
             ]);
-        }
-    }
-
-    private function removeInvalidTokens(array $tokens): void
-    {
-        if (!empty($tokens)) {
-            NotificationSubscription::whereIn('fcm_token', $tokens)->delete();
         }
     }
 }

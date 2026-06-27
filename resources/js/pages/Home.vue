@@ -5,6 +5,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { useStreak } from '@/composables/useStreak'
 import { useWater } from '@/composables/useWater'
 import { apiFetch } from '@/utils/api'
+import { setAppBadge } from '@/utils/badge'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import HomeCalorieRing from '@/components/home/CalorieRing.vue'
 import NotificationsPermissionBanner from '@/components/notifications/PermissionBanner.vue'
@@ -43,6 +44,9 @@ watch(panelOpen, (v) => {
     unreadCount.value = 0
   }
 })
+
+// Đồng bộ badge trên icon app với số chưa đọc (mở app, đóng panel, đọc hết)
+watch(unreadCount, (n) => setAppBadge(n))
 
 const consumed = computed(() => todayStats.value?.total_calories ?? 0)
 const goal     = computed(() => store.user?.calorie_goal ?? 2000)

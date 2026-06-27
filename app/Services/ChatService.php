@@ -73,7 +73,7 @@ class ChatService
             ? "{$genderVi}, {$age} tuổi, {$height}cm, {$weight}kg"
             : "{$genderVi} (hồ sơ chưa đầy đủ)";
 
-        $streak = (int) ($user->calorie_streak ?? 0);
+        $streak = (int) ($user->streak?->current_streak ?? 0);
 
         return <<<CTX
 === HỒ SƠ NGƯỜI DÙNG (dữ liệu thật, cập nhật hôm nay) ===

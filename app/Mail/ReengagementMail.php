@@ -29,7 +29,7 @@ class ReengagementMail extends Mailable
             with: [
                 'userName'    => $this->user->name ?? 'bạn',
                 'dailyGoal'   => $this->user->calorie_goal ?? 2000,
-                'bestStreak'  => $this->user->calorie_streak ?? 0,
+                'bestStreak'  => $this->user->streak?->best_streak ?? 0,
                 'appUrl'      => config('app.url'),
             ],
         );

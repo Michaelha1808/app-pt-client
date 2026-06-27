@@ -54,10 +54,10 @@ export function useNotifications() {
     if (!messaging) return
 
     onMessage(messaging, (payload) => {
-      const { title = 'CaloEye', body } = payload.notification ?? {}
+      // Message là data-only — title/body nằm trong payload.data
       const data = payload.data ?? {}
       if (Notification.permission !== 'granted') return
-      const notif = new Notification(title, { body, icon: '/logo/caloreye_icon_192.png', data })
+      const notif = new Notification(data.title || 'CaloEye', { body: data.body, icon: '/logo/caloreye_icon_192.png', data })
       notif.onclick = () => {
         window.focus()
         goWithAuth(safePath(data.url))

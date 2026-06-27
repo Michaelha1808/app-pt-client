@@ -90,7 +90,7 @@ class MealPlanService
             'adherence'     => $adherence,
             'trend'         => $trend,
             'avg_water'     => $avgWater,
-            'streak'        => (int) ($user->calorie_streak ?? 0),
+            'streak'        => (int) ($user->streak?->current_streak ?? 0),
         ];
 
         $ctx['data_hash'] = sha1(implode('|', [

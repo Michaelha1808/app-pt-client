@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { user } = useAuth()
 const { loading, bmi, bmr, bmiLabel, age, fetchProfile, uploadAvatar, deleteAvatar } = useProfile()
+const { streakCount, fetchStreak } = useStreak()
 const { success, error: toastError } = useToast()
 const { supported: bioSupported, enabled: bioEnabled, checkSupport, fetchStatus, register: registerPasskey, disable: disablePasskey } = usePasskey()
 const bioBusy = ref(false)
@@ -24,6 +25,7 @@ const displayAvatar = computed(() => displayName.value.charAt(0).toUpperCase())
 
 onMounted(async () => {
   if (await checkSupport()) fetchStatus()
+  fetchStreak()
   await fetchProfile()
   if (user.value?.calorie_goal) calorieGoal.value = user.value.calorie_goal
 })
@@ -161,7 +163,7 @@ async function handleLogout() {
             </div>
             <div class="w-px bg-white/20"/>
             <div class="flex-1 text-center">
-              <p class="text-[20px] font-bold">{{ user?.calorie_streak ?? 0 }}</p>
+              <p class="text-[20px] font-bold">{{ streakCount }}</p>
               <p class="text-[11px] text-white/70">Ngày liên tiếp</p>
               <p class="text-[10px] text-white/60 mt-0.5">🔥 Streak</p>
             </div>

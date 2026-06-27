@@ -9,7 +9,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="h-svh flex flex-col items-center justify-center select-none overflow-hidden"
+    class="h-dvh flex flex-col items-center justify-center select-none overflow-hidden"
     style="background: linear-gradient(160deg, #0F6E56 0%, #18A874 50%, #9FE1CB 100%)"
   >
     <!-- Background leaf decoration -->

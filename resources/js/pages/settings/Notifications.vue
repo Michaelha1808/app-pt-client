@@ -148,31 +148,7 @@ async function handleRequestPermission() {
         </div>
       </div>
 
-      <!-- EMAIL -->
-      <div class="px-4 mt-4">
-        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Email</p>
-        <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
-          <div class="flex items-center gap-3 px-4 py-3.5">
-            <div class="w-8 h-8 rounded-[8px] bg-ios-blue/15 flex items-center justify-center flex-shrink-0">
-              <span class="text-base">✉️</span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-[15px] text-black">Nhắc quay lại</p>
-              <p class="text-[13px] text-ios-gray mt-0.5">Gửi sau 7 ngày không hoạt động</p>
-            </div>
-            <button
-              class="relative w-[51px] h-[31px] rounded-full transition-colors duration-200 flex-shrink-0"
-              :class="settings.email_reengagement.enabled ? 'bg-ios-green' : 'bg-ios-gray3'"
-              @click="updateSetting({ email_reengagement: { enabled: !settings.email_reengagement.enabled } })"
-            >
-              <span
-                class="absolute top-[2px] w-[27px] h-[27px] bg-white rounded-full shadow transition-all duration-200"
-                :class="settings.email_reengagement.enabled ? 'left-[22px]' : 'left-[2px]'"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- Email nhắc quay lại (sau 7 ngày) chạy ngầm — không hiện toggle cho user -->
     </template>
   </div>
 </template>

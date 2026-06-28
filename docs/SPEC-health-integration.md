@@ -17,7 +17,7 @@
 ### Ràng buộc quan trọng (đã chốt)
 | Provider | Có cloud API? | Khả thi với PWA | Ghi chú |
 |---|---|---|---|
-| **Strava** | ✅ OAuth2 + Webhook | ✅ **MVP** | Token hết hạn mỗi ~6h, phải refresh |
+| **Strava** | ✅ OAuth2 + Webhook | ✅ **MVP** | Token hết hạn mỗi ~6h, phải refresh. ⚠️ **API nay yêu cầu tài khoản Strava trả phí** (subscriber) mới tạo được API app — Free Account bị chặn (xác nhận 2026-06). Đã chốt: sẽ subscribe. |
 | **Fitbit / Garmin** | ✅ OAuth2 | ✅ Phase sau | Kiến trúc gần giống Strava |
 | Apple Health | ❌ Không có server API | ❌ | Cần app native (HealthKit) — ngoài scope PWA |
 | Google Fit | ⚠️ REST đang deprecate | ❌ | Google đẩy sang Health Connect (native) |
@@ -235,8 +235,9 @@ STRAVA_WEBHOOK_VERIFY_TOKEN=
 > - ⬜ **Phase 0 (CUỐI CÙNG — khi có kinh phí):** đăng ký Strava app tại https://www.strava.com/settings/api, điền `STRAVA_*` trong `.env`, set webhook URL public (ngrok khi dev), `queue:work` + `schedule:work` (đã có sẵn service `queue`/`scheduler` trong docker-compose). Sau đó test live: kết nối → backfill → tạo activity trên Strava → webhook → xuất hiện trong feed + cộng calo.
 
 ### Phase 0 — Chuẩn bị (½ ngày)
-- [ ] Đăng ký Strava API app, lấy client id/secret, set redirect URI.
-- [ ] Thêm config + env keys (+ `.env.example`).
+- [ ] **Subscribe Strava** (API gated sau paywall — bắt buộc trước khi tạo app).
+- [ ] Đăng ký Strava API app, lấy client id/secret, set Authorization Callback Domain.
+- [x] Thêm config + env keys (+ `.env.example`). *(code đã có; chỉ cần điền giá trị thật vào `.env`)*
 
 ### Phase 1 — Connect flow (1–2 ngày)
 - [x] Migration `health_connections`.

@@ -2,7 +2,9 @@
 const { user } = useAuth()
 const { loading, bmi, bmr, bmiLabel, age, fetchProfile, uploadAvatar, deleteAvatar } = useProfile()
 const { streakCount, fetchStreak } = useStreak()
+const { isConnected, isAvailable, fetchConnections, connect, disconnect } = useHealthIntegration()
 const { success, error: toastError } = useToast()
+const stravaConnecting = ref(false)
 const { supported: bioSupported, enabled: bioEnabled, checkSupport, fetchStatus, register: registerPasskey, disable: disablePasskey } = usePasskey()
 const bioBusy = ref(false)
 
@@ -13,11 +15,6 @@ const calorieGoal = ref(2000)
 
 const darkMode = ref(false)
 
-const connectedDevices = ref([
-  { id: 'strava', name: 'Strava', icon: '🏃', connected: true, color: '#FC4C02' },
-  { id: 'health', name: 'Apple Health', icon: '❤️', connected: false, color: '#FF2D55' },
-  { id: 'garmin', name: 'Garmin Connect', icon: '⌚', connected: false, color: '#007CC2' },
-])
 
 const isAdmin = computed(() => user.value?.role === 'admin')
 const displayName = computed(() => user.value?.name ?? 'Người dùng')
@@ -27,6 +24,7 @@ const displayAvatar = computed(() => displayName.value.charAt(0).toUpperCase())
 onMounted(async () => {
   if (await checkSupport()) fetchStatus()
   fetchStreak()
+  fetchConnections()
   await fetchProfile()
   if (user.value?.calorie_goal) calorieGoal.value = user.value.calorie_goal
 })
@@ -48,9 +46,21 @@ async function toggleBiometric() {
   }
 }
 
-function toggleDevice(id: string) {
-  const d = connectedDevices.value.find(d => d.id === id)
-  if (d) d.connected = !d.connected
+async function connectStrava() {
+  stravaConnecting.value = true
+  try {
+    await connect('strava')   // redirect cả tab sang Strava
+  } catch {
+    stravaConnecting.value = false
+    toastError('Không thể bắt đầu kết nối Strava')
+  }
+}
+
+async function disconnectStrava() {
+  if (!confirm('Ngắt kết nối Strava?')) return
+  const ok = await disconnect('strava')
+  if (ok) success('Đã ngắt kết nối Strava')
+  else toastError('Không thể ngắt kết nối')
 }
 
 function triggerAvatarPicker() {
@@ -268,28 +278,43 @@ async function handleLogout() {
         </div>
       </div>
 
-      <!-- Kết nối thiết bị -->
+      <!-- Kết nối ứng dụng sức khoẻ -->
       <div class="px-5 mb-2 animate-fadeInUp delay-4" style="opacity:0">
-        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Kết nối thiết bị</p>
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Kết nối ứng dụng sức khoẻ</p>
         <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
-          <div v-for="(device, idx) in connectedDevices" :key="device.id">
-            <div class="flex items-center gap-3 px-4 py-3.5">
-              <div
-                class="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg"
-                :style="`background: ${device.color}18`"
-              >{{ device.icon }}</div>
-              <span class="flex-1 text-[15px] text-black">{{ device.name }}</span>
-              <button
-                class="px-3 py-1 rounded-full text-[12px] font-semibold ios-press"
-                :class="device.connected
-                  ? 'bg-ios-red/10 text-ios-red'
-                  : 'bg-ios-blue/10 text-ios-blue'"
-                @click="toggleDevice(device.id)"
-              >{{ device.connected ? 'Ngắt kết nối' : 'Kết nối' }}</button>
+          <!-- Strava -->
+          <div class="flex items-center gap-3 px-4 py-3.5">
+            <div class="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg" style="background: #FC4C0218">🏃</div>
+            <div class="flex-1 min-w-0">
+              <span class="text-[15px] text-black">Strava</span>
+              <p v-if="isConnected('strava')" class="text-[12px] text-ios-gray mt-0.5">Đã kết nối · tự đồng bộ buổi tập</p>
             </div>
-            <div v-if="idx < connectedDevices.length - 1" class="ios-separator mx-4"/>
+            <button
+              v-if="isConnected('strava')"
+              class="px-3 py-1 rounded-full text-[12px] font-semibold bg-ios-red/10 text-ios-red ios-press"
+              @click="disconnectStrava"
+            >Ngắt kết nối</button>
+            <button
+              v-else-if="isAvailable('strava')"
+              class="px-3 py-1 rounded-full text-[12px] font-semibold bg-ios-blue/10 text-ios-blue ios-press disabled:opacity-50"
+              :disabled="stravaConnecting"
+              @click="connectStrava"
+            >{{ stravaConnecting ? '...' : 'Kết nối' }}</button>
+            <span v-else class="text-[12px] text-ios-gray bg-ios-gray6 px-2.5 py-1 rounded-full">Sắp ra mắt</span>
           </div>
+
+          <div class="ios-separator mx-4"/>
+
+          <!-- Link sang feed hoạt động + log thủ công -->
+          <NuxtLink to="/activities" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-9 h-9 rounded-[10px] bg-ios-orange/12 flex items-center justify-center text-lg">📋</div>
+            <span class="flex-1 text-[15px] text-black">Nhật ký hoạt động</span>
+            <svg viewBox="0 0 24 24" class="w-4 h-4 text-ios-gray3" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </NuxtLink>
         </div>
+        <p class="text-[12px] text-ios-gray mt-2 px-1 leading-snug">
+          Không có Strava? Bạn vẫn tự thêm buổi tập trong Nhật ký hoạt động để cộng calo đốt.
+        </p>
       </div>
 
       <!-- Tài khoản -->

@@ -54,17 +54,34 @@ export function useNotifications() {
     const messaging = getFirebaseMessaging()
     if (!messaging) return
 
-    onMessage(messaging, (payload) => {
+    onMessage(messaging, async (payload) => {
       // Message là data-only — title/body nằm trong payload.data
       const data = payload.data ?? {}
       // Cập nhật badge trên icon (backend gửi kèm số chưa đọc)
       if (data.unread_count !== undefined) setAppBadge(Number(data.unread_count))
       if (Notification.permission !== 'granted') return
-      const notif = new Notification(data.title || 'CaloEye', { body: data.body, icon: '/logo/caloreye_icon_192.png', data })
-      notif.onclick = () => {
-        window.focus()
-        goWithAuth(safePath(data.url))
-        notif.close()
+
+      // Hiển thị qua service worker chứ KHÔNG dùng new Notification(). Trên iOS PWA,
+      // new Notification() khi app đang mở (foreground) hay bị nuốt — đây là lý do
+      // thông báo sáng/trưa (giờ hay mở app) không hiện trong khi tối (máy khóa) thì có.
+      // showNotification() từ SW hiển thị tin cậy ở cả foreground lẫn background, và
+      // click sẽ đi qua cùng handler notificationclick của SW.
+      try {
+        const reg = await navigator.serviceWorker.ready
+        await reg.showNotification(data.title || 'CaloEye', {
+          body: data.body,
+          icon: '/logo/caloreye_icon_192.png',
+          badge: '/logo/caloreye_icon_192.png',
+          data,
+        })
+      } catch {
+        // Fallback cho trình duyệt không có service worker (vd desktop cũ)
+        const notif = new Notification(data.title || 'CaloEye', { body: data.body, icon: '/logo/caloreye_icon_192.png', data })
+        notif.onclick = () => {
+          window.focus()
+          goWithAuth(safePath(data.url))
+          notif.close()
+        }
       }
     })
   }

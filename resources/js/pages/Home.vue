@@ -49,6 +49,7 @@ watch(panelOpen, (v) => {
 watch(unreadCount, (n) => setAppBadge(n))
 
 const consumed = computed(() => todayStats.value?.total_calories ?? 0)
+const burned   = computed(() => todayStats.value?.calories_burned ?? 0)
 const goal     = computed(() => store.user?.calorie_goal ?? 2000)
 
 const macros = computed(() => {
@@ -159,11 +160,27 @@ onMounted(() => {
     <div class="mx-5 mb-4 bg-white rounded-[20px] px-5 py-6 shadow-sm animate-fadeInUp delay-1" style="opacity:0">
       <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-4">Calo hôm nay</h2>
       <div class="flex justify-center">
-        <HomeCalorieRing :consumed="consumed" :goal="goal" />
+        <HomeCalorieRing :consumed="consumed" :goal="goal" :burned="burned" />
       </div>
       <div v-if="loading" class="mt-3 flex justify-center">
         <div class="w-4 h-4 rounded-full border-2 border-calor-green border-t-transparent animate-spin"/>
       </div>
+
+      <!-- Entry: hoạt động / log buổi tập (đường chính cho user không có Strava) -->
+      <NuxtLink
+        to="/activities"
+        class="mt-4 flex items-center gap-3 bg-ios-orange/8 rounded-[14px] px-4 py-3 ios-press"
+      >
+        <div class="w-9 h-9 rounded-full bg-ios-orange/15 flex items-center justify-center text-lg">🏃</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[14px] font-semibold text-black">Hoạt động hôm nay</p>
+          <p class="text-[12px] text-ios-gray mt-0.5">
+            <template v-if="burned > 0">Đã đốt {{ burned.toLocaleString('vi') }} kcal · Thêm buổi tập</template>
+            <template v-else>Thêm buổi tập để cộng calo đốt</template>
+          </p>
+        </div>
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-ios-gray3" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+      </NuxtLink>
     </div>
 
     <!-- Macros card -->

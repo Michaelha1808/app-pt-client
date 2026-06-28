@@ -15,6 +15,7 @@ export interface TodayStats {
   total_protein: number
   total_carbs: number
   total_fat: number
+  calories_burned: number
   meals: MealLogEntry[]
 }
 

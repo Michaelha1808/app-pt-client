@@ -52,4 +52,13 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
     ],
 
+    // Tích hợp app sức khoẻ — OAuth đọc dữ liệu buổi tập (Phase B).
+    'strava' => [
+        'client_id'     => env('STRAVA_CLIENT_ID'),
+        'client_secret' => env('STRAVA_CLIENT_SECRET'),
+        'redirect'      => env('STRAVA_REDIRECT_URI'),
+        'verify_token'  => env('STRAVA_WEBHOOK_VERIFY_TOKEN'),
+        'webhook_url'   => env('STRAVA_WEBHOOK_URL'),   // URL public HTTPS cho subscription (ngrok khi dev)
+    ],
+
 ];

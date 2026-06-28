@@ -3,6 +3,8 @@
 > **App:** CaloEye — Vue 3 SPA + Laravel 13 + Tailwind CSS 4 (iOS-style PWA)
 > **Cập nhật lần cuối:** 2026-06-25
 > **Trạng thái tổng:** 🟢 Đã implement CẢ HAI: (1) tư vấn hội thoại trong Chat, (2) trang `/plan` riêng + bảng `meal_plans` (daily + monthly). Còn lại: Phase 3 (activity_logs) + scheduled job.
+>
+> ⚠️ **Phase 3 `activity_logs` đã được CHUYỂN sang `SPEC-health-integration.md`**: buổi tập (cả manual lẫn từ Strava) ghi chung bảng `health_activities`, không tạo bảng `activity_logs` riêng. Xem §4.6 spec health.
 
 ---
 

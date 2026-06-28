@@ -216,12 +216,19 @@ class FoodController extends Controller
             ->orderBy('logged_at')
             ->get(['id', 'food_name', 'serving', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
 
+        // Calo đốt hôm nay (mọi nguồn: manual + provider) → FE tính net calories.
+        $caloriesBurned = (int) $request->user()
+            ->healthActivities()
+            ->whereDate('started_at', today())
+            ->sum('calories');
+
         return response()->json([
-            'total_calories' => $logs->sum('calories'),
-            'total_protein'  => $logs->sum('protein'),
-            'total_carbs'    => $logs->sum('carbs'),
-            'total_fat'      => $logs->sum('fat'),
-            'meals'          => $logs->map(fn ($log) => [
+            'total_calories'   => $logs->sum('calories'),
+            'total_protein'    => $logs->sum('protein'),
+            'total_carbs'      => $logs->sum('carbs'),
+            'total_fat'        => $logs->sum('fat'),
+            'calories_burned'  => $caloriesBurned,
+            'meals'            => $logs->map(fn ($log) => [
                 'id'        => $log->id,
                 'food_name' => $log->food_name,
                 'serving'   => $log->serving,

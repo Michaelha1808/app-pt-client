@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\IntegrationController;
+use App\Http\Controllers\Api\V1\IntegrationWebhookController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\StreakController;
@@ -96,6 +98,22 @@ Route::middleware('auth:sanctum')->prefix('water')->group(function () {
     Route::get('/today',        [WaterController::class, 'today']);
     Route::post('/log',         [WaterController::class, 'log']);
     Route::delete('/log/{waterLog}', [WaterController::class, 'delete']);
+});
+
+// ── Tích hợp app sức khoẻ (Strava…) + log buổi tập thủ công ──
+// Callback OAuth + webhook: route PUBLIC (provider gọi vào, không có Sanctum token).
+Route::middleware('throttle:30,1')->get('/integrations/{provider}/callback', [IntegrationController::class, 'callback']);
+Route::get('/webhooks/{provider}', [IntegrationWebhookController::class, 'verify']);
+Route::post('/webhooks/{provider}', [IntegrationWebhookController::class, 'receive']);
+
+Route::middleware('auth:sanctum')->prefix('integrations')->group(function () {
+    Route::get('/', [IntegrationController::class, 'index']);
+    Route::get('/activities', [IntegrationController::class, 'activities']);
+    Route::middleware('throttle:30,1')->post('/activities/manual', [IntegrationController::class, 'storeManual']);
+    Route::delete('/activities/{activity}', [IntegrationController::class, 'destroyManual']);
+    // Connect/disconnect provider (đặt SAU activities để không nuốt path 'activities')
+    Route::middleware('throttle:10,1')->get('/{provider}/connect', [IntegrationController::class, 'connect']);
+    Route::delete('/{provider}', [IntegrationController::class, 'disconnect']);
 });
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {

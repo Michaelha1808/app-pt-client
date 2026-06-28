@@ -21,9 +21,19 @@ class StreakService
 
     /**
      * Gọi mỗi khi user log bữa ăn thành công.
-     * Trả về thông tin để frontend hiển thị (streak tăng / milestone mới).
+     * Alias giữ tương thích — buổi tập (manual / Strava) dùng recordActivity().
      */
     public function recordMealActivity(User $user): array
+    {
+        return $this->recordActivity($user);
+    }
+
+    /**
+     * Ghi nhận MỘT hoạt động bất kỳ trong ngày (bữa ăn hoặc buổi tập) để giữ streak.
+     * Idempotent theo ngày: gọi nhiều lần cùng ngày chỉ tính 1 (guard last_activity_date).
+     * Trả về thông tin để frontend hiển thị (streak tăng / milestone mới).
+     */
+    public function recordActivity(User $user): array
     {
         $streak = UserStreak::firstOrCreate(
             ['user_id' => $user->id],

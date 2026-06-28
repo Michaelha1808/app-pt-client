@@ -78,6 +78,16 @@ class User extends Authenticatable
         return $this->hasMany(StreakMilestone::class);
     }
 
+    public function healthConnections(): HasMany
+    {
+        return $this->hasMany(HealthConnection::class);
+    }
+
+    public function healthActivities(): HasMany
+    {
+        return $this->hasMany(HealthActivity::class);
+    }
+
     protected function casts(): array
     {
         return [

@@ -6,6 +6,7 @@ use App\Console\Commands\Notifications\SendMiddayNotifications;
 use App\Console\Commands\Notifications\SendMorningNotifications;
 use App\Console\Commands\Notifications\SendReengagementEmails;
 use App\Console\Commands\Notifications\SendStreakRiskReminders;
+use App\Jobs\RefreshExpiringTokensJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -31,3 +32,6 @@ Schedule::command(SendStreakRiskReminders::class)->everyMinute();
 
 // Gợi ý freeze token — chạy mỗi ngày lúc 09:00
 Schedule::command(SendFreezeSuggestions::class)->dailyAt('09:00');
+
+// Health: refresh token provider sắp hết hạn (Strava ~6h) — chạy mỗi giờ
+Schedule::job(new RefreshExpiringTokensJob())->hourly();

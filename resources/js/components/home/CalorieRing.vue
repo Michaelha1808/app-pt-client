@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 const props = defineProps<{
   consumed: number
   goal: number
+  burned?: number
   size?: number
 }>()
 
@@ -11,8 +12,12 @@ const animated = ref(false)
 const radius = 90
 const circumference = 2 * Math.PI * radius  // ≈ 565.5
 
-const progress = computed(() => Math.min(props.consumed / props.goal, 1))
-const remaining = computed(() => Math.max(props.goal - props.consumed, 0))
+// Net calories: calo đốt (tập luyện) bù lại budget → net = nạp − đốt.
+const burned = computed(() => props.burned ?? 0)
+const net = computed(() => props.consumed - burned.value)
+
+const progress = computed(() => Math.min(Math.max(net.value / props.goal, 0), 1))
+const remaining = computed(() => Math.max(props.goal - net.value, 0))
 const offset = computed(() => circumference * (1 - (animated.value ? progress.value : 0)))
 
 const ringColor = computed(() => {
@@ -96,7 +101,7 @@ onMounted(() => {
       <div class="flex flex-col items-center">
         <div class="flex items-center gap-1">
           <div class="w-2.5 h-2.5 rounded-full bg-ios-orange"/>
-          <span class="text-[13px] font-semibold text-black">320</span>
+          <span class="text-[13px] font-semibold text-black">{{ burned.toLocaleString('vi') }}</span>
         </div>
         <span class="text-[11px] text-ios-gray mt-0.5">Tập luyện</span>
       </div>

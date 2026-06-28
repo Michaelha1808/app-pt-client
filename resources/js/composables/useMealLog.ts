@@ -13,7 +13,7 @@ export function useMealLog() {
     try {
       todayStats.value = await apiFetch<TodayStats>('/food/today')
     } catch {
-      todayStats.value = { total_calories: 0, total_protein: 0, total_carbs: 0, total_fat: 0, meals: [] }
+      todayStats.value = { total_calories: 0, total_protein: 0, total_carbs: 0, total_fat: 0, calories_burned: 0, meals: [] }
     } finally {
       loading.value = false
     }

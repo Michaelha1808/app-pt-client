@@ -2,6 +2,7 @@ import { apiFetch } from '@/utils/api'
 import { getFirebaseMessaging, getToken, onMessage, VAPID_KEY } from '@/plugins/firebase'
 import { goWithAuth, safePath } from '@/utils/deeplink'
 import { setAppBadge } from '@/utils/badge'
+import { setupNotifySound, playNotifySound } from '@/utils/notifySound'
 
 export interface NotificationSettings {
   morning: { enabled: boolean; time: string }
@@ -51,6 +52,9 @@ export function useNotifications() {
       await _subscribeToBackend()
     }
 
+    // Mồi âm thanh thông báo ở tương tác đầu tiên để vượt rào autoplay của iOS
+    setupNotifySound()
+
     const messaging = getFirebaseMessaging()
     if (!messaging) return
 
@@ -60,6 +64,9 @@ export function useNotifications() {
       // Cập nhật badge trên icon (backend gửi kèm số chưa đọc)
       if (data.unread_count !== undefined) setAppBadge(Number(data.unread_count))
       if (Notification.permission !== 'granted') return
+
+      // Âm thanh thông báo riêng (chỉ khi app đang mở — foreground)
+      playNotifySound()
 
       // Hiển thị qua service worker chứ KHÔNG dùng new Notification(). Trên iOS PWA,
       // new Notification() khi app đang mở (foreground) hay bị nuốt — đây là lý do

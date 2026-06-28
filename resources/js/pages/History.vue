@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useMealLog } from '@/composables/useMealLog'
+import { useHealthIntegration } from '@/composables/useHealthIntegration'
+import { activityMeta } from '@/types/health'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const store = useAuthStore()
 const { historyStats, loading, fetchHistory, deleteLog } = useMealLog()
+const { activities, loading: actLoading, hasMore, fetchActivities } = useHealthIntegration()
 
 const activeTab    = ref<'food' | 'exercise'>('food')
 const selectedDate = ref(todayStr())
@@ -12,6 +15,34 @@ const selectedDate = ref(todayStr())
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
+
+// Tổng calo đốt hôm nay = các buổi tập có started_at trong ngày hôm nay
+const todayBurned = computed(() =>
+  activities.value
+    .filter(a => a.started_at.slice(0, 10) === todayStr())
+    .reduce((s, a) => s + (a.calories ?? 0), 0),
+)
+
+function fmtActDuration(sec: number): string {
+  const m = Math.round(sec / 60)
+  if (m < 60) return `${m} phút`
+  const h = Math.floor(m / 60)
+  return `${h}h${m % 60 ? ` ${m % 60}p` : ''}`
+}
+
+function fmtActDistance(m: number | null): string | null {
+  if (!m) return null
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`
+}
+
+function fmtActDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+// Lần đầu mở tab Tập luyện mới tải dữ liệu (lazy)
+watch(activeTab, (t) => {
+  if (t === 'exercise' && store.token && activities.value.length === 0) fetchActivities(true)
+})
 
 const weekDays  = computed(() => historyStats.value?.week ?? [])
 const meals     = computed(() => historyStats.value?.meals ?? [])
@@ -252,17 +283,69 @@ onMounted(async () => {
 
     <!-- Exercise tab -->
     <template v-else>
-      <div class="px-5 pt-2 animate-fadeInUp" style="opacity:0">
+      <!-- Auth gate -->
+      <div v-if="!store.token" class="mx-5 bg-white rounded-[18px] p-6 text-center animate-fadeInUp" style="opacity:0">
+        <p class="text-[32px] mb-2">🏋️</p>
+        <p class="text-[17px] font-semibold text-black mb-1">Đăng nhập để xem lịch sử</p>
+        <p class="text-[13px] text-ios-gray mb-4">Lịch sử tập luyện được lưu khi bạn đăng nhập</p>
+        <NuxtLink to="/auth/login" class="inline-block bg-ios-blue text-white text-[15px] font-semibold px-6 py-2.5 rounded-[12px] ios-press">
+          Đăng nhập
+        </NuxtLink>
+      </div>
+
+      <div v-else class="px-5 pt-2 animate-fadeInUp" style="opacity:0">
         <div class="bg-white rounded-[18px] overflow-hidden shadow-sm mb-4">
           <div class="px-5 py-4 border-b-hairline border-ios-gray5">
             <p class="text-[13px] text-ios-gray">Tổng hôm nay</p>
-            <p class="text-[26px] font-bold text-ios-green">0 <span class="text-[14px] font-normal text-ios-gray">kcal đốt cháy</span></p>
+            <p class="text-[26px] font-bold text-ios-green">{{ todayBurned.toLocaleString('vi') }} <span class="text-[14px] font-normal text-ios-gray">kcal đốt cháy</span></p>
           </div>
-          <div class="px-5 py-6 flex flex-col items-center gap-3 text-center">
+
+          <!-- Loading -->
+          <div v-if="actLoading && activities.length === 0" class="px-5 py-8 flex justify-center">
+            <div class="w-7 h-7 rounded-full border-2 border-ios-green border-t-transparent animate-spin"/>
+          </div>
+
+          <!-- Empty -->
+          <div v-else-if="activities.length === 0" class="px-5 py-6 flex flex-col items-center gap-3 text-center">
             <CaloeyeCharacter mood="exercise" :size="72" />
             <p class="text-[13px] text-ios-gray">Chưa có dữ liệu tập luyện</p>
           </div>
+
+          <!-- Danh sách buổi tập -->
+          <div v-else>
+            <div v-for="(a, idx) in activities" :key="a.id">
+              <div class="flex items-center gap-3 px-4 py-3.5">
+                <div class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
+                  {{ activityMeta(a.type).emoji }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[15px] font-medium text-black truncate">
+                    {{ a.name || activityMeta(a.type).label }}
+                    <span v-if="a.source === 'manual'" class="text-[11px] text-ios-gray font-normal">· tự thêm</span>
+                  </p>
+                  <p class="text-[12px] text-ios-gray mt-0.5">
+                    {{ fmtActDate(a.started_at) }} · {{ fmtActDuration(a.duration_seconds) }}<template v-if="fmtActDistance(a.distance_meters)"> · {{ fmtActDistance(a.distance_meters) }}</template>
+                  </p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-[15px] font-semibold text-ios-green">{{ a.calories ?? 0 }}</p>
+                  <p class="text-[11px] text-ios-gray">kcal</p>
+                </div>
+              </div>
+              <div v-if="idx < activities.length - 1" class="ios-separator mx-4"/>
+            </div>
+
+            <button
+              v-if="hasMore"
+              class="w-full py-2.5 text-[14px] text-ios-blue font-medium ios-press border-t-hairline border-ios-gray5"
+              :disabled="actLoading"
+              @click="fetchActivities(false)"
+            >
+              {{ actLoading ? 'Đang tải...' : 'Xem thêm' }}
+            </button>
+          </div>
         </div>
+
         <div class="bg-gradient-to-br from-ios-blue/5 to-ios-teal/5 border border-ios-blue/10 rounded-[18px] p-4">
           <p class="text-[15px] font-semibold text-black mb-1">Kết nối thiết bị</p>
           <p class="text-[13px] text-ios-gray mb-3">Đồng bộ dữ liệu từ Strava, Apple Health, Garmin...</p>

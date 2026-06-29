@@ -193,7 +193,10 @@ class StravaProvider implements HealthProvider
             'external_id'      => (string) $a['id'],
             'type'             => self::TYPE_MAP[$sport] ?? 'other',
             'name'             => $a['name'] ?? null,
-            'started_at'       => isset($a['start_date']) ? Carbon::parse($a['start_date']) : now(),
+            // start_date là UTC; đưa về app timezone để khớp cột timestamp (naive) — cùng quy ước với manual log.
+            'started_at'       => isset($a['start_date'])
+                ? Carbon::parse($a['start_date'])->setTimezone(config('app.timezone'))
+                : now(),
             'duration_seconds' => (int) ($a['moving_time'] ?? $a['elapsed_time'] ?? 0),
             'distance_meters'  => isset($a['distance']) ? (int) round($a['distance']) : null,
             'calories'         => isset($a['calories']) ? (int) round($a['calories']) : null,

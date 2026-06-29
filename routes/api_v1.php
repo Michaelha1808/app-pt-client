@@ -41,6 +41,9 @@ Route::middleware('throttle:10,1')->post('/food/analyze', [FoodController::class
 // Multi-dish detect — public (guest được phép), rate limit 10/min
 Route::middleware('throttle:10,1')->post('/food/detect', [FoodController::class, 'detect']);
 
+// Ghi nhận kết quả user chốt cho 1 lần detect (dataset cải thiện model) — public, rate limit 20/min
+Route::middleware('throttle:20,1')->post('/food/detect/{sample}/feedback', [FoodController::class, 'detectFeedback']);
+
 // Nhận xét AI cho cả bữa (SSE) — public, rate limit 10/min
 Route::middleware('throttle:10,1')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
 
@@ -141,6 +144,18 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/settings/test/{service}', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'test']);
 
     Route::get('/audit-logs', [\App\Http\Controllers\Api\V1\Admin\AuditLogController::class, 'index']);
+
+    // Thư viện món ăn chuẩn (nutrition DB) — CRUD
+    Route::get('/dishes', [\App\Http\Controllers\Api\V1\Admin\DishController::class, 'index']);
+    Route::post('/dishes', [\App\Http\Controllers\Api\V1\Admin\DishController::class, 'store']);
+    Route::put('/dishes/{dish}', [\App\Http\Controllers\Api\V1\Admin\DishController::class, 'update']);
+    Route::delete('/dishes/{dish}', [\App\Http\Controllers\Api\V1\Admin\DishController::class, 'destroy']);
+
+    // Dataset nhận diện (AI đoán vs user sửa) — duyệt + xoá
+    Route::get('/dataset/stats', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'stats']);
+    Route::get('/dataset', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'index']);
+    Route::get('/dataset/{sample}', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'show']);
+    Route::delete('/dataset/{sample}', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'destroy']);
 
     Route::get('/notifications', [\App\Http\Controllers\Api\V1\Admin\NotificationController::class, 'index']);
     Route::post('/notifications/preview', [\App\Http\Controllers\Api\V1\Admin\NotificationController::class, 'preview']);

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\FoodDetectionSample;
 use App\Models\MealLog;
+use App\Services\DishCatalogService;
 use App\Services\FoodAnalysisService;
+use App\Services\FoodSampleService;
 use App\Services\StreakService;
 use App\Support\UsageTracker;
 use Carbon\Carbon;
@@ -86,8 +89,12 @@ class FoodController extends Controller
         );
     }
 
-    public function detect(Request $request, FoodAnalysisService $service): JsonResponse
-    {
+    public function detect(
+        Request $request,
+        FoodAnalysisService $service,
+        FoodSampleService $samples,
+        DishCatalogService $catalog,
+    ): JsonResponse {
         $request->validate([
             'image' => 'nullable|string',
             'text'  => 'nullable|string|max:500',
@@ -100,11 +107,55 @@ class FoodController extends Controller
         UsageTracker::record('food_detect', $request->user('sanctum')?->id);
 
         try {
-            $dishes = $service->detectDishes($request->input('image'), $request->input('text'));
-            return response()->json(['dishes' => $dishes]);
+            $image    = $request->input('image');
+            $text     = $request->input('text');
+            // Gợi ý tên: danh sách món chuẩn + cặp dễ nhầm học từ dataset → tăng tỉ lệ khớp thư viện.
+            $aiDishes = $service->detectDishes(
+                $image,
+                $text,
+                $catalog->names(),
+                $samples->nameCorrectionExamples(),
+            );
+
+            // Thu thập mẫu (AI đoán RAW) để cải thiện model — best-effort, không chặn luồng chính.
+            $sample = $samples->capture(
+                $image,
+                $text,
+                $aiDishes,
+                $request->user('sanctum')?->id,
+                $service->modelName(),
+            );
+
+            // Grounding: thay calo/macro/tên bằng giá trị chuẩn từ thư viện nutrition (nếu khớp).
+            $dishes = $catalog->ground($aiDishes);
+
+            return response()->json([
+                'dishes'       => $dishes,
+                'detection_id' => $sample?->id,
+            ]);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Không thể nhận diện món ăn. Vui lòng thử lại.'], 500);
         }
+    }
+
+    /**
+     * Ghi nhận kết quả user chốt cho 1 lần detect (AI đoán vs user sửa) → dataset cải thiện model.
+     * Public (guest cũng gửi được), không chặn nếu lỗi.
+     */
+    public function detectFeedback(Request $request, FoodDetectionSample $sample, FoodSampleService $samples): JsonResponse
+    {
+        $data = $request->validate([
+            'saved'               => 'nullable|boolean',
+            'dishes'              => 'required|array|max:30',
+            'dishes.*.food_name'  => 'required|string|max:200',
+            'dishes.*.calories'   => 'required|integer|min:0|max:10000',
+            'dishes.*.quantity'   => 'required|numeric|min:0|max:99',
+            'dishes.*.selected'   => 'required|boolean',
+        ]);
+
+        $samples->recordFeedback($sample, $data['dishes'], (bool) ($data['saved'] ?? false));
+
+        return response()->json(['message' => 'ok']);
     }
 
     public function adviseMeal(Request $request, FoodAnalysisService $service): StreamedResponse

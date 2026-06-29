@@ -19,6 +19,12 @@ class FoodAnalysisService // cấu hình AI đọc qua SettingsService (fallback
         $this->http   = new Client(['timeout' => 30]);
     }
 
+    /** Tên model Gemini đang dùng (để ghi kèm dataset). */
+    public function modelName(): string
+    {
+        return $this->model;
+    }
+
     /**
      * Gọi Gemini với JSON mode để lấy structured nutrition data (non-streaming).
      *
@@ -164,7 +170,7 @@ PROMPT;
      * @return array<int,array<string,mixed>>
      * @throws \RuntimeException
      */
-    public function detectDishes(?string $image, ?string $text): array
+    public function detectDishes(?string $image, ?string $text, array $catalogNames = [], array $corrections = []): array
     {
         $parts = [];
 
@@ -178,6 +184,7 @@ PROMPT;
         }
 
         $subject = $text ? "bữa ăn được mô tả: \"{$text}\"" : 'bữa ăn trong ảnh';
+        $hint    = $this->buildNameHint($catalogNames, $corrections);
         $parts[] = [
             'text' => <<<PROMPT
 Liệt kê TẤT CẢ món ăn/đồ uống nhìn thấy trong {$subject} (mỗi món 1 phần tử). Trả về JSON đúng format, không thêm text nào khác:
@@ -187,7 +194,7 @@ Quy tắc:
 - unit_type = "countable" nếu là vật phẩm rời đếm được (nem, trứng, viên, miếng, cái bánh...), unit_label dùng: cái/quả/miếng/viên. quantity_default = số đơn vị thấy trong ảnh.
 - unit_type = "portion" nếu là khẩu phần liều lượng không đếm rời được (cơm, canh, phở, salad, nước chấm, miến...), unit_label dùng: chén/tô/đĩa/phần/ly. quantity_default = 1.
 - calories LUÔN tính cho 1 đơn vị (1 cái / 1 khẩu phần chuẩn), KHÔNG nhân số lượng.
-- Bỏ qua vật không phải đồ ăn/uống. Nếu không có món nào: {"dishes":[]}.
+- Bỏ qua vật không phải đồ ăn/uống. Nếu không có món nào: {"dishes":[]}.{$hint}
 PROMPT,
         ];
 
@@ -219,6 +226,29 @@ PROMPT,
         } catch (GuzzleException $e) {
             throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Dựng đoạn gợi ý tên cho prompt: danh sách món chuẩn (ưu tiên dùng đúng) + cặp dễ nhầm từ dataset.
+     *
+     * @param  array<int,string> $catalogNames
+     * @param  array<int,array{from:string,to:string}> $corrections
+     */
+    private function buildNameHint(array $catalogNames, array $corrections): string
+    {
+        $hint = '';
+
+        if ($catalogNames !== []) {
+            $list = implode(', ', $catalogNames);
+            $hint .= "\n- Nếu món khớp với danh sách phổ biến sau thì DÙNG ĐÚNG tên trong danh sách (giữ nguyên dấu): {$list}. Nếu không khớp, đặt tên tiếng Việt tự nhiên.";
+        }
+
+        if ($corrections !== []) {
+            $pairs = implode('; ', array_map(fn ($c) => "\"{$c['from']}\" → \"{$c['to']}\"", $corrections));
+            $hint .= "\n- Một số trường hợp trước đây hay nhận nhầm (đoán → đúng), tránh lặp lại: {$pairs}.";
+        }
+
+        return $hint;
     }
 
     /**

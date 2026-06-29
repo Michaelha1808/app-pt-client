@@ -48,3 +48,7 @@ frontend/public/fallback-*.js
 _ide_helper.php
 Homestead.json
 Homestead.yaml
+
+# ML pipeline artifacts (ảnh người dùng + venv) — không commit
+/ml/out/
+/ml/.venv/

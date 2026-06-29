@@ -7,20 +7,22 @@ import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useMealLog } from '@/composables/useMealLog'
 import { useMealAdvice } from '@/composables/useMealAdvice'
 import { useAuthStore } from '@/stores/auth'
+import { apiFetch } from '@/utils/api'
 import { dishCalories, dishMacro, totalCalories, selectedCount, formatQty } from '@/utils/nutrition'
 import type { DishPick } from '@/types/food'
 import type { FoodAnalysisResult } from '@/types/food'
 
 const route = useRoute()
 const store = useAuthStore()
-const { dishes, loading, error, detect } = useFoodDetect()
+const { dishes, detectionId, loading, error, detect } = useFoodDetect()
 const { canUse, increment } = useGuestQuota()
 const { todayStats, fetchTodayStats, logMeals } = useMealLog()
 const { advice, streaming: adviceStreaming, fetchAdvice } = useMealAdvice()
 
-const picks    = ref<DishPick[]>([])
-const gateOpen = ref(false)
-const saving   = ref(false)
+const picks        = ref<DishPick[]>([])
+const gateOpen     = ref(false)
+const saving       = ref(false)
+const feedbackSent = ref(false)
 
 const total      = computed(() => totalCalories(picks.value))
 const pickCount  = computed(() => selectedCount(picks.value))
@@ -53,6 +55,31 @@ onMounted(async () => {
   if (store.token) await fetchTodayStats()
   await runDetect()
 })
+
+// Gửi dataset feedback (AI đoán vs user chốt) để cải thiện model — best-effort, không chặn UI.
+async function sendDetectFeedback(saved: boolean) {
+  if (feedbackSent.value || !detectionId.value || picks.value.length === 0) return
+  feedbackSent.value = true
+  try {
+    await apiFetch(`/food/detect/${detectionId.value}/feedback`, {
+      method: 'POST',
+      body: {
+        saved,
+        dishes: picks.value.map(d => ({
+          food_name: d.food_name,
+          calories:  d.calories,   // calo/1 đơn vị (đã sửa nếu có)
+          quantity:  d.quantity,
+          selected:  d.selected,
+        })),
+      },
+    })
+  } catch {
+    // im lặng: thu dataset không được làm hỏng trải nghiệm
+  }
+}
+
+// Nếu rời màn mà chưa lưu (chụp lại / thoát) vẫn ghi lại tín hiệu (saved=false).
+onBeforeUnmount(() => { sendDetectFeedback(false) })
 
 function askMealAdvice() {
   const selected = picks.value.filter(d => d.selected)
@@ -90,6 +117,7 @@ async function confirmMeal() {
     })
 
   await logMeals(results)
+  await sendDetectFeedback(true)
   await new Promise(r => setTimeout(r, 400))
   navigateTo('/home')
 }
@@ -155,6 +183,7 @@ async function confirmMeal() {
             @update:selected="d.selected = $event"
             @update:quantity="d.quantity = $event"
             @update:calories="d.calories = $event"
+            @update:food_name="d.food_name = $event"
           />
         </div>
 

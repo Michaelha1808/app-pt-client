@@ -35,10 +35,13 @@ export interface DetectedDish {
   fat: number
   sodium: number
   confidence: number
+  source?: 'catalog' | 'ai'   // 'catalog' = calo lấy từ thư viện chuẩn; 'ai' = AI ước tính
+  dish_id?: number | null     // id món trong thư viện nếu khớp
 }
 
 export interface DetectResponse {
   dishes: DetectedDish[]
+  detection_id?: number | null   // id mẫu dataset để gửi feedback (AI đoán vs user sửa)
 }
 
 /** Dòng trong màn chọn món (UI state) */

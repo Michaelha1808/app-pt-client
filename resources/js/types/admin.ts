@@ -146,3 +146,74 @@ export interface UsersQuery {
   page?: number
   per_page?: number
 }
+
+// ── Thư viện món ăn (nutrition DB) ──
+export interface DishRow {
+  id: number
+  name: string
+  aliases: string[]
+  unit_type: 'countable' | 'portion'
+  unit_label: string
+  serving: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  sodium: number
+}
+
+export type DishInput = Omit<DishRow, 'id'>
+
+// ── Dataset nhận diện (AI đoán vs user sửa) ──
+export interface DatasetStats {
+  total: number
+  with_correction: number
+  saved: number
+  with_image: number
+}
+
+export interface DatasetRow {
+  id: number
+  input_type: 'image' | 'text'
+  has_image: boolean
+  text_input: string | null
+  model: string | null
+  ai_count: number
+  has_correction: boolean
+  saved: boolean
+  created_at: string
+}
+
+export interface DatasetDishAi {
+  food_name: string
+  unit_type?: string
+  unit_label?: string
+  serving?: string
+  quantity_default?: number
+  calories: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  sodium?: number
+  confidence?: number
+}
+
+export interface DatasetDishCorrected {
+  food_name: string
+  calories: number
+  quantity: number
+  selected: boolean
+}
+
+export interface DatasetDetail {
+  id: number
+  input_type: 'image' | 'text'
+  text_input: string | null
+  model: string | null
+  ai_dishes: DatasetDishAi[]
+  corrected_dishes: DatasetDishCorrected[] | null
+  has_correction: boolean
+  saved: boolean
+  created_at: string
+  image: string | null   // data URI base64
+}

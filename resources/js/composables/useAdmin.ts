@@ -3,6 +3,7 @@ import type {
   AdminStats, AdminUserRow, AdminUserDetail, Paginated,
   AdminSettings, AuditLogRow, UsersQuery,
   NotificationSegment, NotificationPreview, NotificationCampaign,
+  DishRow, DishInput, DatasetStats, DatasetRow, DatasetDetail,
 } from '@/types/admin'
 
 function qs(params: Record<string, unknown>): string {
@@ -62,9 +63,37 @@ export function useAdmin() {
   const fetchCampaigns = (params: Record<string, unknown> = {}) =>
     apiFetch<Paginated<NotificationCampaign>>(`/admin/notifications${qs(params)}`)
 
+  // ── Thư viện món ăn (nutrition DB) ──
+  const fetchDishes = (params: { q?: string; page?: number; per_page?: number } = {}) =>
+    apiFetch<Paginated<DishRow>>(`/admin/dishes${qs(params as Record<string, unknown>)}`)
+
+  const createDish = (payload: DishInput) =>
+    apiFetch<DishRow>('/admin/dishes', { method: 'POST', body: payload })
+
+  const updateDish = (id: number, payload: DishInput) =>
+    apiFetch<DishRow>(`/admin/dishes/${id}`, { method: 'PUT', body: payload })
+
+  const deleteDish = (id: number) =>
+    apiFetch<{ message: string }>(`/admin/dishes/${id}`, { method: 'DELETE' })
+
+  // ── Dataset nhận diện ──
+  const fetchDatasetStats = () =>
+    apiFetch<DatasetStats>('/admin/dataset/stats')
+
+  const fetchDataset = (params: { only_corrections?: boolean; input_type?: string; page?: number } = {}) =>
+    apiFetch<Paginated<DatasetRow>>(`/admin/dataset${qs(params as Record<string, unknown>)}`)
+
+  const fetchDatasetSample = (id: number) =>
+    apiFetch<DatasetDetail>(`/admin/dataset/${id}`)
+
+  const deleteDatasetSample = (id: number) =>
+    apiFetch<{ message: string }>(`/admin/dataset/${id}`, { method: 'DELETE' })
+
   return {
     fetchStats, fetchUsers, fetchUser, updateUser, suspendUser, restoreUser,
     resetUserPassword, deleteUser, fetchSettings, saveSettings, testService, fetchAuditLogs,
     previewNotification, sendNotification, fetchCampaigns,
+    fetchDishes, createDish, updateDish, deleteDish,
+    fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample,
   }
 }

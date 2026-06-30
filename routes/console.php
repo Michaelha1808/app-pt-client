@@ -6,6 +6,7 @@ use App\Console\Commands\Notifications\SendMiddayNotifications;
 use App\Console\Commands\Notifications\SendMorningNotifications;
 use App\Console\Commands\Notifications\SendReengagementEmails;
 use App\Console\Commands\Notifications\SendStreakRiskReminders;
+use App\Console\Commands\Notifications\SendWaterReminders;
 use App\Jobs\RefreshExpiringTokensJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -25,6 +26,10 @@ Schedule::command(SendMiddayNotifications::class)->dailyAt('12:00');
 
 // Thông báo cuối ngày — chạy mỗi phút, tự filter theo giờ từng user
 Schedule::command(SendEveningNotifications::class)->everyMinute()->withoutOverlapping(5)->runInBackground();
+
+// Nhắc uống nước — 2 mốc/ngày (10:00 & 16:00), chỉ gửi user chưa đủ 2 lít
+Schedule::command(SendWaterReminders::class)->dailyAt('10:00')->withoutOverlapping(5);
+Schedule::command(SendWaterReminders::class)->dailyAt('16:00')->withoutOverlapping(5);
 
 // Email re-engagement — chạy mỗi ngày lúc 09:00
 Schedule::command(SendReengagementEmails::class)->dailyAt('09:00');

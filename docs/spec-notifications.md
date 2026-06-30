@@ -424,6 +424,7 @@ def send_reengagement_emails():
 - [x] `app/Console/Commands/Notifications/SendMorningNotifications.php` — `notify:morning`, filter theo giờ từng user
 - [x] `app/Console/Commands/Notifications/SendMiddayNotifications.php` — `notify:midday`, tính `remaining_kcal`
 - [x] `app/Console/Commands/Notifications/SendEveningNotifications.php` — `notify:evening`, tính `consumed_kcal`
+- [x] `app/Console/Commands/Notifications/SendWaterReminders.php` — `notify:water`, chạy 2 mốc/ngày (10:00 & 16:00), chỉ nhắc user chưa đủ 2L (luôn bật, không toggle riêng)
 - [x] `app/Console/Commands/Notifications/SendReengagementEmails.php` — `notify:reengagement`, throttle 7 ngày
 - [x] `app/Mail/ReengagementMail.php` + `resources/views/emails/reengagement.blade.php`
 - [x] `app/Services/FcmService.php` — gửi push qua kreait/laravel-firebase

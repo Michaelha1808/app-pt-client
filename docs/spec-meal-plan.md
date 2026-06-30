@@ -550,6 +550,7 @@ export type PlanStreamEvent =
 
 ### Phase 3 — Đối chiếu thực hiện (P2) 🔴
 
+- [x] **Nhiệm vụ hằng ngày theo kế hoạch** (Home): `GET /home/daily-tasks` (`DailyTaskController`) lấy `workouts[0]` từ kế hoạch `daily` mới nhất → hiển thị task tập luyện trên `DailyTasksCard.vue`, đánh dấu hoàn thành nếu hôm nay đã có `health_activity`. Chưa có plan → CTA "Tạo kế hoạch".
 - [ ] Bảng `activity_logs` (log tập luyện thực tế)
 - [ ] So sánh kế hoạch vs thực tế (calo nạp/đốt) → hiển thị % hoàn thành kế hoạch
 - [ ] Feedback vào prompt: "hôm qua bạn hoàn thành 80% kế hoạch"

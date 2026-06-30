@@ -41,4 +41,33 @@ trait DispatchesUserPush
             NotificationSubscription::whereIn('fcm_token', $invalid)->delete();
         }
     }
+
+    /**
+     * Danh sách 'HH:MM' của N phút gần nhất (gồm phút hiện tại) theo timezone app.
+     * Dùng cho command everyMinute để có dung sai: nếu scheduler lỡ đúng phút cài
+     * (server tải cao / deploy / command trước chạy quá lâu), phút sau vẫn bắt kịp.
+     * Kết hợp với alreadySentToday() để mỗi user chỉ nhận đúng 1 lần/ngày.
+     *
+     * @return string[]
+     */
+    protected function recentMinutes(int $minutes = 5): array
+    {
+        $now = now(config('app.timezone'));
+
+        return collect(range(0, max(0, $minutes - 1)))
+            ->map(fn ($i) => $now->copy()->subMinutes($i)->format('H:i'))
+            ->all();
+    }
+
+    /**
+     * Đã gửi thông báo loại $type cho user trong hôm nay chưa (chống gửi trùng
+     * khi dùng cửa sổ recentMinutes()).
+     */
+    protected function alreadySentToday(User $user, string $type): bool
+    {
+        return NotificationLog::where('user_id', $user->id)
+            ->where('type', $type)
+            ->whereDate('created_at', now(config('app.timezone'))->toDateString())
+            ->exists();
+    }
 }

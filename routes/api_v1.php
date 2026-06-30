@@ -51,6 +51,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
+
+    // Nhiệm vụ tập luyện hôm nay theo kế hoạch AI
+    Route::get('/home/daily-tasks', [\App\Http\Controllers\Api\V1\DailyTaskController::class, 'index']);
 });
 
 // Kế hoạch ăn uống & tập luyện (AI) — auth required

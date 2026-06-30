@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useWater } from '@/composables/useWater'
+import { apiFetch } from '@/utils/api'
+import { navigateTo } from '@/utils/navigate'
 
 const props = defineProps<{
   mealLogged: boolean
@@ -10,7 +12,41 @@ const { totalMl, isCompleted: waterCompleted, percentage: waterPct, logWater } =
 
 const QUICK_AMOUNTS = [150, 250, 500]
 
-const allDone = computed(() => props.mealLogged && waterCompleted.value)
+interface WorkoutTask {
+  name: string
+  type: string | null
+  duration_min: number | null
+  done: boolean
+}
+
+// Nhiệm vụ tập luyện cá nhân hóa theo kế hoạch AI (null = chưa có kế hoạch).
+const workout = ref<WorkoutTask | null>(null)
+const hasPlan = ref(true)   // mặc định true để tránh CTA nhấp nháy trước khi tải xong
+
+onMounted(async () => {
+  try {
+    const r = await apiFetch<{ has_plan: boolean; workout: WorkoutTask | null }>('/home/daily-tasks')
+    hasPlan.value = r.has_plan
+    workout.value = r.workout
+  } catch {
+    // Không tải được kế hoạch → giữ task mặc định, không chặn UI
+  }
+})
+
+const workoutSubtitle = computed(() => {
+  const w = workout.value
+  if (!w) return ''
+  const parts: string[] = []
+  if (w.duration_min) parts.push(`${w.duration_min} phút`)
+  if (w.type) parts.push(w.type)
+  return parts.join(' · ') || 'Theo kế hoạch hôm nay'
+})
+
+const allDone = computed(() =>
+  props.mealLogged
+  && waterCompleted.value
+  && (!workout.value || workout.value.done),
+)
 </script>
 
 <template>
@@ -86,5 +122,44 @@ const allDone = computed(() => props.mealLogged && waterCompleted.value)
         </button>
       </div>
     </div>
+
+    <!-- Task 3: Tập luyện theo kế hoạch AI (chỉ khi có kế hoạch) -->
+    <template v-if="workout">
+      <div class="ios-separator mx-5" />
+      <div class="flex items-center gap-3 px-5 py-3">
+        <div
+          class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+          :class="workout.done ? 'bg-calor-green' : 'bg-ios-gray6'"
+        >
+          <svg v-if="workout.done" viewBox="0 0 24 24" class="w-4 h-4" fill="white">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+          </svg>
+          <span v-else class="text-[14px]">🏃</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[14px] font-medium text-black truncate">{{ workout.name }}</p>
+          <p class="text-[12px] text-ios-gray">{{ workout.done ? 'Đã hoàn thành' : workoutSubtitle }}</p>
+        </div>
+        <span v-if="!workout.done" class="text-[12px] text-ios-gray3">🔥</span>
+      </div>
+    </template>
+
+    <!-- Chưa có kế hoạch → gợi ý tạo để có nhiệm vụ tập luyện cá nhân hóa -->
+    <template v-else-if="!hasPlan">
+      <div class="ios-separator mx-5" />
+      <button
+        class="w-full flex items-center gap-3 px-5 py-3 text-left ios-press"
+        @click="navigateTo('/plan')"
+      >
+        <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-calor-light">
+          <span class="text-[14px]">✨</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[14px] font-medium text-calor-deep">Tạo kế hoạch tập luyện</p>
+          <p class="text-[12px] text-ios-gray">Để AI gợi ý nhiệm vụ phù hợp với bạn</p>
+        </div>
+        <span class="text-[12px] text-ios-gray3">›</span>
+      </button>
+    </template>
   </div>
 </template>

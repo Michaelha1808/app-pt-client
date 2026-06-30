@@ -47,7 +47,7 @@ services:
       - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
-      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+      - FIREBASE_CREDENTIALS=/var/www/storage/app/firebase/service_account.json
       # ── OAuth social login (Socialite) ──
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
@@ -96,7 +96,7 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
-      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+      - FIREBASE_CREDENTIALS=/var/www/storage/app/firebase/service_account.json
       # Strava: RefreshExpiringTokensJob cần để refresh token định kỳ
       - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
       - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}

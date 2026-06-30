@@ -144,7 +144,7 @@ interface HealthProvider {
 > Webhook **không** xử lý đồng bộ trong request — chỉ enqueue job (Strava yêu cầu phản hồi nhanh).
 
 ### 4.4 Jobs (queue)
-- `SyncActivityJob(connection, externalId)` — fetch chi tiết 1 activity → upsert `health_activities` → gọi `HealthStreakService`/cộng calo. Idempotent qua `unique(provider, external_id)`.
+- `SyncActivityJob(connection, externalId)` — fetch chi tiết 1 activity → upsert `health_activities` → gọi `HealthStreakService`/cộng calo. Idempotent qua `unique(provider, external_id)`. **Khi tạo MỚI activity (calo > 0)**: gửi push + `NotificationLog` (type `activity_synced`, url `/history`) chúc mừng kèm số calo đốt được. Guard `wasRecentlyCreated` → không gửi trùng lúc re-sync/backfill/retry.
 - `BackfillActivitiesJob(connection)` — chạy sau khi kết nối lần đầu, kéo N activity gần nhất.
 - `RefreshExpiringTokensJob` — cron, refresh token sắp hết hạn.
 - (cron) `PollActivitiesCommand` — fallback quét provider mỗi X giờ phòng webhook miss.

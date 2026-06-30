@@ -16,21 +16,24 @@ class SendMorningNotifications extends Command
 
     public function handle(FcmService $fcm): void
     {
-        // Lấy giờ hiện tại theo timezone app (HH:MM)
-        $now = now(config('app.timezone'))->format('H:i');
+        // Cửa sổ vài phút gần nhất (catch-up nếu scheduler lỡ đúng phút cài).
+        $window = $this->recentMinutes();
 
-        // Tìm users bật thông báo đầu ngày và giờ khớp với bây giờ
+        // Tìm users bật thông báo đầu ngày và giờ rơi vào cửa sổ.
         $users = User::where('morning_notify_enabled', true)
-            ->whereRaw("TO_CHAR(morning_notify, 'HH24:MI') = ?", [$now])
+            ->whereRaw("TO_CHAR(morning_notify, 'HH24:MI') IN (" . implode(',', array_fill(0, count($window), '?')) . ")", $window)
             ->with('notificationSubscriptions')
             ->get();
 
-        $this->info("[notify:morning] {$now} — {$users->count()} users");
+        $this->info('[notify:morning] ' . implode('/', $window) . " — {$users->count()} users");
 
         $title = 'Chào buổi sáng! ☀️';
         $body  = 'Đừng quên log bữa sáng để theo dõi calo hôm nay nhé!';
 
         foreach ($users as $user) {
+            // Chống gửi trùng: mỗi user chỉ nhận 1 lần/ngày dù cửa sổ rộng nhiều phút.
+            if ($this->alreadySentToday($user, 'morning')) continue;
+
             $this->dispatchPush($fcm, $user, [
                 'type'  => 'morning',
                 'title' => $title,

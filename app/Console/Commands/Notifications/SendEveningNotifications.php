@@ -17,18 +17,22 @@ class SendEveningNotifications extends Command
 
     public function handle(FcmService $fcm): void
     {
-        $now = now(config('app.timezone'))->format('H:i');
+        // Cửa sổ vài phút gần nhất (catch-up nếu scheduler lỡ đúng phút cài).
+        $window = $this->recentMinutes();
 
         $users = User::where('evening_notify_enabled', true)
-            ->whereRaw("TO_CHAR(evening_notify, 'HH24:MI') = ?", [$now])
+            ->whereRaw("TO_CHAR(evening_notify, 'HH24:MI') IN (" . implode(',', array_fill(0, count($window), '?')) . ")", $window)
             ->with('notificationSubscriptions')
             ->get();
 
-        $this->info("[notify:evening] {$now} — {$users->count()} users");
+        $this->info('[notify:evening] ' . implode('/', $window) . " — {$users->count()} users");
 
         $today = now(config('app.timezone'))->toDateString();
 
         foreach ($users as $user) {
+            // Chống gửi trùng: mỗi user chỉ nhận 1 lần/ngày dù cửa sổ rộng nhiều phút.
+            if ($this->alreadySentToday($user, 'evening')) continue;
+
             $consumed = MealLog::where('user_id', $user->id)
                 ->whereDate('logged_at', $today)
                 ->sum('calories');

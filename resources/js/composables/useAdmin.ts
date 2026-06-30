@@ -40,6 +40,9 @@ export function useAdmin() {
   const deleteUser = (id: number | string) =>
     apiFetch<void>(`/admin/users/${id}`, { method: 'DELETE' })
 
+  const revokeUserSession = (id: number | string, tokenId: number) =>
+    apiFetch<{ status: string }>(`/admin/users/${id}/sessions/${tokenId}`, { method: 'DELETE' })
+
   const fetchSettings = () =>
     apiFetch<AdminSettings>('/admin/settings')
 
@@ -91,7 +94,7 @@ export function useAdmin() {
 
   return {
     fetchStats, fetchUsers, fetchUser, updateUser, suspendUser, restoreUser,
-    resetUserPassword, deleteUser, fetchSettings, saveSettings, testService, fetchAuditLogs,
+    resetUserPassword, deleteUser, revokeUserSession, fetchSettings, saveSettings, testService, fetchAuditLogs,
     previewNotification, sendNotification, fetchCampaigns,
     fetchDishes, createDish, updateDish, deleteDish,
     fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample,

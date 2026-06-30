@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\WebauthnCredential;
+use App\Support\DeviceName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -161,7 +162,7 @@ class WebAuthnController extends Controller
         }
 
         $user  = $cred->user;
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         // Trả access_token + đặt refresh cookie (giống các luồng đăng nhập khác).
         // Frontend lấy user qua /auth/me sau khi set token.

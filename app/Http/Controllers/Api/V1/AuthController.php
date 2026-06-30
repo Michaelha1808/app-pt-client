@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\DeviceName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -47,7 +48,7 @@ class AuthController extends Controller
             'calorie_goal' => $request->calorie_goal ?? 2000,
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
@@ -68,7 +69,7 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
@@ -107,9 +108,16 @@ class AuthController extends Controller
         }
 
         $user = $personalToken->tokenable;
+
+        // Giữ nguyên nhãn thiết bị qua mỗi lần refresh (token cũ xoá, token mới
+        // mang lại đúng tên) — nếu là token legacy thì gán nhãn theo UA hiện tại.
+        $deviceName = $personalToken->name === DeviceName::LEGACY || $personalToken->name === ''
+            ? DeviceName::fromRequest($request)
+            : $personalToken->name;
+
         $personalToken->delete();
 
-        $newToken = $user->createToken('auth_token')->plainTextToken;
+        $newToken = $user->createToken($deviceName)->plainTextToken;
 
         return response()->json([
             'access_token' => $newToken,
@@ -159,7 +167,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         // Decode the redirect_uri from state param
         $state       = $request->query('state', '');
@@ -211,7 +219,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         $state       = $request->query('state', '');
         $redirectUri = $state ? urldecode($state) : env('FRONTEND_URL', 'http://localhost:3000') . '/auth/callback';

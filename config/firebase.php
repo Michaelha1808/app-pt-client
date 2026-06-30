@@ -50,7 +50,14 @@ return [
              *
              */
 
-            'credentials' => env('FIREBASE_CREDENTIALS', env('GOOGLE_APPLICATION_CREDENTIALS')),
+            // Ưu tiên env; nếu env không tới được PHP (vd variables_order thiếu 'E'
+            // trong php.ini của container) thì fallback về đường dẫn cố định trong
+            // storage — file service_account.json được đặt sẵn ở đây khi deploy.
+            'credentials' => env('FIREBASE_CREDENTIALS')
+                ?: env('GOOGLE_APPLICATION_CREDENTIALS')
+                ?: (file_exists(storage_path('app/firebase/service_account.json'))
+                    ? storage_path('app/firebase/service_account.json')
+                    : null),
 
             /*
              * ------------------------------------------------------------------------

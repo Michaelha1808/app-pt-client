@@ -22,7 +22,7 @@ const allDone = computed(() => props.mealLogged && waterCompleted.value)
       </div>
     </div>
 
-    <!-- Task 1: Log bữa ăn -->
+    <!-- Task 1: Ghi lại bữa ăn -->
     <div class="flex items-center gap-3 px-5 pb-3">
       <div
         class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
@@ -34,7 +34,7 @@ const allDone = computed(() => props.mealLogged && waterCompleted.value)
         <span v-else class="text-[14px]">🍽️</span>
       </div>
       <div class="flex-1">
-        <p class="text-[14px] font-medium text-black">Log bữa ăn</p>
+        <p class="text-[14px] font-medium text-black">Ghi lại bữa ăn</p>
         <p class="text-[12px] text-ios-gray">{{ mealLogged ? 'Đã hoàn thành' : 'Chụp ảnh hoặc nhập tay' }}</p>
       </div>
       <span v-if="!mealLogged" class="text-[12px] text-ios-gray3">+🥑</span>

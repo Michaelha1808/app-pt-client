@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\AuditLogger;
+use App\Support\DeviceName;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -188,7 +189,42 @@ class UserController extends Controller
                 'plans'      => $u->mealPlans()->count(),
                 'passkeys'   => $u->webauthnCredentials()->count(),
             ],
+            'sessions'   => $this->sessions($u),
             'updated_at' => optional($u->updated_at)->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Phiên đăng nhập (Sanctum personal access token). Tên token = nhãn thiết bị
+     * (suy từ User-Agent lúc đăng nhập). Mỗi lần /auth/refresh token được làm mới
+     * nên last_used_at phản ánh hoạt động gần nhất của thiết bị.
+     */
+    private function sessions(User $u): array
+    {
+        return $u->tokens()
+            ->orderByDesc('last_used_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($t) => [
+                'id'           => $t->id,
+                'device'       => DeviceName::display($t->name),
+                'last_used_at' => optional($t->last_used_at)->toIso8601String(),
+                'created_at'   => optional($t->created_at)->toIso8601String(),
+            ])
+            ->all();
+    }
+
+    /** Thu hồi (đăng xuất) một phiên đăng nhập cụ thể của user. */
+    public function revokeSession(User $user, int $tokenId): JsonResponse
+    {
+        $deleted = $user->tokens()->whereKey($tokenId)->delete();
+
+        if (!$deleted) {
+            return response()->json(['detail' => 'Không tìm thấy phiên đăng nhập'], 404);
+        }
+
+        AuditLogger::log('user.revoke_session', 'user', (string) $user->id, ['token_id' => $tokenId]);
+
+        return response()->json(['status' => 'revoked']);
     }
 }

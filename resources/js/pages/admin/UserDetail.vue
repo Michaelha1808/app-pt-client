@@ -10,7 +10,7 @@ import type { AdminUserDetail } from '@/types/admin'
 
 const route = useRoute()
 const router = useRouter()
-const { fetchUser, updateUser, suspendUser, restoreUser, resetUserPassword, deleteUser } = useAdmin()
+const { fetchUser, updateUser, suspendUser, restoreUser, resetUserPassword, deleteUser, revokeUserSession } = useAdmin()
 const { extractError } = useAuth()
 const { user: me } = storeToRefs(useAuthStore())
 const toast = useToast()
@@ -81,6 +81,35 @@ async function onDelete() {
   if (!confirm('Xoá tài khoản này?')) return
   try { await deleteUser(id); toast.success('Đã xoá'); router.push('/admin/users') }
   catch (e) { toast.error(extractError(e)) }
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const diff = Date.now() - d.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'vừa xong'
+  if (mins < 60) return `${mins} phút trước`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} giờ trước`
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function deviceIcon(device: string): string {
+  if (/iPhone|iPad|iPod|Android/i.test(device)) return '📱'
+  if (/Windows|macOS|Linux|ChromeOS/i.test(device)) return '💻'
+  return '🌐'
+}
+
+async function onRevokeSession(tokenId: number) {
+  if (!confirm('Thu hồi phiên đăng nhập này? Thiết bị sẽ bị đăng xuất.')) return
+  try {
+    await revokeUserSession(id, tokenId)
+    if (user.value) user.value.sessions = user.value.sessions.filter(s => s.id !== tokenId)
+    toast.success('Đã thu hồi phiên')
+  } catch (e) {
+    toast.error(extractError(e))
+  }
 }
 
 const statItems = computed(() => {
@@ -195,6 +224,24 @@ onMounted(load)
               <li class="flex justify-between"><span class="text-gray-500">Buổi trưa</span><span>{{ user.notify.midday ? '✅' : '—' }}</span></li>
               <li class="flex justify-between"><span class="text-gray-500">Buổi tối</span><span>{{ user.notify.evening ? '✅' : '—' }}</span></li>
               <li class="flex justify-between"><span class="text-gray-500">Email re-engage</span><span>{{ user.notify.email_reengagement ? '✅' : '—' }}</span></li>
+            </ul>
+          </div>
+
+          <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 class="font-semibold text-gray-800 mb-3">Thiết bị đăng nhập</h2>
+            <p v-if="!user.sessions.length" class="text-sm text-gray-400">Không có phiên đăng nhập nào.</p>
+            <ul v-else class="space-y-2">
+              <li v-for="s in user.sessions" :key="s.id" class="flex items-center gap-2 text-sm">
+                <span class="text-base">{{ deviceIcon(s.device) }}</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-gray-800 truncate">{{ s.device }}</div>
+                  <div class="text-xs text-gray-400">Hoạt động: {{ fmtTime(s.last_used_at) }}</div>
+                </div>
+                <button
+                  class="text-xs px-2 py-1 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 shrink-0"
+                  @click="onRevokeSession(s.id)"
+                >Thu hồi</button>
+              </li>
             </ul>
           </div>
 

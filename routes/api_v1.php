@@ -134,6 +134,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/users/{user}/suspend', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'suspend']);
     Route::post('/users/{user}/restore', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'restore']);
     Route::post('/users/{user}/reset-password', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'resetPassword']);
+    Route::delete('/users/{user}/sessions/{token}', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'revokeSession']);
     Route::delete('/users/{user}', [\App\Http\Controllers\Api\V1\Admin\UserController::class, 'destroy']);
 
     Route::get('/settings', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'index']);

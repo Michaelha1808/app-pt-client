@@ -50,7 +50,15 @@ export interface AdminUserDetail extends AdminUserRow {
   suspend_reason: string | null
   notify: { morning: boolean; midday: boolean; evening: boolean; email_reengagement: boolean }
   stats: { meal_logs: number; water_logs: number; plans: number; passkeys: number }
+  sessions: AdminUserSession[]
   updated_at: string
+}
+
+export interface AdminUserSession {
+  id: number
+  device: string
+  last_used_at: string | null
+  created_at: string | null
 }
 
 export interface Paginated<T> {

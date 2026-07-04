@@ -199,14 +199,16 @@ function goTo(to: string) {
     >
       <!-- Glow ring -->
       <div class="absolute inset-0 rounded-full bg-calor-green animate-glow-pulse" style="margin: -8px"/>
-      <!-- Character -->
+      <!-- Character — chỉ hiển thị nửa thân trên (chân dung), cắt bỏ phần chân -->
       <div class="relative" :class="isDragging ? '' : 'char-idle'">
-        <img
-          :src="'/logo/AVO-mascot-nobg.png'"
-          class="w-[72px] h-[72px] object-contain select-none drop-shadow-lg"
-          draggable="false"
-          alt="AVO"
-        />
+        <div class="w-[72px] h-[72px] rounded-full overflow-hidden bg-calor-light drop-shadow-lg flex items-start justify-center">
+          <img
+            :src="'/logo/AVO-mascot-nobg.png'"
+            class="w-[82px] max-w-none h-auto select-none"
+            draggable="false"
+            alt="AVO"
+          />
+        </div>
       </div>
       <!-- Notification dot -->
       <div class="absolute top-0 right-0 w-3 h-3 rounded-full bg-ios-orange border-2 border-white"/>

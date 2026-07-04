@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useMealPlan } from '@/composables/useMealPlan'
-import type { DailyPlan, MonthlyPlan, PlanScope } from '@/types/plan'
+import type { DailyPlan, MonthlyPlan, PlanScope, WeeklyPlan } from '@/types/plan'
 
 const { plan, reasoning, isStale, loading, generating, error, fetchPlan, generate } = useMealPlan()
 
 const scope = ref<PlanScope>('daily')
 
 const dailyPlan   = computed(() => (scope.value === 'daily' ? plan.value as DailyPlan | null : null))
+const weeklyPlan  = computed(() => (scope.value === 'weekly' ? plan.value as WeeklyPlan | null : null))
 const monthlyPlan = computed(() => (scope.value === 'monthly' ? plan.value as MonthlyPlan | null : null))
+
+// Thứ hôm nay theo chuẩn ISO (1 = Thứ 2 … 7 = Chủ nhật) để làm nổi ngày hiện tại.
+const todayIso = ((new Date().getDay() + 6) % 7) + 1
+
+const SCOPE_LABEL: Record<PlanScope, string> = {
+  daily: 'ngày mai', weekly: 'tuần này', monthly: 'tháng này',
+}
 
 const SLOT_LABEL: Record<string, string> = {
   breakfast: 'Bữa sáng', lunch: 'Bữa trưa', dinner: 'Bữa tối', snack: 'Bữa phụ',
@@ -47,6 +55,11 @@ onMounted(() => fetchPlan('daily'))
         >Ngày mai</button>
         <button
           class="flex-1 h-9 rounded-[9px] text-[14px] font-medium transition-colors"
+          :class="scope === 'weekly' ? 'bg-white text-black shadow-sm' : 'text-ios-gray'"
+          @click="switchScope('weekly')"
+        >Tuần này</button>
+        <button
+          class="flex-1 h-9 rounded-[9px] text-[14px] font-medium transition-colors"
           :class="scope === 'monthly' ? 'bg-white text-black shadow-sm' : 'text-ios-gray'"
           @click="switchScope('monthly')"
         >Tháng này</button>
@@ -70,7 +83,7 @@ onMounted(() => fetchPlan('daily'))
     <!-- Empty → cần tạo -->
     <div v-else-if="!plan && !generating" class="mx-5 mt-6 flex flex-col items-center text-center">
       <CaloeyeCharacter mood="motivate" :size="96" />
-      <p class="text-[16px] font-semibold text-black mt-3">Chưa có kế hoạch {{ scope === 'daily' ? 'ngày mai' : 'tháng này' }}</p>
+      <p class="text-[16px] font-semibold text-black mt-3">Chưa có kế hoạch {{ SCOPE_LABEL[scope] }}</p>
       <p class="text-[13px] text-ios-gray mt-1 px-6">Để AI lập kế hoạch ăn uống &amp; tập luyện dựa trên dữ liệu của bạn.</p>
       <button class="mt-4 px-6 h-12 rounded-[14px] bg-calor-green text-white text-[16px] font-semibold ios-press" @click="generate(scope)">
         Tạo kế hoạch
@@ -146,6 +159,62 @@ onMounted(() => fetchPlan('daily'))
           <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2">Lời khuyên</h2>
           <ul class="space-y-1.5">
             <li v-for="(t, i) in dailyPlan.tips" :key="i" class="text-[13px] text-black flex gap-2">
+              <span class="text-calor-green">•</span><span>{{ t }}</span>
+            </li>
+          </ul>
+        </div>
+      </template>
+
+      <!-- ── WEEKLY ── -->
+      <template v-else-if="weeklyPlan">
+        <div class="bg-gradient-to-br from-calor-light to-[#C8F0E2] rounded-[18px] px-5 py-4">
+          <p class="text-[14px] text-calor-deep font-medium leading-snug">{{ weeklyPlan.summary }}</p>
+          <p class="text-[12px] text-calor-dark mt-2">Kế hoạch 7 ngày · nhiệm vụ hằng ngày sẽ đổi theo từng ngày</p>
+        </div>
+
+        <!-- 7 ngày -->
+        <div
+          v-for="(d, i) in weeklyPlan.days"
+          :key="i"
+          class="bg-white rounded-[18px] overflow-hidden"
+          :class="d.weekday === todayIso ? 'ring-2 ring-calor-green' : ''"
+        >
+          <div class="px-4 py-3 flex items-center justify-between border-b border-ios-gray6">
+            <div class="flex items-center gap-2">
+              <span class="text-[15px] font-semibold text-black">{{ d.label }}</span>
+              <span v-if="d.weekday === todayIso" class="text-[11px] font-semibold text-calor-green bg-calor-light px-2 py-0.5 rounded-full">Hôm nay</span>
+            </div>
+            <span class="text-[13px] text-ios-gray">{{ d.target_calories?.toLocaleString('vi') }} kcal</span>
+          </div>
+
+          <p v-if="d.focus" class="px-4 pt-2 text-[12px] text-calor-dark">🎯 {{ d.focus }}</p>
+
+          <!-- Bữa ăn -->
+          <div class="px-4 py-2 divide-y divide-ios-gray6">
+            <div v-for="(m, j) in d.meals" :key="j" class="py-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[13px] font-medium text-black">{{ SLOT_ICON[m.slot] }} {{ SLOT_LABEL[m.slot] ?? m.name }}</span>
+                <span class="text-[12px] text-ios-gray">{{ m.calories }} kcal</span>
+              </div>
+              <p class="text-[12px] text-black mt-0.5">{{ m.name }}</p>
+              <p v-if="m.items?.length" class="text-[11px] text-ios-gray mt-0.5">{{ m.items.join(' · ') }}</p>
+            </div>
+          </div>
+
+          <!-- Buổi tập -->
+          <div v-if="d.workout" class="px-4 py-2.5 flex items-center justify-between bg-ios-gray6/40">
+            <div>
+              <p class="text-[13px] font-medium text-black">{{ WORKOUT_ICON[d.workout.type] }} {{ d.workout.name }}</p>
+              <p class="text-[11px] text-ios-gray mt-0.5">{{ d.workout.duration_min }} phút · cường độ {{ d.workout.intensity }}</p>
+            </div>
+            <span class="text-[12px] text-ios-orange font-medium">-{{ d.workout.est_calories_burned }} kcal</span>
+          </div>
+        </div>
+
+        <div v-if="weeklyPlan.tips?.length" class="bg-white rounded-[18px] px-4 py-3">
+          <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2">Lời khuyên</h2>
+          <ul class="space-y-1.5">
+            <li v-for="(t, i) in weeklyPlan.tips" :key="i" class="text-[13px] text-black flex gap-2">
               <span class="text-calor-green">•</span><span>{{ t }}</span>
             </li>
           </ul>

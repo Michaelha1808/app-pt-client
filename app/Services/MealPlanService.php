@@ -108,9 +108,14 @@ class MealPlanService
      */
     public function getStructuredPlan(array $c, string $scope): array
     {
-        $prompt = $scope === 'monthly'
-            ? $this->monthlyPrompt($c)
-            : $this->dailyPrompt($c);
+        $prompt = match ($scope) {
+            'monthly' => $this->monthlyPrompt($c),
+            'weekly'  => $this->weeklyPrompt($c),
+            default   => $this->dailyPrompt($c),
+        };
+
+        // Kế hoạch tuần gồm 7 ngày → cần nhiều token hơn.
+        $maxTokens = $scope === 'weekly' ? 6144 : 2048;
 
         try {
             $response = $this->http->post(
@@ -125,7 +130,7 @@ class MealPlanService
                         ],
                         'generationConfig' => [
                             'responseMimeType' => 'application/json',
-                            'maxOutputTokens'  => 2048,
+                            'maxOutputTokens'  => $maxTokens,
                             'thinkingConfig'   => ['thinkingBudget' => 0],
                         ],
                     ],
@@ -133,7 +138,14 @@ class MealPlanService
             );
             $body = json_decode($response->getBody()->getContents(), true);
             $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
-            return json_decode($raw, true) ?: [];
+            $plan = json_decode($raw, true) ?: [];
+
+            // Ngày bắt đầu tuần do server quyết định (không tin AI tính lịch).
+            if ($scope === 'weekly') {
+                $plan['week_start'] = now(config('app.timezone'))->startOfWeek()->toDateString();
+            }
+
+            return $plan;
         } catch (GuzzleException $e) {
             throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
         }
@@ -146,7 +158,11 @@ class MealPlanService
      */
     public function streamReasoning(array $c, array $plan, string $scope): \Generator
     {
-        $scopeLabel = $scope === 'monthly' ? 'tháng này' : 'ngày mai';
+        $scopeLabel = match ($scope) {
+            'monthly' => 'tháng này',
+            'weekly'  => 'tuần này',
+            default   => 'ngày mai',
+        };
         $summary    = $plan['summary'] ?? '';
         $prompt = <<<PROMPT
 Kế hoạch {$scopeLabel} vừa lập có tóm tắt: "{$summary}".
@@ -216,6 +232,27 @@ Lập kế hoạch ăn uống & tập luyện cho NGÀY MAI. Trả JSON đúng s
 {"summary":"1 câu tóm tắt định hướng","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workouts":[{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}],"tips":["lời khuyên ngắn 1","lời khuyên 2"]}
 
 Tổng calo các bữa phải xấp xỉ mục tiêu (±5%).
+PROMPT;
+    }
+
+    private function weeklyPrompt(array $c): string
+    {
+        $genderVi = $c['gender'] === 'male' ? 'Nam' : ($c['gender'] === 'female' ? 'Nữ' : 'Khác');
+        $history  = $c['days_logged'] > 0
+            ? "Tuần qua: calo TB {$c['avg_calories']} kcal/ngày (xu hướng {$c['trend']}), macros TB protein {$c['avg_protein']}g/carbs {$c['avg_carbs']}g/fat {$c['avg_fat']}g, tuân thủ {$c['adherence']}%, nước TB {$c['avg_water']} ml/ngày."
+            : 'Chưa có lịch sử ăn uống — lập kế hoạch chuẩn theo mục tiêu.';
+
+        // Nhãn 7 ngày (Thứ 2 → Chủ nhật) khớp weekday 1..7.
+        $labels = 'weekday 1 = Thứ 2, 2 = Thứ 3, 3 = Thứ 4, 4 = Thứ 5, 5 = Thứ 6, 6 = Thứ 7, 7 = Chủ nhật';
+
+        return <<<PROMPT
+Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+{$history}
+
+Lập kế hoạch ăn uống & tập luyện cho CẢ TUẦN (7 ngày, {$labels}). Mỗi ngày khác nhau, đa dạng món và xoay vòng nhóm cơ/loại bài tập hợp lý (có ngày nghỉ nhẹ). Trả JSON đúng schema:
+{"summary":"1 câu định hướng cả tuần","days":[{"weekday":1,"label":"Thứ 2","focus":"trọng tâm ngày","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workout":{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}}],"tips":["lời khuyên 1","lời khuyên 2"]}
+
+days phải đủ đúng 7 phần tử, weekday từ 1 đến 7. Mỗi ngày tổng calo các bữa xấp xỉ mục tiêu (±5%). Ngày nghỉ đặt workout type "flexibility" cường độ "low".
 PROMPT;
     }
 

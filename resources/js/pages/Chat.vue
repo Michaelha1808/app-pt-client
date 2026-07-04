@@ -41,13 +41,50 @@ const firstName = computed(() => {
   return name.split(' ').pop() || name
 })
 
-const messages = ref<ChatMessage[]>([
-  {
+// Lưu lịch sử chat theo NGÀY: cùng ngày thì khôi phục, sang ngày mới thì bắt đầu lại.
+const STORAGE_KEY = 'caloeye:chat'
+
+function todayStr() {
+  return new Date().toLocaleDateString('en-CA') // YYYY-MM-DD theo giờ máy
+}
+
+function initialMessages(): ChatMessage[] {
+  return [{
     id: 1, role: 'ai',
     text: `Xin chào ${firstName.value}! 👋 Mình là trợ lý dinh dưỡng của CaloEye. Mình có thể gợi ý kế hoạch ăn uống & tập luyện cho ngày mai hoặc cả tháng này dựa trên dữ liệu bạn đã ghi. Bạn muốn bắt đầu từ đâu?`,
     time: nowTime(),
-  },
-])
+  }]
+}
+
+function loadMessages(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const saved = JSON.parse(raw) as { date: string; messages: ChatMessage[] }
+      if (saved.date === todayStr() && Array.isArray(saved.messages) && saved.messages.length) {
+        return saved.messages
+      }
+    }
+  } catch { /* localStorage hỏng/không dùng được → dùng mặc định */ }
+  return initialMessages()
+}
+
+const messages = ref<ChatMessage[]>(loadMessages())
+
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr(), messages: messages.value }))
+  } catch { /* hết quota → bỏ qua */ }
+}
+
+// Nút làm mới: xoá lịch sử hiện tại, quay về lời chào ban đầu.
+function resetChat() {
+  if (streaming.value) return
+  if (messages.value.length > 1 && !confirm('Bắt đầu cuộc trò chuyện mới? Lịch sử hôm nay sẽ bị xoá.')) return
+  messages.value = initialMessages()
+  persist()
+  scrollToBottom()
+}
 
 const suggestions = [
   'Lên kế hoạch ăn uống cho ngày mai',
@@ -69,6 +106,7 @@ async function sendMessage() {
 
   messages.value.push({ id: Date.now(), role: 'user', text, time: nowTime() })
   inputText.value = ''
+  persist()
   scrollToBottom()
 
   // Lịch sử gửi lên (bỏ id/time, chỉ role + text) — gồm cả tin vừa nhập
@@ -115,6 +153,7 @@ async function sendMessage() {
     aiMsg.text = 'Xin lỗi, mình chưa thể phản hồi lúc này. Bạn thử lại nhé! 🙏'
     messages.value.push(aiMsg)
   }
+  persist()
   await nextTick()
   scrollToBottom()
 }
@@ -151,6 +190,19 @@ onMounted(() => {
           <span class="text-[12px] text-ios-gray">Trực tuyến</span>
         </div>
       </div>
+
+      <!-- Làm mới: bắt đầu cuộc trò chuyện mới -->
+      <button
+        class="ml-auto w-9 h-9 rounded-full bg-white border border-ios-gray5 flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40"
+        :disabled="streaming"
+        aria-label="Làm mới cuộc trò chuyện"
+        @click="resetChat"
+      >
+        <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </button>
     </div>
 
     <!-- Messages area -->

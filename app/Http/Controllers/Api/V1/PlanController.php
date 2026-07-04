@@ -14,7 +14,7 @@ class PlanController extends Controller
     /** Lấy kế hoạch hiện hành + cờ stale. */
     public function show(Request $request, MealPlanService $service): JsonResponse
     {
-        $scope      = $request->query('scope', 'daily') === 'monthly' ? 'monthly' : 'daily';
+        $scope      = $this->normalizeScope($request->query('scope'));
         $targetDate = $this->targetDate($scope);
         $user       = $request->user();
 
@@ -48,8 +48,8 @@ class PlanController extends Controller
     /** Sinh kế hoạch mới — SSE 2-phase, upsert vào DB. */
     public function generate(Request $request, MealPlanService $service): StreamedResponse
     {
-        $request->validate(['scope' => 'nullable|in:daily,monthly']);
-        $scope      = $request->input('scope', 'daily');
+        $request->validate(['scope' => 'nullable|in:daily,weekly,monthly']);
+        $scope      = $this->normalizeScope($request->input('scope'));
         $targetDate = $this->targetDate($scope);
         $user       = $request->user();
 
@@ -104,7 +104,7 @@ class PlanController extends Controller
     /** 14 kế hoạch gần nhất theo scope. */
     public function history(Request $request): JsonResponse
     {
-        $scope = $request->query('scope', 'daily') === 'monthly' ? 'monthly' : 'daily';
+        $scope = $this->normalizeScope($request->query('scope'));
         $plans = $request->user()->mealPlans()
             ->where('scope', $scope)
             ->orderByDesc('target_date')
@@ -119,11 +119,18 @@ class PlanController extends Controller
         return response()->json(['plans' => $plans]);
     }
 
+    private function normalizeScope(?string $scope): string
+    {
+        return in_array($scope, ['weekly', 'monthly'], true) ? $scope : 'daily';
+    }
+
     private function targetDate(string $scope): string
     {
-        return $scope === 'monthly'
-            ? today()->startOfMonth()->toDateString()
-            : today()->addDay()->toDateString();
+        return match ($scope) {
+            'monthly' => today()->startOfMonth()->toDateString(),
+            'weekly'  => today()->startOfWeek()->toDateString(),   // Thứ 2 đầu tuần hiện tại
+            default   => today()->addDay()->toDateString(),        // daily = ngày mai
+        };
     }
 
     private function sseHeaders(): array

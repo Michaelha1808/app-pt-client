@@ -1,4 +1,4 @@
-export type PlanScope = 'daily' | 'monthly'
+export type PlanScope = 'daily' | 'weekly' | 'monthly'
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type WorkoutType = 'cardio' | 'strength' | 'flexibility'
 export type Intensity = 'low' | 'medium' | 'high'
@@ -31,6 +31,24 @@ export interface DailyPlan {
   tips: string[]
 }
 
+export interface WeeklyDay {
+  weekday: number            // 1 = Thứ 2 … 7 = Chủ nhật
+  label: string
+  focus: string
+  target_calories: number
+  target_macros: { protein: number; carbs: number; fat: number }
+  water_target_ml: number
+  meals: PlannedMeal[]
+  workout: PlannedWorkout | null
+}
+
+export interface WeeklyPlan {
+  summary: string
+  week_start: string         // YYYY-MM-DD (Thứ 2 đầu tuần)
+  days: WeeklyDay[]
+  tips: string[]
+}
+
 export interface WeeklyFocus {
   week: number
   focus: string
@@ -53,7 +71,7 @@ export interface MonthlyPlan {
   tips: string[]
 }
 
-export type AnyPlan = DailyPlan | MonthlyPlan
+export type AnyPlan = DailyPlan | WeeklyPlan | MonthlyPlan
 
 export interface PlanResponse {
   plan: AnyPlan | null

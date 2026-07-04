@@ -8,6 +8,7 @@ const emit = defineEmits<{
   'update:selected': [boolean]
   'update:quantity': [number]
   'update:calories': [number]
+  'update:food_name': [string]
 }>()
 
 const lowConfidence = computed(() => props.dish.confidence < 0.5)
@@ -24,6 +25,21 @@ function commitEdit() {
   const v = Math.max(0, Math.min(10000, Math.round(editVal.value || 0)))
   emit('update:calories', v)
   editing.value = false
+}
+
+// ── Sửa tên món (thu tín hiệu nhận sai tên cho dataset) ──
+const nameEditing = ref(false)
+const nameVal     = ref('')
+
+function startNameEdit() {
+  nameVal.value = props.dish.food_name
+  nameEditing.value = true
+}
+
+function commitNameEdit() {
+  const v = nameVal.value.trim().slice(0, 200)
+  if (v) emit('update:food_name', v)
+  nameEditing.value = false
 }
 </script>
 
@@ -43,10 +59,30 @@ function commitEdit() {
 
     <!-- Info -->
     <div class="flex-1 min-w-0" :class="dish.selected ? '' : 'opacity-50'">
-      <div class="flex items-center gap-1.5">
-        <p class="text-[15px] font-medium text-black truncate">{{ dish.food_name }}</p>
+      <!-- Sửa tên món inline -->
+      <div v-if="nameEditing" class="flex items-center gap-1.5">
+        <input
+          v-model="nameVal"
+          type="text"
+          maxlength="200"
+          class="min-w-0 flex-1 px-2 py-0.5 text-[15px] font-medium border border-ios-blue rounded-md outline-none"
+          @keydown.enter.prevent="commitNameEdit"
+        />
+        <button class="flex-shrink-0 text-[12px] text-ios-blue font-medium ios-press" @click="commitNameEdit">Xong</button>
+      </div>
+      <div v-else class="flex items-center gap-1.5">
+        <button type="button" class="flex items-center gap-1 min-w-0 ios-press" @click="startNameEdit">
+          <span class="text-[15px] font-medium text-black truncate">{{ dish.food_name }}</span>
+          <svg viewBox="0 0 24 24" class="w-3 h-3 text-ios-gray3 flex-shrink-0" fill="currentColor">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        </button>
         <span
-          v-if="lowConfidence"
+          v-if="dish.source === 'catalog'"
+          class="flex-shrink-0 text-[10px] text-calor-green bg-calor-green/10 px-1.5 py-0.5 rounded-full font-medium"
+        >📚 Thư viện</span>
+        <span
+          v-else-if="lowConfidence"
           class="flex-shrink-0 text-[10px] text-ios-orange bg-ios-orange/10 px-1.5 py-0.5 rounded-full font-medium"
         >AI chưa chắc</span>
       </div>

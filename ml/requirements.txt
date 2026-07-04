@@ -1,0 +1,9 @@
+# Pipeline OFFLINE chuẩn bị dữ liệu + fine-tune nhận diện món ăn.
+# Cài: python -m venv .venv && . .venv/Scripts/activate && pip install -r requirements.txt
+
+psycopg2-binary>=2.9        # đọc Postgres (dataset food_detection_samples)
+python-dotenv>=1.0          # đọc .env của Laravel để lấy thông tin DB
+
+# --- Chỉ cần cho bước fine-tune trên Google Cloud (tùy chọn) ---
+# google-cloud-aiplatform>=1.60   # Vertex AI supervised tuning Gemini
+# google-cloud-storage>=2.17      # upload ảnh lên GCS (Vertex yêu cầu ảnh nằm trên GCS)

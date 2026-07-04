@@ -3,21 +3,24 @@ import { apiFetch } from '@/utils/api'
 import type { DetectResponse, DetectedDish } from '@/types/food'
 
 export function useFoodDetect() {
-  const dishes  = ref<DetectedDish[]>([])
-  const loading = ref(false)
-  const error   = ref<string | null>(null)
+  const dishes      = ref<DetectedDish[]>([])
+  const loading     = ref(false)
+  const error       = ref<string | null>(null)
+  const detectionId = ref<number | null>(null)
 
   async function detect(opts: { image?: string | null; text?: string | null }): Promise<void> {
-    dishes.value  = []
-    error.value   = null
-    loading.value = true
+    dishes.value      = []
+    detectionId.value = null
+    error.value       = null
+    loading.value     = true
 
     try {
       const res = await apiFetch<DetectResponse>('/food/detect', {
         method: 'POST',
         body: { image: opts.image ?? null, text: opts.text ?? null },
       })
-      dishes.value = res.dishes ?? []
+      dishes.value      = res.dishes ?? []
+      detectionId.value = res.detection_id ?? null
     } catch (e: any) {
       if (e?.message !== 'auth:session_expired') {
         const msg = e?.data?.message ?? e?.response?._data?.message
@@ -28,5 +31,5 @@ export function useFoodDetect() {
     }
   }
 
-  return { dishes, loading, error, detect }
+  return { dishes, detectionId, loading, error, detect }
 }

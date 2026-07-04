@@ -89,7 +89,7 @@ async function confirmMeal() {
       }
     })
 
-  await logMeals(results)
+  await logMeals(results, savedImage.value)
   await new Promise(r => setTimeout(r, 400))
   navigateTo('/home')
 }

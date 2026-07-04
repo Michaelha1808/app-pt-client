@@ -255,7 +255,13 @@ onMounted(async () => {
                 :class="swipedId === meal.id ? '-translate-x-20' : 'translate-x-0'"
                 @click="toggleSwipe(meal.id)"
               >
-                <div class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
+                <img
+                  v-if="meal.image_url"
+                  :src="meal.image_url"
+                  class="w-10 h-10 rounded-[10px] object-cover flex-shrink-0"
+                  alt=""
+                />
+                <div v-else class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
                   {{ mealEmoji(meal.food_name) }}
                 </div>
                 <div class="flex-1 min-w-0">

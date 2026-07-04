@@ -253,8 +253,14 @@ onMounted(() => {
           :key="meal.id"
         >
           <div class="flex items-center gap-3 px-4 py-3.5">
-            <!-- Icon -->
-            <div class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
+            <!-- Ảnh đã chụp / icon nếu nhập tay -->
+            <img
+              v-if="meal.image_url"
+              :src="meal.image_url"
+              class="w-10 h-10 rounded-[10px] object-cover flex-shrink-0"
+              alt=""
+            />
+            <div v-else class="w-10 h-10 rounded-[10px] bg-ios-gray6 flex items-center justify-center text-xl flex-shrink-0">
               🍽️
             </div>
             <!-- Info -->

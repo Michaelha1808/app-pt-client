@@ -2,6 +2,7 @@ export interface MealLogEntry {
   id: number
   food_name: string
   serving: string | null
+  image_url?: string | null   // ảnh đã chụp; null/không có → nhập tay, dùng icon
   calories: number
   protein: number
   carbs: number

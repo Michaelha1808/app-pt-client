@@ -116,7 +116,7 @@ async function confirmMeal() {
       }
     })
 
-  await logMeals(results)
+  await logMeals(results, savedImage.value)
   await sendDetectFeedback(true)
   await new Promise(r => setTimeout(r, 400))
   navigateTo('/home')

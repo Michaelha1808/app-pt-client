@@ -4,14 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class MealLog extends Model
 {
     protected $fillable = [
-        'user_id', 'food_name', 'serving',
+        'user_id', 'food_name', 'serving', 'image_path',
         'calories', 'protein', 'carbs', 'fat', 'sodium',
         'logged_at',
     ];
+
+    /** URL công khai của ảnh món ăn (null nếu nhập tay). */
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+    }
 
     protected function casts(): array
     {

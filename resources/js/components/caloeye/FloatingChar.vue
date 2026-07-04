@@ -203,7 +203,7 @@ function goTo(to: string) {
       <div class="relative" :class="isDragging ? '' : 'char-idle'">
         <div class="w-[72px] h-[72px] rounded-full overflow-hidden bg-calor-light drop-shadow-lg flex items-start justify-center">
           <img
-            :src="'/logo/AVO-mascot-nobg.png'"
+            :src="'/svg/AVO-13-tro-giup.svg'"
             class="w-[82px] max-w-none h-auto select-none"
             draggable="false"
             alt="AVO"

@@ -116,7 +116,7 @@ async function confirmMeal() {
     food_name: editName.value || result.value.food_name,
     calories:  editCalories.value || result.value.calories,
   }
-  await logMeal(mealToLog)
+  await logMeal(mealToLog, savedImage.value)
   await new Promise(r => setTimeout(r, 500))
   navigateTo('/home')
 }
@@ -172,6 +172,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
             <span class="text-5xl">📝</span>
             <p class="text-[14px] text-ios-gray font-medium">Nhập từ văn bản</p>
           </div>
+          <img v-else-if="savedImage" :src="savedImage" class="w-full h-full object-cover" alt="Ảnh món ăn" />
           <div v-else class="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
             <span class="text-7xl">🍜</span>
           </div>

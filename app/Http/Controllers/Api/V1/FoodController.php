@@ -13,6 +13,8 @@ use App\Support\UsageTracker;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -211,10 +213,14 @@ class FoodController extends Controller
             'carbs'     => 'required|integer|min:0',
             'fat'       => 'required|integer|min:0',
             'sodium'    => 'required|integer|min:0',
+            'image'     => 'nullable|string|max:8000000',   // data URL base64 ảnh đã chụp
         ]);
 
+        $imagePath = $this->storeMealImage($data['image'] ?? null);
+        unset($data['image']);
+
         $user = $request->user();
-        $log  = $user->mealLogs()->create($data);
+        $log  = $user->mealLogs()->create([...$data, 'image_path' => $imagePath]);
 
         $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
 
@@ -239,13 +245,17 @@ class FoodController extends Controller
             'meals.*.carbs'     => 'required|integer|min:0',
             'meals.*.fat'       => 'required|integer|min:0',
             'meals.*.sodium'    => 'required|integer|min:0',
+            'image'             => 'nullable|string|max:8000000',   // 1 ảnh chung cho cả mâm
         ]);
 
         $user = $request->user();
 
-        $ids = DB::transaction(function () use ($user, $data) {
+        // Cả mâm dùng chung 1 ảnh chụp → lưu 1 lần, gán cho mọi món.
+        $imagePath = $this->storeMealImage($request->input('image'));
+
+        $ids = DB::transaction(function () use ($user, $data, $imagePath) {
             return collect($data['meals'])
-                ->map(fn ($m) => $user->mealLogs()->create($m)->id)
+                ->map(fn ($m) => $user->mealLogs()->create([...$m, 'image_path' => $imagePath])->id)
                 ->all();
         });
 
@@ -265,7 +275,7 @@ class FoodController extends Controller
             ->mealLogs()
             ->whereDate('logged_at', today())
             ->orderBy('logged_at')
-            ->get(['id', 'food_name', 'serving', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
+            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
 
         // Calo đốt hôm nay (mọi nguồn: manual + provider) → FE tính net calories.
         $caloriesBurned = (int) $request->user()
@@ -283,6 +293,7 @@ class FoodController extends Controller
                 'id'        => $log->id,
                 'food_name' => $log->food_name,
                 'serving'   => $log->serving,
+                'image_url' => $log->image_url,
                 'calories'  => $log->calories,
                 'protein'   => $log->protein,
                 'carbs'     => $log->carbs,
@@ -302,7 +313,7 @@ class FoodController extends Controller
         $meals = $user->mealLogs()
             ->whereDate('logged_at', $targetDate)
             ->orderBy('logged_at')
-            ->get(['id', 'food_name', 'serving', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
+            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
 
         $week = collect(range(6, 0))->map(function ($daysAgo) use ($user) {
             $day  = today()->subDays($daysAgo);
@@ -324,6 +335,7 @@ class FoodController extends Controller
                 'id'        => $log->id,
                 'food_name' => $log->food_name,
                 'serving'   => $log->serving,
+                'image_url' => $log->image_url,
                 'calories'  => $log->calories,
                 'protein'   => $log->protein,
                 'carbs'     => $log->carbs,
@@ -338,8 +350,37 @@ class FoodController extends Controller
     public function deleteLog(Request $request, MealLog $log): JsonResponse
     {
         abort_if($log->user_id !== $request->user()->id, 403);
+
+        // Xoá luôn file ảnh nếu không còn bản ghi nào khác dùng chung (mâm cùng ảnh).
+        if ($log->image_path
+            && !MealLog::where('image_path', $log->image_path)->whereKeyNot($log->id)->exists()) {
+            Storage::disk('public')->delete($log->image_path);
+        }
+
         $log->delete();
         return response()->json(['message' => 'Đã xóa bữa ăn']);
+    }
+
+    /**
+     * Giải mã data URL base64 → lưu vào disk public (thư mục meals/), trả path tương đối.
+     * Trả null nếu không có ảnh hoặc dữ liệu không hợp lệ.
+     */
+    private function storeMealImage(?string $dataUrl): ?string
+    {
+        if (!$dataUrl || !preg_match('/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/', $dataUrl, $m)) {
+            return null;
+        }
+
+        $binary = base64_decode($m[2], true);
+        if ($binary === false || strlen($binary) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $ext  = $m[1] === 'jpg' ? 'jpeg' : $m[1];
+        $path = 'meals/' . Str::uuid()->toString() . '.' . $ext;
+        Storage::disk('public')->put($path, $binary);
+
+        return $path;
     }
 
     private function sseHeaders(): array

@@ -199,8 +199,25 @@ class StravaProvider implements HealthProvider
                 : now(),
             'duration_seconds' => (int) ($a['moving_time'] ?? $a['elapsed_time'] ?? 0),
             'distance_meters'  => isset($a['distance']) ? (int) round($a['distance']) : null,
-            'calories'         => isset($a['calories']) ? (int) round($a['calories']) : null,
+            'calories'         => $this->normalizeCalories($a),
             'raw'              => $a,
         ];
+    }
+
+    /**
+     * Calo từ Strava: trả null khi thiếu/0 (ride không power/HR → Strava trả 0)
+     * để HealthActivityWriter fallback ước lượng MET. Ride có power: dùng kilojoules (kJ ≈ kcal).
+     */
+    private function normalizeCalories(array $a): ?int
+    {
+        if (!empty($a['calories'])) {
+            return (int) round($a['calories']);
+        }
+
+        if (!empty($a['kilojoules'])) {
+            return (int) round($a['kilojoules']);
+        }
+
+        return null;
     }
 }

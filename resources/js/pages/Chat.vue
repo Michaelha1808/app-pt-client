@@ -4,7 +4,8 @@ import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import { useChat } from '@/composables/useChat'
 import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useAuthStore } from '@/stores/auth'
-import type { ChatMessage } from '@/types/chat'
+import { navigateTo } from '@/utils/navigate'
+import type { ChatAction, ChatMessage } from '@/types/chat'
 import type { MemoryItem, MemoryConflict, PreferenceKind } from '@/types/preference'
 
 // Nhãn hiển thị cho chip "đã ghi nhớ" theo loại sở thích
@@ -19,7 +20,9 @@ const MEMORY_KIND_LABEL: Record<PreferenceKind, string> = {
 const auth = useAuthStore()
 const { streaming, send } = useChat()
 const { canUse, increment } = useGuestQuota()
+const { success, error: toastError } = useToast()
 const gateOpen = ref(false)
+const applyingPlan = ref(false)
 
 const inputText = ref('')
 const isTyping = ref(false)
@@ -176,6 +179,13 @@ async function sendMessage() {
         persist()
       }
     },
+    (actions: ChatAction[]) => {
+      // Nút hành động gợi ý theo ngữ cảnh
+      if (aiIndex !== -1 && actions.length) {
+        messages.value[aiIndex].actions = actions
+        persist()
+      }
+    },
   )
 
   streamDone = true
@@ -218,6 +228,35 @@ async function resolveConflict(msg: ChatMessage, c: MemoryConflict, accept: bool
   }
   msg.conflicts = msg.conflicts?.filter(x => x.id !== c.id)
   persist()
+}
+
+// Bấm nút hành động sau khi AI tư vấn
+async function handleAction(msg: ChatMessage, a: ChatAction) {
+  if (a.action === 'navigate' && a.to) {
+    navigateTo(a.to)
+    return
+  }
+  if (a.action === 'prompt' && a.text) {
+    inputText.value = a.text
+    sendMessage()
+    return
+  }
+  if (a.action === 'apply_plan') {
+    if (applyingPlan.value) return
+    applyingPlan.value = true
+    try {
+      const history = messages.value.map(m => ({ role: m.role, text: m.text }))
+      await apiFetch('/chat/apply-plan', { method: 'POST', body: { messages: history } })
+      msg.planApplied = true
+      msg.actions = msg.actions?.filter(x => x.action !== 'apply_plan')
+      persist()
+      success('Đã thiết lập kế hoạch hôm nay 🎯')
+    } catch (e: any) {
+      toastError(e?.data?.message ?? 'Không thể thiết lập kế hoạch. Thử lại nhé.')
+    } finally {
+      applyingPlan.value = false
+    }
+  }
 }
 
 function scrollToBottom() {
@@ -326,6 +365,21 @@ onMounted(() => {
               >Giữ nguyên</button>
             </div>
           </div>
+
+          <!-- Nút hành động gợi ý sau tư vấn -->
+          <div v-if="msg.role === 'ai' && msg.actions?.length" class="flex flex-wrap gap-1.5 mt-2">
+            <button
+              v-for="a in msg.actions"
+              :key="a.id"
+              class="px-3 py-1.5 rounded-full text-[12px] font-semibold ios-press disabled:opacity-50"
+              :class="a.action === 'apply_plan' ? 'bg-ios-blue text-white' : 'bg-ios-blue/10 text-ios-blue'"
+              :disabled="a.action === 'apply_plan' && applyingPlan"
+              @click="handleAction(msg, a)"
+            >{{ a.action === 'apply_plan' && applyingPlan ? 'Đang thiết lập...' : a.label }}</button>
+          </div>
+          <p v-if="msg.role === 'ai' && msg.planApplied" class="mt-1.5 text-[11px] text-calor-green font-medium">
+            ✓ Đã thêm vào Nhiệm vụ hôm nay
+          </p>
 
           <p class="text-[10px] text-ios-gray mt-1" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
             {{ msg.time }}

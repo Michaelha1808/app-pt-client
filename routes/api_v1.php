@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\IntegrationWebhookController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\PreferenceController;
 use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WaterController;
@@ -98,6 +99,13 @@ Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
 Route::middleware('auth:sanctum')->prefix('streak')->group(function () {
     Route::get('/',       [StreakController::class, 'show']);
     Route::post('/freeze', [StreakController::class, 'useFreeze']);
+});
+
+// Sở thích / giới hạn ăn uống (bộ nhớ cá nhân hóa của chatbot)
+Route::middleware('auth:sanctum')->prefix('preferences')->group(function () {
+    Route::get('/', [PreferenceController::class, 'index']);
+    Route::middleware('throttle:20,1')->post('/', [PreferenceController::class, 'store']);
+    Route::delete('/{id}', [PreferenceController::class, 'destroy']);
 });
 
 Route::middleware('auth:sanctum')->prefix('water')->group(function () {

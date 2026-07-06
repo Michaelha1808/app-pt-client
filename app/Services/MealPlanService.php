@@ -13,7 +13,7 @@ class MealPlanService
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-    public function __construct()
+    public function __construct(private PreferenceService $preferences)
     {
         $this->apiKey = config('services.gemini.key');
         $this->model  = config('services.gemini.model', 'gemini-2.0-flash');
@@ -93,8 +93,14 @@ class MealPlanService
             'streak'        => (int) ($user->streak?->current_streak ?? 0),
         ];
 
+        // Ràng buộc món ăn theo sở thích/dị ứng + thói quen — nhồi vào prompt.
+        $ctx['pref_constraints'] = $this->preferences->promptBlock($user)
+            . "\n" . $this->preferences->habitPromptBlock($user);
+
+        // preferences_hash vào data_hash → thêm dị ứng mới ⇒ plan cũ thành stale.
         $ctx['data_hash'] = sha1(implode('|', [
             $avgCalories, $adherence, $trend, $weight, $goal, $scope,
+            $this->preferences->preferencesHash($user),
         ]));
 
         return $ctx;
@@ -228,6 +234,9 @@ PROMPT;
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
 {$history}
 
+{$c['pref_constraints']}
+RÀNG BUỘC BẮT BUỘC: tuyệt đối KHÔNG đưa món chứa nguyên liệu người dùng dị ứng; tránh món họ không thích; tuân thủ chế độ ăn nếu có; ưu tiên xoay quanh món họ thích / hay ăn.
+
 Lập kế hoạch ăn uống & tập luyện cho NGÀY MAI. Trả JSON đúng schema:
 {"summary":"1 câu tóm tắt định hướng","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workouts":[{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}],"tips":["lời khuyên ngắn 1","lời khuyên 2"]}
 
@@ -249,6 +258,9 @@ PROMPT;
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
 {$history}
 
+{$c['pref_constraints']}
+RÀNG BUỘC BẮT BUỘC: tuyệt đối KHÔNG đưa món chứa nguyên liệu người dùng dị ứng; tránh món họ không thích; tuân thủ chế độ ăn nếu có; ưu tiên xoay quanh món họ thích / hay ăn.
+
 Lập kế hoạch ăn uống & tập luyện cho CẢ TUẦN (7 ngày, {$labels}). Mỗi ngày khác nhau, đa dạng món và xoay vòng nhóm cơ/loại bài tập hợp lý (có ngày nghỉ nhẹ). Trả JSON đúng schema:
 {"summary":"1 câu định hướng cả tuần","days":[{"weekday":1,"label":"Thứ 2","focus":"trọng tâm ngày","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workout":{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}}],"tips":["lời khuyên 1","lời khuyên 2"]}
 
@@ -262,6 +274,9 @@ PROMPT;
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
 30 ngày qua: calo TB {$c['avg_calories']} kcal/ngày (xu hướng {$c['trend']}), tuân thủ {$c['adherence']}%.
+
+{$c['pref_constraints']}
+RÀNG BUỘC BẮT BUỘC: tuyệt đối KHÔNG đưa món chứa nguyên liệu người dùng dị ứng; tránh món họ không thích; tuân thủ chế độ ăn nếu có; ưu tiên xoay quanh món họ thích / hay ăn.
 
 Lập định hướng kế hoạch cho THÁNG NÀY. Trả JSON đúng schema:
 {"summary":"1 câu định hướng tháng","avg_daily_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"expected_weight_change_kg":0,"weekly_focus":[{"week":1,"focus":"trọng tâm tuần","note":"ghi chú ngắn"}],"weekly_workout_split":[{"day":"Thứ 2","activity":"bài tập","duration_min":0}],"tips":["lời khuyên 1","lời khuyên 2"]}

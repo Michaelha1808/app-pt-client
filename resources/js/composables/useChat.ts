@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatStreamEvent, ChatTurn } from '@/types/chat'
+import type { MemoryItem, MemoryConflict } from '@/types/preference'
 
 const API_URL = import.meta.env.VITE_API_URL as string
 
@@ -11,8 +12,13 @@ export function useChat() {
   /**
    * Gửi lịch sử hội thoại, stream phản hồi AI.
    * `onDelta` được gọi mỗi khi có thêm text → cập nhật tin nhắn đang hiển thị.
+   * `onMemory` (tuỳ chọn) được gọi khi AI ghi nhớ sở thích mới từ lượt vừa gửi.
    */
-  async function send(history: ChatTurn[], onDelta: (delta: string) => void) {
+  async function send(
+    history: ChatTurn[],
+    onDelta: (delta: string) => void,
+    onMemory?: (items: MemoryItem[], conflicts: MemoryConflict[]) => void,
+  ) {
     const store = useAuthStore()
 
     streaming.value = true
@@ -54,6 +60,7 @@ export function useChat() {
           try {
             const event = JSON.parse(raw) as ChatStreamEvent
             if (event.type === 'text') onDelta(event.delta)
+            else if (event.type === 'memory') onMemory?.(event.items, event.conflicts ?? [])
             else if (event.type === 'error') error.value = event.message
           } catch {
             // bỏ qua event JSON không hợp lệ

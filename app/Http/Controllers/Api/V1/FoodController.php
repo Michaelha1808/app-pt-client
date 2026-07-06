@@ -8,6 +8,7 @@ use App\Models\MealLog;
 use App\Services\DishCatalogService;
 use App\Services\FoodAnalysisService;
 use App\Services\FoodSampleService;
+use App\Services\PreferenceService;
 use App\Services\StreakService;
 use App\Support\UsageTracker;
 use Carbon\Carbon;
@@ -222,6 +223,8 @@ class FoodController extends Controller
         $user = $request->user();
         $log  = $user->mealLogs()->create([...$data, 'image_path' => $imagePath]);
 
+        app(PreferenceService::class)->bustHabitCache($user->id);
+
         $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
 
         return response()->json([
@@ -258,6 +261,8 @@ class FoodController extends Controller
                 ->map(fn ($m) => $user->mealLogs()->create([...$m, 'image_path' => $imagePath])->id)
                 ->all();
         });
+
+        app(PreferenceService::class)->bustHabitCache($user->id);
 
         // recordMealActivity idempotent theo ngày → gọi 1 lần là đủ
         $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));

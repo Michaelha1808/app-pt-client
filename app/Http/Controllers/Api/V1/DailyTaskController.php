@@ -23,16 +23,22 @@ class DailyTaskController extends Controller
         $user  = $request->user();
         $today = now(config('app.timezone'));
 
+        // Kế hoạch daily đã thiết lập RIÊNG cho hôm nay (từ chat "Thiết lập kế hoạch ăn hôm nay").
+        $todayPlan = MealPlan::where('user_id', $user->id)
+            ->where('scope', 'daily')
+            ->whereDate('target_date', $today->toDateString())
+            ->first();
+
         [$w, $hasPlan] = $this->workoutFromWeekly($user->id, $today);
 
-        // Fallback: kế hoạch daily cũ (workout đầu tiên).
+        // Fallback workout: plan hôm nay → plan daily mới nhất.
         if (!$w) {
-            $daily    = MealPlan::where('user_id', $user->id)
+            $daily   = $todayPlan ?? MealPlan::where('user_id', $user->id)
                 ->where('scope', 'daily')
                 ->latest('target_date')
                 ->first();
-            $hasPlan  = $hasPlan || (bool) $daily;
-            $w        = $daily?->plan['workouts'][0] ?? null;
+            $hasPlan = $hasPlan || (bool) $daily;
+            $w       = $daily?->plan['workouts'][0] ?? null;
         }
 
         $workout = null;
@@ -52,7 +58,46 @@ class DailyTaskController extends Controller
         return response()->json([
             'has_plan' => $hasPlan,
             'workout'  => $workout,
+            'meals'    => $this->mealTasks($user->id, $todayPlan, $today),
         ]);
+    }
+
+    /**
+     * Các bữa trong kế hoạch hôm nay → nhiệm vụ. done = đã có bữa ăn ghi nhận trong khung giờ của slot.
+     *
+     * @return array<int,array{slot:string,name:string,calories:?int,done:bool}>
+     */
+    private function mealTasks(int $userId, ?MealPlan $todayPlan, \Illuminate\Support\Carbon $today): array
+    {
+        if (!$todayPlan || empty($todayPlan->plan['meals'])) {
+            return [];
+        }
+
+        // Giờ của các bữa đã log hôm nay → suy ra slot nào đã ăn.
+        $loggedHours = \App\Models\MealLog::where('user_id', $userId)
+            ->whereDate('logged_at', $today->toDateString())
+            ->pluck('logged_at')
+            ->map(fn ($t) => $t->hour);
+
+        $slotDone = fn (string $slot): bool => $loggedHours->contains(
+            fn (int $h) => match ($slot) {
+                'breakfast' => $h >= 4 && $h < 11,
+                'lunch'     => $h >= 11 && $h < 15,
+                'dinner'    => $h >= 17 && $h < 23,
+                'snack'     => ($h >= 15 && $h < 17) || $h >= 21 || $h < 4,
+                default     => false,
+            }
+        );
+
+        return collect($todayPlan->plan['meals'])
+            ->map(fn ($m) => [
+                'slot'     => $m['slot'] ?? 'snack',
+                'name'     => $m['name'] ?? ($m['items'][0] ?? 'Bữa ăn'),
+                'calories' => isset($m['calories']) ? (int) $m['calories'] : null,
+                'done'     => $slotDone($m['slot'] ?? 'snack'),
+            ])
+            ->values()
+            ->all();
     }
 
     /**

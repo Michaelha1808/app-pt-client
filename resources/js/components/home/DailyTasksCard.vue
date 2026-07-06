@@ -19,15 +19,26 @@ interface WorkoutTask {
   done: boolean
 }
 
+interface MealTask {
+  slot: string
+  name: string
+  calories: number | null
+  done: boolean
+}
+
+const SLOT_LABEL: Record<string, string> = { breakfast: 'Sáng', lunch: 'Trưa', dinner: 'Tối', snack: 'Phụ' }
+
 // Nhiệm vụ tập luyện cá nhân hóa theo kế hoạch AI (null = chưa có kế hoạch).
 const workout = ref<WorkoutTask | null>(null)
+const meals = ref<MealTask[]>([])
 const hasPlan = ref(true)   // mặc định true để tránh CTA nhấp nháy trước khi tải xong
 
 onMounted(async () => {
   try {
-    const r = await apiFetch<{ has_plan: boolean; workout: WorkoutTask | null }>('/home/daily-tasks')
+    const r = await apiFetch<{ has_plan: boolean; workout: WorkoutTask | null; meals: MealTask[] }>('/home/daily-tasks')
     hasPlan.value = r.has_plan
     workout.value = r.workout
+    meals.value   = r.meals ?? []
   } catch {
     // Không tải được kế hoạch → giữ task mặc định, không chặn UI
   }
@@ -75,6 +86,29 @@ const allDone = computed(() =>
       </div>
       <span v-if="!mealLogged" class="text-[12px] text-ios-gray3">+🥑</span>
     </div>
+
+    <!-- Kế hoạch bữa ăn hôm nay (khi đã "Thiết lập kế hoạch" từ chat) -->
+    <template v-if="meals.length">
+      <div class="ios-separator mx-5" />
+      <div class="px-5 py-3">
+        <p class="text-[12px] font-semibold text-ios-gray mb-2">Kế hoạch bữa ăn hôm nay</p>
+        <div v-for="(m, i) in meals" :key="i" class="flex items-center gap-3 py-1.5">
+          <div
+            class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+            :class="m.done ? 'bg-calor-green' : 'bg-ios-gray6'"
+          >
+            <svg v-if="m.done" viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="white">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            <span v-else class="text-[9px] font-semibold text-ios-gray3">{{ SLOT_LABEL[m.slot] ?? '•' }}</span>
+          </div>
+          <p class="flex-1 min-w-0 text-[13px] truncate" :class="m.done ? 'line-through text-ios-gray3' : 'text-black'">
+            {{ m.name }}
+          </p>
+          <span v-if="m.calories" class="text-[11px] text-ios-gray3 flex-shrink-0">{{ m.calories }} kcal</span>
+        </div>
+      </div>
+    </template>
 
     <div class="ios-separator mx-5" />
 

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import type { ChatStreamEvent, ChatTurn } from '@/types/chat'
+import type { ChatAction, ChatStreamEvent, ChatTurn } from '@/types/chat'
 import type { MemoryItem, MemoryConflict } from '@/types/preference'
 
 const API_URL = import.meta.env.VITE_API_URL as string
@@ -18,6 +18,7 @@ export function useChat() {
     history: ChatTurn[],
     onDelta: (delta: string) => void,
     onMemory?: (items: MemoryItem[], conflicts: MemoryConflict[]) => void,
+    onActions?: (actions: ChatAction[]) => void,
   ) {
     const store = useAuthStore()
 
@@ -61,6 +62,7 @@ export function useChat() {
             const event = JSON.parse(raw) as ChatStreamEvent
             if (event.type === 'text') onDelta(event.delta)
             else if (event.type === 'memory') onMemory?.(event.items, event.conflicts ?? [])
+            else if (event.type === 'actions') onActions?.(event.actions ?? [])
             else if (event.type === 'error') error.value = event.message
           } catch {
             // bỏ qua event JSON không hợp lệ

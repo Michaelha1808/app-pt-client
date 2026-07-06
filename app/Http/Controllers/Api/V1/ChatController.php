@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\ChatService;
+use App\Services\MealPlanService;
 use App\Services\PreferenceService;
 use App\Support\UsageTracker;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -36,6 +38,7 @@ class ChatController extends Controller
                 }
 
                 $inScope = true;
+                $reply   = '';
 
                 try {
                     // Cổng phân loại: chặn sớm yêu cầu ngoài phạm vi dinh dưỡng/tập luyện
@@ -48,6 +51,7 @@ class ChatController extends Controller
                         flush();
                     } else {
                         foreach ($service->streamReply($user, $messages) as $delta) {
+                            $reply .= $delta;
                             echo 'data: ' . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
                             flush();
                         }
@@ -58,6 +62,17 @@ class ChatController extends Controller
                         'message' => 'Không thể kết nối trợ lý AI. Vui lòng thử lại.',
                     ]) . "\n\n";
                     flush();
+                }
+
+                // Gợi ý nút hành động theo ngữ cảnh (chỉ user đăng nhập — hành động cần dữ liệu cá nhân).
+                if ($user && $inScope && $reply !== '') {
+                    $lastUser = collect($messages)->reverse()
+                        ->first(fn ($m) => ($m['role'] ?? 'user') === 'user')['text'] ?? '';
+                    $actions = $service->suggestActions($reply, $lastUser);
+                    if ($actions !== []) {
+                        echo 'data: ' . json_encode(['type' => 'actions', 'actions' => $actions]) . "\n\n";
+                        flush();
+                    }
                 }
 
                 // Ghi nhớ sở thích từ lượt user mới nhất (sau khi đã trả lời xong → không tăng độ trễ).
@@ -94,5 +109,53 @@ class ChatController extends Controller
                 'Connection'        => 'keep-alive',
             ]
         );
+    }
+
+    /**
+     * "Thiết lập kế hoạch ăn hôm nay": biến lời tư vấn trong hội thoại thành
+     * kế hoạch daily cho HÔM NAY → hiển thị dưới dạng nhiệm vụ (Home / /plan).
+     */
+    public function applyPlan(Request $request, MealPlanService $service): JsonResponse
+    {
+        $request->validate([
+            'messages'        => 'required|array|min:1|max:30',
+            'messages.*.role' => 'required|string|in:user,ai,model',
+            'messages.*.text' => 'required|string|max:2000',
+        ]);
+
+        $user = $request->user();
+
+        try {
+            $context = $service->buildContext($user, 'daily');
+        } catch (\RuntimeException $e) {
+            // Thiếu hồ sơ (chiều cao/cân nặng/năm sinh)
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        try {
+            $plan = $service->planFromConversation($context, $request->input('messages'));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Không thể thiết lập kế hoạch. Vui lòng thử lại.'], 500);
+        }
+
+        UsageTracker::record('chat_apply_plan', $user->id);
+
+        $record = $user->mealPlans()->updateOrCreate(
+            ['scope' => 'daily', 'target_date' => today()->toDateString()],
+            [
+                'plan'             => $plan,
+                'context_snapshot' => $context,
+                'data_hash'        => $context['data_hash'],
+                'reasoning'        => null,
+            ]
+        );
+
+        return response()->json([
+            'message'     => 'Đã thiết lập kế hoạch cho hôm nay',
+            'plan'        => $record->plan,
+            'target_date' => $record->target_date->toDateString(),
+        ]);
     }
 }

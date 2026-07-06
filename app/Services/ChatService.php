@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\VietnameseText;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -212,6 +213,52 @@ CTX;
             : ($diff < -$target * 0.1 ? 'thiếu ' . abs($diff) . ' kcal' : 'bám sát mục tiêu');
 
         return "ĐỐI CHIẾU KẾ HOẠCH HÔM QUA:\n- Kế hoạch {$target} kcal, thực tế nạp {$actual} kcal ({$pct}% — {$note})";
+    }
+
+    /**
+     * Gợi ý các nút hành động theo NGỮ CẢNH sau khi tư vấn xong (không tốn token AI —
+     * chọn từ catalog cố định dựa trên nội dung câu trả lời + câu hỏi của user).
+     *
+     * @return array<int,array{id:string,label:string,action:string,to?:string,text?:string}>
+     */
+    public function suggestActions(string $reply, string $lastUser): array
+    {
+        $t   = VietnameseText::normalize($reply . ' ' . $lastUser);
+        $has = fn (string ...$kw): bool => (bool) array_filter($kw, fn ($k) => str_contains($t, $k));
+
+        $actions = [];
+
+        // Lời khuyên có nội dung bữa ăn/thực đơn → nút CHÍNH: biến thành kế hoạch hôm nay.
+        if ($has('bua sang', 'bua trua', 'bua toi', 'bua phu', 'thuc don', 'ke hoach', 'goi y', 'nen an', 'an gi', 'mon')) {
+            $actions[] = ['id' => 'set_daily_plan', 'label' => '🍽️ Thiết lập kế hoạch ăn hôm nay', 'action' => 'apply_plan'];
+        }
+
+        // Có nhắc tập luyện → gợi ý bài tập (gửi câu hỏi mồi).
+        if ($has('tap', 'van dong', 'bai tap', 'cardio', 'gym', 'calo dot', 'chay bo', 'the duc')) {
+            $actions[] = ['id' => 'suggest_workout', 'label' => '💪 Gợi ý bài tập hôm nay', 'action' => 'prompt', 'text' => 'Gợi ý bài tập phù hợp cho tôi hôm nay'];
+        }
+
+        // Cân nặng/tiến độ → xem tiến độ.
+        if ($has('can nang', 'tien do', 'xu huong', 'giam can', 'tang can', 'giam mo', 'lich su')) {
+            $actions[] = ['id' => 'view_progress', 'label' => '📊 Xem tiến độ', 'action' => 'navigate', 'to' => '/history'];
+        }
+
+        // Kế hoạch dài hạn.
+        if ($has('tuan', 'thang', 'dai han')) {
+            $actions[] = ['id' => 'plan_long', 'label' => '📅 Lên kế hoạch tuần/tháng', 'action' => 'navigate', 'to' => '/plan'];
+        }
+
+        // Khuyên ghi lại bữa ăn.
+        if ($has('ghi lai', 'ghi nhan', 'nhap mon', 'chup anh', 'log bua')) {
+            $actions[] = ['id' => 'log_meal', 'label' => '➕ Ghi lại bữa ăn', 'action' => 'navigate', 'to' => '/scan'];
+        }
+
+        // Không khớp gì → vẫn cho lối tắt thiết lập kế hoạch.
+        if ($actions === []) {
+            $actions[] = ['id' => 'set_daily_plan', 'label' => '🍽️ Thiết lập kế hoạch ăn hôm nay', 'action' => 'apply_plan'];
+        }
+
+        return array_slice($actions, 0, 3);
     }
 
     /**

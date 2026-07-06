@@ -223,6 +223,90 @@ PROMPT;
         }
     }
 
+    /**
+     * Chuyển lời tư vấn trong hội thoại thành kế hoạch daily (schema giống dailyPrompt).
+     * Grounding bằng context (số liệu + ràng buộc sở thích) để bám dữ liệu thật.
+     *
+     * @param  array<string,mixed>  $context  kết quả buildContext($user,'daily')
+     * @param  array<int,array{role?:string,text?:string}>  $messages
+     * @return array<string,mixed>
+     * @throws \RuntimeException
+     */
+    public function planFromConversation(array $context, array $messages): array
+    {
+        $advice = $this->extractAdvice($messages);
+
+        $prompt = <<<PROMPT
+Dưới đây là nội dung vừa trao đổi giữa người dùng và trợ lý dinh dưỡng:
+\"\"\"
+{$advice}
+\"\"\"
+
+{$context['pref_constraints']}
+RÀNG BUỘC BẮT BUỘC: tuyệt đối KHÔNG món chứa nguyên liệu dị ứng; tuân thủ chế độ ăn nếu có.
+
+Hãy chuyển lời tư vấn trên thành KẾ HOẠCH ĂN UỐNG & TẬP LUYỆN cho HÔM NAY. Giữ đúng các món/bài tập đã được gợi ý trong hội thoại; nếu thiếu bữa nào thì bổ sung hợp lý theo mục tiêu {$context['calorie_goal']} kcal/ngày. Trả JSON đúng schema:
+{"summary":"1 câu tóm tắt định hướng hôm nay","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workouts":[{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}],"tips":["lời khuyên ngắn 1","lời khuyên 2"]}
+
+Tổng calo các bữa xấp xỉ mục tiêu (±10%).
+PROMPT;
+
+        try {
+            $response = $this->http->post(
+                "{$this->baseUrl}{$this->model}:generateContent?key={$this->apiKey}",
+                [
+                    'json' => [
+                        'systemInstruction' => [
+                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm.']],
+                        ],
+                        'contents'         => [['role' => 'user', 'parts' => [['text' => $prompt]]]],
+                        'generationConfig' => [
+                            'responseMimeType' => 'application/json',
+                            'maxOutputTokens'  => 2048,
+                            'thinkingConfig'   => ['thinkingBudget' => 0],
+                        ],
+                    ],
+                ]
+            );
+            $body = json_decode($response->getBody()->getContents(), true);
+            $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+            $plan = json_decode($raw, true) ?: [];
+
+            if (!isset($plan['meals']) || !is_array($plan['meals'])) {
+                throw new \RuntimeException('Kế hoạch trả về không hợp lệ.');
+            }
+
+            return $plan;
+        } catch (GuzzleException $e) {
+            throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /** Rút lời khuyên gần nhất của trợ lý + câu hỏi gần nhất của user để làm nguồn cho kế hoạch. */
+    private function extractAdvice(array $messages): string
+    {
+        $lastAi = '';
+        $lastUser = '';
+        foreach (array_reverse($messages) as $m) {
+            $role = $m['role'] ?? 'user';
+            $text = trim((string) ($m['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            if ($lastAi === '' && in_array($role, ['ai', 'model'], true)) {
+                $lastAi = mb_substr($text, 0, 1500);
+            }
+            if ($lastUser === '' && $role === 'user') {
+                $lastUser = mb_substr($text, 0, 500);
+            }
+            if ($lastAi !== '' && $lastUser !== '') {
+                break;
+            }
+        }
+
+        return trim("Người dùng hỏi: {$lastUser}\nTrợ lý tư vấn: {$lastAi}");
+    }
+
     private function dailyPrompt(array $c): string
     {
         $genderVi = $c['gender'] === 'male' ? 'Nam' : ($c['gender'] === 'female' ? 'Nữ' : 'Khác');

@@ -85,6 +85,9 @@ Route::prefix('webauthn')->group(function () {
 // User đăng nhập gửi kèm Bearer token → có ngữ cảnh cá nhân hóa; khách → tư vấn chung.
 Route::middleware('throttle:15,1')->post('/chat', [ChatController::class, 'send']);
 
+// "Thiết lập kế hoạch ăn hôm nay" từ lời tư vấn — auth required, tốn token AI nên siết chặt.
+Route::middleware(['auth:sanctum', 'throttle:5,1'])->post('/chat/apply-plan', [ChatController::class, 'applyPlan']);
+
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);
     Route::delete('/subscribe', [NotificationController::class, 'unsubscribe']);

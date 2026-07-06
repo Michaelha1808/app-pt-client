@@ -13,7 +13,7 @@ class ChatService
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-    public function __construct(SettingsService $settings)
+    public function __construct(SettingsService $settings, private PreferenceService $preferences)
     {
         $this->apiKey = $settings->get('ai.api_key', config('services.gemini.key'));
         $this->model  = $settings->get('ai.model', config('services.gemini.model', 'gemini-2.0-flash'));
@@ -75,6 +75,23 @@ class ChatService
 
         $streak = (int) ($user->streak?->current_streak ?? 0);
 
+        // Nước hôm nay
+        $todayWater = (int) $user->waterLogs()->whereDate('logged_at', today())->sum('amount_ml');
+
+        // Tập luyện 7 ngày qua
+        $workoutBlock = $this->workoutBlock($user);
+
+        // Sở thích/giới hạn + thói quen 30 ngày + kế hoạch đang theo
+        $prefBlock  = $this->preferences->promptBlock($user);
+        $habitBlock = $this->preferences->habitPromptBlock($user);
+        $planBlock  = $this->currentPlanBlock($user);
+
+        // Đối chiếu kế hoạch hôm qua vs thực tế (vòng lặp feedback)
+        $feedback = $this->planFeedbackBlock($user);
+        if ($feedback !== '') {
+            $planBlock .= "\n\n" . $feedback;
+        }
+
         return <<<CTX
 === HỒ SƠ NGƯỜI DÙNG (dữ liệu thật, cập nhật hôm nay) ===
 Tên: {$user->name}
@@ -86,12 +103,115 @@ Streak hiện tại: {$streak} ngày
 HÔM NAY ({$this->todayLabel()}):
 - Đã nạp: {$todayCals} kcal (còn lại {$remaining} kcal so với mục tiêu)
 - Macros hôm nay: protein {$todayP}g, carbs {$todayC}g, fat {$todayF}g
+- Nước đã uống: {$todayWater} ml
 - Các bữa đã ăn: {$todayMeals}
 
 TRUNG BÌNH 7 NGÀY GẦN ĐÂY (trên {$daysLogged} ngày có ghi nhận):
 - Calo TB: {$avgCals} kcal/ngày
 - Macros TB: protein {$avgP}g, carbs {$avgC}g, fat {$avgF}g
+
+{$prefBlock}
+
+{$habitBlock}
+
+{$workoutBlock}
+
+{$planBlock}
 CTX;
+    }
+
+    /** Khối tập luyện 7 ngày từ health_activities. */
+    private function workoutBlock(User $user): string
+    {
+        $acts = $user->healthActivities()
+            ->where('started_at', '>=', today()->subDays(6)->startOfDay())
+            ->orderByDesc('started_at')
+            ->get(['name', 'type', 'calories', 'duration_seconds', 'started_at']);
+
+        if ($acts->isEmpty()) {
+            return "TẬP LUYỆN 7 NGÀY QUA: chưa ghi nhận buổi tập nào.";
+        }
+
+        $count   = $acts->count();
+        $burned  = (int) $acts->sum('calories');
+        $latest  = $acts->first();
+        $mins    = (int) round(((int) $latest->duration_seconds) / 60);
+        $ago     = $latest->started_at->diffForHumans();
+
+        return "TẬP LUYỆN 7 NGÀY QUA:\n"
+            . "- {$count} buổi, tổng ~{$burned} kcal đốt\n"
+            . "- Gần nhất: {$latest->name} ~{$mins} phút (~{$latest->calories} kcal) — {$ago}";
+    }
+
+    /** Khối kế hoạch daily đang áp dụng cho hôm nay (nếu có). */
+    private function currentPlanBlock(User $user): string
+    {
+        $plan = $user->mealPlans()
+            ->where('scope', 'daily')
+            ->whereDate('target_date', today())
+            ->latest()
+            ->first();
+
+        if (!$plan) {
+            return "KẾ HOẠCH ĐANG THEO: chưa có kế hoạch cho hôm nay.";
+        }
+
+        $data    = $plan->plan ?? [];
+        $summary = $data['summary'] ?? '';
+        $target  = $data['target_calories'] ?? null;
+
+        $lines = ["KẾ HOẠCH ĐANG THEO (hôm nay):"];
+        if ($target) {
+            $lines[] = "- Mục tiêu theo kế hoạch: {$target} kcal";
+        }
+        if ($summary) {
+            $lines[] = "- Định hướng: {$summary}";
+        }
+
+        // Bữa gợi ý trong kế hoạch
+        $meals = collect($data['meals'] ?? [])
+            ->map(fn ($m) => ($m['name'] ?? '') . ' (~' . ($m['calories'] ?? '?') . ' kcal)')
+            ->filter()
+            ->take(4)
+            ->implode('; ');
+        if ($meals) {
+            $lines[] = "- Bữa theo kế hoạch: {$meals}";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Đối chiếu kế hoạch daily của HÔM QUA với lượng calo thực tế đã nạp.
+     * Cho AI dữ liệu để nhắc "hôm qua bạn hoàn thành X% kế hoạch". Rỗng nếu không có plan.
+     */
+    private function planFeedbackBlock(User $user): string
+    {
+        $yesterday = today()->subDay();
+
+        $plan = $user->mealPlans()
+            ->where('scope', 'daily')
+            ->whereDate('target_date', $yesterday)
+            ->latest()
+            ->first();
+
+        $target = (int) ($plan?->plan['target_calories'] ?? 0);
+        if (!$plan || $target <= 0) {
+            return '';
+        }
+
+        $actual = (int) $user->mealLogs()->whereDate('logged_at', $yesterday)->sum('calories');
+        if ($actual === 0) {
+            return "ĐỐI CHIẾU KẾ HOẠCH HÔM QUA:\n- Kế hoạch {$target} kcal nhưng hôm qua chưa ghi nhận bữa nào (chưa rõ mức tuân thủ).";
+        }
+
+        $pct  = (int) round($actual / $target * 100);
+        $diff = $actual - $target;
+        $note = $diff > $target * 0.1
+            ? 'vượt ' . $diff . ' kcal'
+            : ($diff < -$target * 0.1 ? 'thiếu ' . abs($diff) . ' kcal' : 'bám sát mục tiêu');
+
+        return "ĐỐI CHIẾU KẾ HOẠCH HÔM QUA:\n- Kế hoạch {$target} kcal, thực tế nạp {$actual} kcal ({$pct}% — {$note})";
     }
 
     /**
@@ -126,6 +246,18 @@ Quy tắc:
 - Ưu tiên món Việt phổ biến, dễ mua/dễ nấu. Tổng calo đề xuất nên bám sát mục tiêu.
 - Trả lời bằng tiếng Việt, tự nhiên, thân thiện, có thể dùng emoji. Không dùng markdown heading (#). Có thể dùng gạch đầu dòng và **in đậm**.
 - Nếu hồ sơ chưa đủ (thiếu chiều cao/cân nặng), nhắc người dùng hoàn thiện hồ sơ để tư vấn chính xác hơn.
+
+QUY TẮC CÁ NHÂN HÓA (BẮT BUỘC — vi phạm là trả lời sai):
+1. DỊ ỨNG là ràng buộc tuyệt đối: KHÔNG BAO GIỜ gợi ý món chứa nguyên liệu trong danh sách dị ứng, kể cả khi người dùng hỏi trực tiếp về món đó — thay vào đó nhắc họ bị dị ứng và gợi ý món thay thế tương đương dinh dưỡng.
+2. Món "Không thích": tránh gợi ý. "Chế độ ăn" (nếu có): mọi gợi ý phải tuân thủ.
+3. Khi gợi ý món ăn: ưu tiên (a) món trong danh sách "Thích", (b) món tương tự/cùng nhóm với "Món hay ăn nhất" — người dùng đã quen khẩu vị đó. KHÔNG gợi ý món hoàn toàn xa lạ với thói quen của họ trừ khi họ chủ động xin món mới.
+4. MỌI câu trả lời tư vấn phải trích dẫn ít nhất 1 SỐ LIỆU CỤ THỂ từ ngữ cảnh (ví dụ: "bạn còn 420 kcal hôm nay", "7 ngày qua bạn ăn trung bình 1.650 kcal", "bạn đã tập 3 buổi tuần này"). Cấm câu trả lời chỉ toàn kiến thức chung chung không gắn với dữ liệu của người dùng.
+5. Nếu người dùng đang theo kế hoạch (mục KẾ HOẠCH ĐANG THEO): tư vấn NHẤT QUÁN với kế hoạch đó, chỉ đề xuất chệch khi có lý do từ số liệu. Nếu có mục ĐỐI CHIẾU KẾ HOẠCH HÔM QUA, hãy nhắc mức độ hoàn thành hôm qua và điều chỉnh hôm nay cho phù hợp (vd hôm qua vượt calo thì hôm nay tiết chế).
+6. Khi người dùng cho feedback về sở thích ("tôi dị ứng X", "tôi không ăn Y", "tôi thích Z"): xác nhận trong câu trả lời rằng bạn đã ghi nhớ, và điều chỉnh gợi ý ngay lập tức.
+7. Không mở đầu bằng disclaimer chung chung. Đi thẳng vào tư vấn dựa trên số liệu.
+
+VÍ DỤ SAI (chung chung, cấm): "Bạn nên ăn nhiều rau xanh và protein nạc, uống đủ nước nhé!"
+VÍ DỤ ĐÚNG: "Hôm nay bạn còn 420 kcal. Vì bạn hay ăn cơm tấm và không ăn được tôm, bữa tối mình gợi ý cơm gạo lứt + gà nướng (~400 kcal) — đủ đạm bù cho 7 ngày qua bạn đang thiếu protein 💪"
 
 {$context}
 

@@ -5,6 +5,16 @@ import { useChat } from '@/composables/useChat'
 import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatMessage } from '@/types/chat'
+import type { MemoryItem, MemoryConflict, PreferenceKind } from '@/types/preference'
+
+// Nhãn hiển thị cho chip "đã ghi nhớ" theo loại sở thích
+const MEMORY_KIND_LABEL: Record<PreferenceKind, string> = {
+  allergy: 'Dị ứng',
+  dislike: 'Không thích',
+  like:    'Thích',
+  diet:    'Chế độ ăn',
+  habit:   'Thói quen',
+}
 
 const auth = useAuthStore()
 const { streaming, send } = useChat()
@@ -33,6 +43,18 @@ watch(inputText, () => nextTick(autoResize))
 
 function nowTime() {
   return new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' })
+}
+
+// Render markdown tối giản mà AI hay dùng (đậm/nghiêng) — ESCAPE HTML trước nên an toàn với v-html.
+// Xuống dòng do class whitespace-pre-wrap lo, không cần <br>.
+function formatMessage(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return escaped
+    .replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>')   // **đậm**
+    .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>') // *nghiêng* (không đụng bullet ** )
 }
 
 const firstName = computed(() => {
@@ -136,14 +158,25 @@ async function sendMessage() {
     step()
   })
 
-  await send(history, (delta) => {
-    if (isTyping.value) {
-      isTyping.value = false
-      messages.value.push(aiMsg)
-      aiIndex = messages.value.length - 1
-    }
-    pending += delta
-  })
+  await send(
+    history,
+    (delta) => {
+      if (isTyping.value) {
+        isTyping.value = false
+        messages.value.push(aiMsg)
+        aiIndex = messages.value.length - 1
+      }
+      pending += delta
+    },
+    (items: MemoryItem[], conflicts: MemoryConflict[]) => {
+      // AI vừa ghi nhớ sở thích / phát hiện xung đột → gắn vào tin nhắn AI
+      if (aiIndex !== -1 && (items.length || conflicts.length)) {
+        if (items.length) messages.value[aiIndex].memory = items
+        if (conflicts.length) messages.value[aiIndex].conflicts = conflicts
+        persist()
+      }
+    },
+  )
 
   streamDone = true
   await typing
@@ -161,6 +194,30 @@ async function sendMessage() {
 function useSuggestion(s: string) {
   inputText.value = s
   sendMessage()
+}
+
+// Hoàn tác một mục AI vừa ghi nhớ (xóa khỏi DB + bỏ chip)
+async function undoMemory(msg: ChatMessage, id: number) {
+  try {
+    await apiFetch(`/preferences/${id}`, { method: 'DELETE' })
+    msg.memory = msg.memory?.filter(m => m.id !== id)
+    persist()
+  } catch { /* lỗi mạng → giữ nguyên chip */ }
+}
+
+// Xử lý xung đột: đổi "thái độ" (accept) hoặc giữ nguyên
+async function resolveConflict(msg: ChatMessage, c: MemoryConflict, accept: boolean) {
+  if (accept) {
+    try {
+      const res = await apiFetch<{ preference: MemoryItem }>('/preferences', {
+        method: 'POST',
+        body:   { kind: c.suggested_kind, label: c.label },
+      })
+      msg.memory = [...(msg.memory ?? []), res.preference]
+    } catch { /* bỏ qua, vẫn gỡ card xung đột bên dưới */ }
+  }
+  msg.conflicts = msg.conflicts?.filter(x => x.id !== c.id)
+  persist()
 }
 
 function scrollToBottom() {
@@ -221,11 +278,55 @@ onMounted(() => {
 
         <div class="max-w-[78%]">
           <div
-            class="px-3.5 py-2.5 rounded-[18px] text-[14px] leading-relaxed whitespace-pre-wrap"
+            class="px-3.5 py-2.5 rounded-[18px] text-[14px] leading-relaxed whitespace-pre-wrap [&_strong]:font-semibold"
             :class="msg.role === 'user'
               ? 'bg-ios-blue text-white rounded-br-[6px]'
               : 'bg-white text-black rounded-bl-[6px] shadow-sm'"
-          >{{ msg.text }}</div>
+            v-html="formatMessage(msg.text)"
+          />
+
+          <!-- Chip: sở thích AI vừa ghi nhớ (kèm hoàn tác) -->
+          <div v-if="msg.role === 'ai' && msg.memory?.length" class="flex flex-wrap gap-1.5 mt-1.5">
+            <span
+              v-for="m in msg.memory"
+              :key="m.id"
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full bg-ios-green/10 text-ios-green text-[11px] font-medium"
+            >
+              🧠 Đã ghi nhớ: {{ MEMORY_KIND_LABEL[m.kind] }} — {{ m.label }}
+              <button
+                class="w-4 h-4 rounded-full bg-ios-green/15 flex items-center justify-center ios-press"
+                title="Hoàn tác"
+                @click="undoMemory(msg, m.id)"
+              >
+                <svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                  <path d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
+            </span>
+          </div>
+
+          <!-- Card: xung đột sở thích cần xác nhận -->
+          <div
+            v-for="c in (msg.role === 'ai' ? msg.conflicts ?? [] : [])"
+            :key="c.id"
+            class="mt-1.5 px-3 py-2 rounded-[12px] bg-ios-orange/10 text-[12px]"
+          >
+            <p class="text-black/80 mb-1.5">
+              Trước đây bạn đánh dấu <b>{{ c.label }}</b> là “{{ MEMORY_KIND_LABEL[c.current_kind] }}”.
+              Đổi thành “{{ MEMORY_KIND_LABEL[c.suggested_kind] }}”?
+            </p>
+            <div class="flex gap-2">
+              <button
+                class="px-3 py-1 rounded-full bg-ios-blue text-white text-[11px] font-semibold ios-press"
+                @click="resolveConflict(msg, c, true)"
+              >Đổi</button>
+              <button
+                class="px-3 py-1 rounded-full bg-black/5 text-ios-gray text-[11px] font-semibold ios-press"
+                @click="resolveConflict(msg, c, false)"
+              >Giữ nguyên</button>
+            </div>
+          </div>
+
           <p class="text-[10px] text-ios-gray mt-1" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
             {{ msg.time }}
           </p>

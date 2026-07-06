@@ -23,6 +23,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/integrations/callback', component: () => import('@/pages/integrations/Callback.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/edit', component: () => import('@/pages/profile/Edit.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/change-password', component: () => import('@/pages/profile/ChangePassword.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+  { path: '/profile/preferences', component: () => import('@/pages/profile/Preferences.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/settings/notifications', component: () => import('@/pages/settings/Notifications.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
 
   // ── Admin ──

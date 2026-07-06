@@ -61,6 +61,7 @@ declare global {
   const onUnmounted: typeof import('vue').onUnmounted
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
+  const playNotifySound: typeof import('./utils/notifySound').playNotifySound
   const provide: typeof import('vue').provide
   const reactive: typeof import('vue').reactive
   const readonly: typeof import('vue').readonly
@@ -73,6 +74,7 @@ declare global {
   const setActivePinia: typeof import('pinia').setActivePinia
   const setAppBadge: typeof import('./utils/badge').setAppBadge
   const setMapStoreSuffix: typeof import('pinia').setMapStoreSuffix
+  const setupNotifySound: typeof import('./utils/notifySound').setupNotifySound
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
@@ -97,6 +99,7 @@ declare global {
   const useFoodAnalysis: typeof import('./composables/useFoodAnalysis').useFoodAnalysis
   const useFoodDetect: typeof import('./composables/useFoodDetect').useFoodDetect
   const useGuestQuota: typeof import('./composables/useGuestQuota').useGuestQuota
+  const useHealthIntegration: typeof import('./composables/useHealthIntegration').useHealthIntegration
   const useId: typeof import('vue').useId
   const useLink: typeof import('vue-router').useLink
   const useMealAdvice: typeof import('./composables/useMealAdvice').useMealAdvice
@@ -105,6 +108,7 @@ declare global {
   const useModel: typeof import('vue').useModel
   const useNotifications: typeof import('./composables/useNotifications').useNotifications
   const usePasskey: typeof import('./composables/usePasskey').usePasskey
+  const usePreferences: typeof import('./composables/usePreferences').usePreferences
   const useProfile: typeof import('./composables/useProfile').useProfile
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
@@ -204,6 +208,7 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
+    readonly playNotifySound: UnwrapRef<typeof import('./utils/notifySound')['playNotifySound']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
@@ -216,6 +221,7 @@ declare module 'vue' {
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setAppBadge: UnwrapRef<typeof import('./utils/badge')['setAppBadge']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
+    readonly setupNotifySound: UnwrapRef<typeof import('./utils/notifySound')['setupNotifySound']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
@@ -240,6 +246,7 @@ declare module 'vue' {
     readonly useFoodAnalysis: UnwrapRef<typeof import('./composables/useFoodAnalysis')['useFoodAnalysis']>
     readonly useFoodDetect: UnwrapRef<typeof import('./composables/useFoodDetect')['useFoodDetect']>
     readonly useGuestQuota: UnwrapRef<typeof import('./composables/useGuestQuota')['useGuestQuota']>
+    readonly useHealthIntegration: UnwrapRef<typeof import('./composables/useHealthIntegration')['useHealthIntegration']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useMealAdvice: UnwrapRef<typeof import('./composables/useMealAdvice')['useMealAdvice']>
@@ -248,6 +255,7 @@ declare module 'vue' {
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
     readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
+    readonly usePreferences: UnwrapRef<typeof import('./composables/usePreferences')['usePreferences']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>

@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Postgres mac dinh UTC (docker-compose khong set TZ) — cac cot timestamp
+            // "without time zone" dung useCurrent()/CURRENT_TIMESTAMP se bi lech gio
+            // that neu khong ep session timezone khop voi app.timezone.
+            'timezone' => env('APP_TIMEZONE', 'Asia/Ho_Chi_Minh'),
         ],
 
         'sqlsrv' => [

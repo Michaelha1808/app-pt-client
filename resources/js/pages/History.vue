@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { useMealLog } from '@/composables/useMealLog'
 import { useHealthIntegration } from '@/composables/useHealthIntegration'
+import { useQuickLog } from '@/composables/useQuickLog'
+import { useToast } from '@/composables/useToast'
 import { activityMeta } from '@/types/health'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const store = useAuthStore()
-const { historyStats, loading, fetchHistory, deleteLog } = useMealLog()
+const { historyStats, loading, fetchHistory, deleteLog, relogMeal } = useMealLog()
 const { activities, loading: actLoading, hasMore, fetchActivities } = useHealthIntegration()
+const { addFavorite } = useQuickLog()
+const toast = useToast()
 
 const activeTab    = ref<'food' | 'exercise'>('food')
 const selectedDate = ref(todayStr())
@@ -91,6 +95,17 @@ async function removeLog(id: number) {
   const ok = await deleteLog(id)
   if (ok) await fetchHistory(selectedDate.value)
   swipedId.value = null
+}
+
+async function eatAgain(id: number) {
+  swipedId.value = null
+  const ok = await relogMeal(id)
+  toast[ok ? 'success' : 'error'](ok ? 'Đã thêm vào hôm nay' : 'Không thể ăn lại món này')
+}
+
+async function toggleFavorite(meal: { id: number; food_name: string; serving: string | null; calories: number; protein: number; carbs: number; fat: number; sodium: number }) {
+  const ok = await addFavorite({ meal_log_id: meal.id })
+  toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${meal.food_name}" vào yêu thích` : 'Món này đã có trong yêu thích')
 }
 
 onMounted(async () => {
@@ -242,17 +257,18 @@ onMounted(async () => {
 
           <div v-else class="bg-white rounded-[18px] overflow-hidden shadow-sm">
             <div v-for="(meal, idx) in meals" :key="meal.id" class="relative overflow-hidden">
-              <!-- Hidden delete button -->
+              <!-- Hidden actions: ăn lại + xoá -->
               <div
-                class="absolute right-0 top-0 bottom-0 w-20 bg-ios-red flex items-center justify-center"
+                class="absolute right-0 top-0 bottom-0 w-40 flex items-stretch"
                 :class="swipedId === meal.id ? 'flex' : 'hidden'"
               >
-                <button class="text-white text-[13px] font-semibold w-full h-full" @click.stop="removeLog(meal.id)">Xóa</button>
+                <button class="flex-1 bg-ios-blue text-white text-[13px] font-semibold" @click.stop="eatAgain(meal.id)">Ăn lại</button>
+                <button class="flex-1 bg-ios-red text-white text-[13px] font-semibold" @click.stop="removeLog(meal.id)">Xóa</button>
               </div>
 
               <div
                 class="flex items-center gap-3 px-4 py-3.5 bg-white transition-transform"
-                :class="swipedId === meal.id ? '-translate-x-20' : 'translate-x-0'"
+                :class="swipedId === meal.id ? '-translate-x-40' : 'translate-x-0'"
                 @click="toggleSwipe(meal.id)"
               >
                 <img
@@ -273,6 +289,9 @@ onMounted(async () => {
                   </div>
                   <p class="text-[12px] text-ios-gray">{{ meal.logged_at }}{{ meal.serving ? ` · ${meal.serving}` : '' }}</p>
                 </div>
+                <button class="ios-press p-1 text-ios-gray3 flex-shrink-0" @click.stop="toggleFavorite(meal)">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                </button>
                 <div class="text-right flex-shrink-0">
                   <p class="text-[15px] font-semibold text-black">{{ meal.calories }}</p>
                   <p class="text-[11px] text-ios-gray">kcal</p>
@@ -282,7 +301,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <p v-if="meals.length" class="text-[12px] text-ios-gray text-center mt-3">Nhấn vào bữa ăn để hiện nút xóa</p>
+          <p v-if="meals.length" class="text-[12px] text-ios-gray text-center mt-3">Nhấn vào bữa ăn để hiện nút ăn lại / xóa · nhấn ⭐ để thêm yêu thích</p>
         </div>
       </template>
     </template>

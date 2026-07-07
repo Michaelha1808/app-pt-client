@@ -16,6 +16,7 @@ declare global {
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
   const createPinia: typeof import('pinia').createPinia
+  const currentMealSlot: typeof import('./composables/useQuickLog').currentMealSlot
   const customRef: typeof import('vue').customRef
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
@@ -110,6 +111,7 @@ declare global {
   const usePasskey: typeof import('./composables/usePasskey').usePasskey
   const usePreferences: typeof import('./composables/usePreferences').usePreferences
   const useProfile: typeof import('./composables/useProfile').useProfile
+  const useQuickLog: typeof import('./composables/useQuickLog').useQuickLog
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
   const useRouter: typeof import('vue-router').useRouter
@@ -118,6 +120,7 @@ declare global {
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('./composables/useToast').useToast
   const useWater: typeof import('./composables/useWater').useWater
+  const useWeight: typeof import('./composables/useWeight').useWeight
   const watch: typeof import('vue').watch
   const watchEffect: typeof import('vue').watchEffect
   const watchPostEffect: typeof import('vue').watchPostEffect
@@ -141,11 +144,17 @@ declare global {
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
   // @ts-ignore
+  export type { FrequentMealItem, FavoriteMeal, MealSlot } from './composables/useQuickLog'
+  import('./composables/useQuickLog')
+  // @ts-ignore
   export type { StreakData, MealStreakResult } from './composables/useStreak'
   import('./composables/useStreak')
   // @ts-ignore
   export type { WaterLogEntry, WaterToday } from './composables/useWater'
   import('./composables/useWater')
+  // @ts-ignore
+  export type { WeightEntry, WeightTrend, WeightBmi, GoalSuggestion, WeightHistory, WeightRange } from './composables/useWeight'
+  import('./composables/useWeight')
 }
 
 // for vue template auto import
@@ -163,6 +172,7 @@ declare module 'vue' {
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createPinia: UnwrapRef<typeof import('pinia')['createPinia']>
+    readonly currentMealSlot: UnwrapRef<typeof import('./composables/useQuickLog')['currentMealSlot']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
@@ -257,6 +267,7 @@ declare module 'vue' {
     readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
     readonly usePreferences: UnwrapRef<typeof import('./composables/usePreferences')['usePreferences']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
+    readonly useQuickLog: UnwrapRef<typeof import('./composables/useQuickLog')['useQuickLog']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
@@ -265,6 +276,7 @@ declare module 'vue' {
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useToast: UnwrapRef<typeof import('./composables/useToast')['useToast']>
     readonly useWater: UnwrapRef<typeof import('./composables/useWater')['useWater']>
+    readonly useWeight: UnwrapRef<typeof import('./composables/useWeight')['useWeight']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchEffect: UnwrapRef<typeof import('vue')['watchEffect']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>

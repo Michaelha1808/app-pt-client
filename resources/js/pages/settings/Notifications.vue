@@ -149,6 +149,32 @@ async function handleRequestPermission() {
       </div>
 
       <!-- Email nhắc quay lại (sau 7 ngày) chạy ngầm — không hiện toggle cho user -->
+
+      <!-- NHẮC NHỞ KHÁC -->
+      <div class="px-4 mb-1 mt-4">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Nhắc nhở khác</p>
+        <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+          <div class="flex items-center gap-3 px-4 py-3.5">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-blue/15 flex items-center justify-center flex-shrink-0">
+              <span class="text-base">⚖️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] text-black">Cân nặng hàng tuần</p>
+              <p class="text-[13px] text-ios-gray mt-0.5">Thứ 2 · nếu chưa ghi cân trong 7 ngày</p>
+            </div>
+            <button
+              class="relative w-[51px] h-[31px] rounded-full transition-colors duration-200 flex-shrink-0"
+              :class="settings.weigh_in_reminder.enabled ? 'bg-ios-green' : 'bg-ios-gray3'"
+              @click="updateSetting({ weigh_in_reminder: { enabled: !settings.weigh_in_reminder.enabled } })"
+            >
+              <span
+                class="absolute top-[2px] w-[27px] h-[27px] bg-white rounded-full shadow transition-all duration-200"
+                :class="settings.weigh_in_reminder.enabled ? 'left-[22px]' : 'left-[2px]'"
+              />
+            </button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>

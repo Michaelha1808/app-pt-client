@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\WeightService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,9 +17,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(Request $request, WeightService $weightService)
     {
-        $request->validate([
+        $data = $request->validate([
             'name'           => 'sometimes|string|min:2|max:100',
             'birth_year'     => 'sometimes|integer|between:1900,2015',
             'gender'         => 'sometimes|in:male,female,other',
@@ -34,6 +35,10 @@ class UserController extends Controller
             'name', 'birth_year', 'gender', 'height_cm', 'weight_kg',
             'calorie_goal', 'morning_notify', 'evening_notify',
         ]));
+
+        if (array_key_exists('weight_kg', $data)) {
+            $weightService->logWeight($user, (float) $data['weight_kg']);
+        }
 
         return response()->json([
             'user' => $this->formatUser($user->fresh()),

@@ -9,6 +9,7 @@ export interface NotificationSettings {
   midday:  { enabled: boolean }
   evening: { enabled: boolean; time: string }
   email_reengagement: { enabled: boolean }
+  weigh_in_reminder: { enabled: boolean }
 }
 
 const settings   = ref<NotificationSettings | null>(null)

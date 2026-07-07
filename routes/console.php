@@ -7,6 +7,7 @@ use App\Console\Commands\Notifications\SendMorningNotifications;
 use App\Console\Commands\Notifications\SendReengagementEmails;
 use App\Console\Commands\Notifications\SendStreakRiskReminders;
 use App\Console\Commands\Notifications\SendWaterReminders;
+use App\Console\Commands\Notifications\SendWeighInReminder;
 use App\Jobs\RefreshExpiringTokensJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -42,3 +43,6 @@ Schedule::command(SendFreezeSuggestions::class)->dailyAt('09:00');
 
 // Health: refresh token provider sắp hết hạn (Strava ~6h) — chạy mỗi giờ
 Schedule::job(new RefreshExpiringTokensJob())->hourly();
+
+// Nhắc cân nặng — thứ 2 hàng tuần 07:30, chỉ user chưa ghi cân trong 7 ngày qua
+Schedule::command(SendWeighInReminder::class)->weeklyOn(1, '07:30');

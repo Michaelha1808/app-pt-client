@@ -9,6 +9,7 @@ use App\Services\DishCatalogService;
 use App\Services\FoodAnalysisService;
 use App\Services\FoodSampleService;
 use App\Services\PreferenceService;
+use App\Services\QuickLogService;
 use App\Services\StreakService;
 use App\Support\UsageTracker;
 use Carbon\Carbon;
@@ -272,6 +273,60 @@ class FoodController extends Controller
             'ids'     => $ids,
             'streak'  => $streak,
         ], 201);
+    }
+
+    /**
+     * Ghi lại 1 bữa đã log trước đó thành bữa mới ngay bây giờ — không gọi AI.
+     */
+    public function relog(Request $request, MealLog $log, StreakService $streakService): JsonResponse
+    {
+        abort_if($log->user_id !== $request->user()->id, 404);
+
+        $data = $request->validate([
+            'serving' => 'sometimes|nullable|string|max:100',
+        ]);
+
+        $user = $request->user();
+        $new  = $user->mealLogs()->create([
+            'food_name'  => $log->food_name,
+            'serving'    => array_key_exists('serving', $data) ? $data['serving'] : $log->serving,
+            'calories'   => $log->calories,
+            'protein'    => $log->protein,
+            'carbs'      => $log->carbs,
+            'fat'        => $log->fat,
+            'sodium'     => $log->sodium,
+            'image_path' => $log->image_path,
+        ]);
+
+        app(PreferenceService::class)->bustHabitCache($user->id);
+        $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
+
+        UsageTracker::record('quick_log_relog', $user->id);
+
+        return response()->json([
+            'message' => 'Đã lưu bữa ăn',
+            'id'      => $new->id,
+            'streak'  => $streak,
+        ], 201);
+    }
+
+    /**
+     * Món ăn "thường ăn" trong 30 ngày qua, gợi ý theo khung giờ hiện tại (FE truyền slot).
+     */
+    public function frequent(Request $request, QuickLogService $quickLog): JsonResponse
+    {
+        $request->validate([
+            'slot'  => 'sometimes|in:morning,noon,evening',
+            'limit' => 'sometimes|integer|min:1|max:20',
+        ]);
+
+        $items = $quickLog->frequent(
+            $request->user(),
+            $request->query('slot'),
+            (int) $request->query('limit', 8),
+        );
+
+        return response()->json(['items' => $items]);
     }
 
     public function todayStats(Request $request): JsonResponse

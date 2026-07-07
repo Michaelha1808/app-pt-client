@@ -61,6 +61,9 @@ class NotificationController extends Controller
             'email_reengagement' => [
                 'enabled' => (bool) $user->email_reengagement_enabled,
             ],
+            'weigh_in_reminder' => [
+                'enabled' => (bool) $user->weigh_in_reminder_enabled,
+            ],
         ]);
     }
 
@@ -73,6 +76,7 @@ class NotificationController extends Controller
             'evening.enabled'             => 'sometimes|boolean',
             'evening.time'                => 'sometimes|date_format:H:i',
             'email_reengagement.enabled'  => 'sometimes|boolean',
+            'weigh_in_reminder.enabled'   => 'sometimes|boolean',
         ]);
 
         $patch = [];
@@ -83,6 +87,7 @@ class NotificationController extends Controller
         if ($request->has('evening.enabled'))            $patch['evening_notify_enabled']      = $request->input('evening.enabled');
         if ($request->has('evening.time'))               $patch['evening_notify']              = $request->input('evening.time');
         if ($request->has('email_reengagement.enabled')) $patch['email_reengagement_enabled']  = $request->input('email_reengagement.enabled');
+        if ($request->has('weigh_in_reminder.enabled'))  $patch['weigh_in_reminder_enabled']   = $request->input('weigh_in_reminder.enabled');
 
         if (!empty($patch)) {
             $request->user()->update($patch);

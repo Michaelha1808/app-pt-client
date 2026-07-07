@@ -15,7 +15,7 @@ class MealPlanService
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-    public function __construct(private PreferenceService $preferences)
+    public function __construct(private PreferenceService $preferences, private WeightService $weightService)
     {
         $this->apiKey = config('services.gemini.key');
         $this->model  = config('services.gemini.model', 'gemini-2.0-flash');
@@ -98,6 +98,15 @@ class MealPlanService
                 ->sum('amount_ml') / max(1, $daysLogged)
         );
 
+        // Xu hướng cân nặng 30 ngày — giúp AI điều chỉnh calo kế hoạch theo tiến độ thực tế thay vì chỉ theo goal tĩnh.
+        $weightTrend = $this->weightService->history($user, 30)['trend'] ?? null;
+        $weightTrendLine = $weightTrend
+            ? sprintf(
+                'Xu hướng cân nặng: %.1fkg hiện tại, thay đổi %.1fkg trong 30 ngày qua (~%.2fkg/tuần).',
+                $weightTrend['current_weight_kg'], $weightTrend['delta_kg'], $weightTrend['weekly_rate_kg']
+            )
+            : 'Xu hướng cân nặng: chưa có đủ lịch sử ghi cân để xác định.';
+
         $ctx = [
             'gender'        => $gender,
             'age'           => $age,
@@ -115,6 +124,7 @@ class MealPlanService
             'trend'         => $trend,
             'avg_water'     => $avgWater,
             'streak'        => (int) ($user->streak?->current_streak ?? 0),
+            'weight_trend_line' => $weightTrendLine,
         ];
 
         // Ràng buộc món ăn theo sở thích/dị ứng + thói quen — nhồi vào prompt.
@@ -124,6 +134,7 @@ class MealPlanService
         // preferences_hash vào data_hash → thêm dị ứng mới ⇒ plan cũ thành stale.
         $ctx['data_hash'] = sha1(implode('|', [
             $avgCalories, $adherence, $trend, $weight, $goal, $scope,
+            $weightTrend['delta_kg'] ?? 0,
             $this->preferences->preferencesHash($user),
         ]));
 
@@ -347,6 +358,7 @@ PROMPT;
 
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+{$c['weight_trend_line']}
 {$history}
 
 {$c['pref_constraints']}
@@ -371,6 +383,7 @@ PROMPT;
 
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+{$c['weight_trend_line']}
 {$history}
 
 {$c['pref_constraints']}
@@ -388,6 +401,7 @@ PROMPT;
         $genderVi = $c['gender'] === 'male' ? 'Nam' : ($c['gender'] === 'female' ? 'Nữ' : 'Khác');
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+{$c['weight_trend_line']}
 30 ngày qua: calo TB {$c['avg_calories']} kcal/ngày (xu hướng {$c['trend']}), tuân thủ {$c['adherence']}%.
 
 {$c['pref_constraints']}

@@ -4,6 +4,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotifications } from '@/composables/useNotifications'
 import { useStreak } from '@/composables/useStreak'
 import { useWater } from '@/composables/useWater'
+import { useWeight } from '@/composables/useWeight'
+import { currentMealSlot, useQuickLog, type FrequentMealItem } from '@/composables/useQuickLog'
+import { useToast } from '@/composables/useToast'
 import { apiFetch } from '@/utils/api'
 import { setAppBadge } from '@/utils/badge'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
@@ -16,15 +19,59 @@ import MilestoneToast from '@/components/streak/MilestoneToast.vue'
 import DailyTasksCard from '@/components/home/DailyTasksCard.vue'
 
 const store = useAuthStore()
-const { todayStats, loading, fetchTodayStats } = useMealLog()
+const { todayStats, loading, fetchTodayStats, relogMeal } = useMealLog()
 const { permission } = useNotifications()
 const { streak, newMilestone, milestoneInfo, showRiskBanner, earnedTokenAtMilestone,
         streakCount, fetchStreak, useFreeze } = useStreak()
 const { fetchWaterToday } = useWater()
+const { history: weightHistory, fetchHistory: fetchWeightHistory } = useWeight()
+const { frequentItems, fetchFrequent } = useQuickLog()
+const toast = useToast()
+
+const quickAddTarget = ref<FrequentMealItem | null>(null)
+const quickAddSaving = ref(false)
+
+function openQuickAdd(item: FrequentMealItem) {
+  quickAddTarget.value = item
+}
+
+async function confirmQuickAdd() {
+  if (!quickAddTarget.value) return
+  quickAddSaving.value = true
+  const ok = await relogMeal(quickAddTarget.value.last_log_id)
+  quickAddSaving.value = false
+  quickAddTarget.value = null
+  if (ok) {
+    toast.success('Đã thêm vào hôm nay')
+    fetchTodayStats()
+  } else {
+    toast.error('Không thể thêm món này')
+  }
+}
 
 const panelOpen    = ref(false)
 const streakOpen   = ref(false)
 const unreadCount  = ref(0)
+
+const WEIGHT_REMINDER_KEY = 'weight_reminder_dismissed_date'
+const todayIso = () => new Date().toISOString().slice(0, 10)
+const weightReminderDismissed = ref(localStorage.getItem(WEIGHT_REMINDER_KEY) === todayIso())
+
+const lastWeighDate = computed(() => {
+  const entries = weightHistory.value?.entries ?? []
+  return entries.length ? entries[entries.length - 1].logged_date : null
+})
+const daysSinceWeigh = computed(() => {
+  if (!lastWeighDate.value) return Infinity
+  const diffMs = Date.now() - new Date(lastWeighDate.value + 'T00:00:00').getTime()
+  return Math.floor(diffMs / 86400000)
+})
+const showWeightReminder = computed(() => daysSinceWeigh.value >= 7 && !weightReminderDismissed.value)
+
+function dismissWeightReminder() {
+  localStorage.setItem(WEIGHT_REMINDER_KEY, todayIso())
+  weightReminderDismissed.value = true
+}
 
 async function fetchUnreadCount() {
   if (!store.token) return
@@ -75,6 +122,8 @@ onMounted(() => {
     fetchUnreadCount()
     fetchStreak()
     fetchWaterToday()
+    fetchWeightHistory(30)
+    fetchFrequent(currentMealSlot(), 4)
   }
 })
 </script>
@@ -148,6 +197,21 @@ onMounted(() => {
           <template v-else>Còn <strong>{{ (goal - consumed).toLocaleString('vi') }} kcal</strong> cho hôm nay 🌿</template>
         </p>
       </div>
+    </div>
+
+    <!-- Nhắc cập nhật cân nặng (≥7 ngày chưa ghi) -->
+    <div
+      v-if="showWeightReminder"
+      class="mx-5 mb-4 bg-white rounded-[16px] px-4 py-3.5 flex items-center gap-3 shadow-sm animate-fadeInUp delay-1"
+      style="opacity:0"
+    >
+      <div class="w-9 h-9 rounded-full bg-ios-blue/10 flex items-center justify-center text-lg flex-shrink-0">⚖️</div>
+      <NuxtLink to="/weight" class="flex-1 min-w-0">
+        <p class="text-[13px] font-medium text-black leading-snug">Đã 1 tuần bạn chưa cân — cập nhật để AI tư vấn sát hơn</p>
+      </NuxtLink>
+      <button class="ios-press p-1 text-ios-gray3 flex-shrink-0" @click="dismissWeightReminder">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
     </div>
 
     <!-- Daily tasks card -->
@@ -233,6 +297,21 @@ onMounted(() => {
           </svg>
           <span class="text-white text-[12px] font-semibold text-center">Tư vấn AI</span>
         </NuxtLink>
+      </div>
+    </div>
+
+    <!-- Quick-add: món hay ăn theo khung giờ hiện tại -->
+    <div v-if="frequentItems.length" class="mb-4 animate-fadeInUp delay-3" style="opacity:0">
+      <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2 px-5">Bạn hay ăn giờ này</p>
+      <div class="flex gap-2 overflow-x-auto px-5 pb-1">
+        <button
+          v-for="item in frequentItems" :key="item.food_name + (item.serving ?? '')"
+          class="flex-shrink-0 bg-white rounded-[14px] px-3.5 py-2.5 shadow-sm ios-press text-left"
+          @click="openQuickAdd(item)"
+        >
+          <p class="text-[13px] font-medium text-black whitespace-nowrap">{{ item.food_name }}</p>
+          <p class="text-[11px] text-ios-gray mt-0.5">{{ item.calories }} kcal</p>
+        </button>
       </div>
     </div>
 
@@ -331,4 +410,22 @@ onMounted(() => {
     :earned-token="earnedTokenAtMilestone"
     @close="newMilestone = null"
   />
+
+  <!-- Confirm sheet: thêm nhanh món hay ăn -->
+  <Teleport to="body">
+    <div v-if="quickAddTarget" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="quickAddTarget = null">
+      <div class="absolute inset-0 bg-black/40" @click="quickAddTarget = null"/>
+      <div class="relative w-full max-w-md bg-white rounded-t-[24px] px-5 pt-3 pb-8 animate-slideUpSheet">
+        <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-4"/>
+        <p class="text-[15px] text-ios-gray mb-1">Thêm vào hôm nay</p>
+        <h2 class="text-[20px] font-bold text-black mb-1">{{ quickAddTarget.food_name }}</h2>
+        <p class="text-[14px] text-ios-gray mb-5">{{ quickAddTarget.calories }} kcal<template v-if="quickAddTarget.serving"> · {{ quickAddTarget.serving }}</template></p>
+        <button
+          class="w-full py-3.5 bg-ios-blue text-white text-[16px] font-semibold rounded-[14px] ios-press disabled:opacity-50"
+          :disabled="quickAddSaving"
+          @click="confirmQuickAdd"
+        >{{ quickAddSaving ? 'Đang lưu...' : 'Ghi' }}</button>
+      </div>
+    </div>
+  </Teleport>
 </template>

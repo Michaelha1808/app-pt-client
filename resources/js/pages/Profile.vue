@@ -221,6 +221,23 @@ async function handleLogout() {
         </div>
       </div>
 
+      <!-- Cân nặng -->
+      <div class="px-5 mb-2 animate-fadeInUp delay-2" style="opacity:0">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Cân nặng</p>
+        <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+          <NuxtLink to="/weight" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-blue/10 flex items-center justify-center">
+              <span class="text-base">⚖️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] text-black">Theo dõi cân nặng</p>
+              <p class="text-[12px] text-ios-gray">{{ user?.weight_kg ? `Hiện tại ${user.weight_kg} kg` : 'Ghi lại tiến trình cân nặng của bạn' }}</p>
+            </div>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </NuxtLink>
+        </div>
+      </div>
+
       <!-- Cá nhân hóa AI -->
       <div class="px-5 mb-2 animate-fadeInUp delay-2" style="opacity:0">
         <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Cá nhân hóa</p>

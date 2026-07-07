@@ -88,5 +88,19 @@ export function useMealLog() {
     }
   }
 
-  return { todayStats, historyStats, loading, fetchTodayStats, fetchHistory, logMeal, logMeals, deleteLog }
+  /** Ghi lại 1 bữa đã log trước đó thành bữa mới ngay bây giờ — không gọi AI. */
+  async function relogMeal(id: number, serving?: string): Promise<boolean> {
+    try {
+      const res = await apiFetch<{ id: number; streak: MealStreakResult }>(`/food/relog/${id}`, {
+        method: 'POST',
+        body: serving !== undefined ? { serving } : {},
+      })
+      if (res.streak) onMealLogged(res.streak)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return { todayStats, historyStats, loading, fetchTodayStats, fetchHistory, logMeal, logMeals, deleteLog, relogMeal }
 }

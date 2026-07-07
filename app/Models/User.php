@@ -19,7 +19,7 @@ use Laravel\Sanctum\HasApiTokens;
     'avatar_url', 'birth_year', 'gender', 'height_cm', 'weight_kg',
     'calorie_goal', 'morning_notify', 'evening_notify', 'calorie_streak',
     'morning_notify_enabled', 'midday_notify_enabled', 'evening_notify_enabled',
-    'email_reengagement_enabled', 'last_seen_at', 'reengagement_sent_at',
+    'email_reengagement_enabled', 'weigh_in_reminder_enabled', 'last_seen_at', 'reengagement_sent_at',
     'role', 'status', 'suspend_reason',
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -78,6 +78,16 @@ class User extends Authenticatable
         return $this->hasMany(WaterLog::class);
     }
 
+    public function weightLogs(): HasMany
+    {
+        return $this->hasMany(WeightLog::class)->orderByDesc('logged_date');
+    }
+
+    public function favoriteMeals(): HasMany
+    {
+        return $this->hasMany(FavoriteMeal::class);
+    }
+
     public function streakMilestones(): HasMany
     {
         return $this->hasMany(StreakMilestone::class);
@@ -107,6 +117,7 @@ class User extends Authenticatable
             'midday_notify_enabled'       => 'boolean',
             'evening_notify_enabled'      => 'boolean',
             'email_reengagement_enabled'  => 'boolean',
+            'weigh_in_reminder_enabled'   => 'boolean',
             'last_seen_at'                => 'datetime',
             'reengagement_sent_at'        => 'datetime',
         ];

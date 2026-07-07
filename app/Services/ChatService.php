@@ -14,7 +14,7 @@ class ChatService
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-    public function __construct(SettingsService $settings, private PreferenceService $preferences)
+    public function __construct(SettingsService $settings, private PreferenceService $preferences, private WeightService $weightService)
     {
         $this->apiKey = $settings->get('ai.api_key', config('services.gemini.key'));
         $this->model  = $settings->get('ai.model', config('services.gemini.model', 'gemini-2.0-flash'));
@@ -82,6 +82,9 @@ class ChatService
         // Tập luyện 7 ngày qua
         $workoutBlock = $this->workoutBlock($user);
 
+        // Xu hướng cân nặng 30 ngày
+        $weightBlock = $this->weightTrendBlock($user);
+
         // Sở thích/giới hạn + thói quen 30 ngày + kế hoạch đang theo
         $prefBlock  = $this->preferences->promptBlock($user);
         $habitBlock = $this->preferences->habitPromptBlock($user);
@@ -117,8 +120,25 @@ TRUNG BÌNH 7 NGÀY GẦN ĐÂY (trên {$daysLogged} ngày có ghi nhận):
 
 {$workoutBlock}
 
+{$weightBlock}
+
 {$planBlock}
 CTX;
+    }
+
+    /** Khối xu hướng cân nặng 30 ngày, dựa trên weight_logs (bảng lịch sử theo ngày). */
+    private function weightTrendBlock(User $user): string
+    {
+        $trend = $this->weightService->history($user, 30)['trend'] ?? null;
+
+        if (!$trend) {
+            return "XU HƯỚNG CÂN NẶNG (30 NGÀY): chưa ghi cân nặng định kỳ — có thể khuyến khích nhẹ nhàng khi phù hợp.";
+        }
+
+        return "XU HƯỚNG CÂN NẶNG (30 NGÀY):\n"
+            . "- Hiện tại: {$trend['current_weight_kg']} kg\n"
+            . "- Thay đổi: {$trend['delta_kg']} kg trong 30 ngày (~{$trend['weekly_rate_kg']} kg/tuần)\n"
+            . "- Trung bình trượt 7 ngày gần nhất: {$trend['avg_7d_kg']} kg";
     }
 
     /** Khối tập luyện 7 ngày từ health_activities. */

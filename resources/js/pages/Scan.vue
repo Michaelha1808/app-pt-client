@@ -1,11 +1,76 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import type { FoodAnalysisResult } from '@/types/food'
+import { currentMealSlot, useQuickLog, type FrequentMealItem, type FavoriteMeal } from '@/composables/useQuickLog'
+import { useMealLog } from '@/composables/useMealLog'
+import { useToast } from '@/composables/useToast'
 
 const route    = useRoute()
 const isManual = computed(() => route.query.manual === 'true')
-const mode     = ref<'camera' | 'manual'>(isManual.value ? 'manual' : 'camera')
+const mode     = ref<'camera' | 'manual' | 'mine'>(isManual.value ? 'manual' : 'camera')
 const manualText = ref('')
+
+// ── Tab "Món của tôi" ────────────────────────────────────────────
+const { favorites, fetchFrequent, fetchFavorites, addFavorite, removeFavorite, logFavorite } = useQuickLog()
+const { relogMeal } = useMealLog()
+const toast = useToast()
+
+const slotItems     = ref<FrequentMealItem[]>([])
+const allFrequent    = ref<FrequentMealItem[]>([])
+const mineLoading    = ref(false)
+const mineLoaded     = ref(false)
+const loggingKey     = ref<string | null>(null)
+
+async function loadMineTab() {
+  if (mineLoaded.value) return
+  mineLoading.value = true
+  try {
+    const [slot, all] = await Promise.all([
+      fetchFrequent(currentMealSlot(), 6),
+      fetchFrequent(undefined, 20),
+      fetchFavorites(),
+    ])
+    slotItems.value   = slot
+    allFrequent.value = all
+    mineLoaded.value  = true
+  } finally {
+    mineLoading.value = false
+  }
+}
+
+async function quickRelog(item: FrequentMealItem) {
+  loggingKey.value = item.food_name + (item.serving ?? '')
+  const ok = await relogMeal(item.last_log_id)
+  loggingKey.value = null
+  toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${item.food_name}"` : 'Không thể thêm món này')
+}
+
+async function quickLogFavorite(fav: FavoriteMeal) {
+  loggingKey.value = 'fav-' + fav.id
+  const ok = await logFavorite(fav.id)
+  loggingKey.value = null
+  toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${fav.food_name}"` : 'Không thể thêm món này')
+}
+
+async function promoteToFavorite(item: FrequentMealItem) {
+  const ok = await addFavorite({
+    food_name: item.food_name, serving: item.serving,
+    calories: item.calories, protein: item.protein, carbs: item.carbs, fat: item.fat, sodium: item.sodium,
+  })
+  if (ok) {
+    item.is_favorite = true
+    toast.success(`Đã thêm "${item.food_name}" vào yêu thích`)
+  } else {
+    toast.error('Không thể thêm vào yêu thích')
+  }
+}
+
+async function unfavorite(fav: FavoriteMeal) {
+  await removeFavorite(fav.id)
+  toast.success('Đã bỏ yêu thích')
+}
+
+watch(mode, (val) => { if (val === 'mine') loadMineTab() })
 
 // ── Camera state ────────────────────────────────────────────────
 const videoEl     = ref<HTMLVideoElement | null>(null)
@@ -263,15 +328,20 @@ onUnmounted(() => {
         <!-- Mode toggle -->
         <div class="bg-black/40 rounded-full p-1 flex backdrop-blur-sm">
           <button
-            class="px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+            class="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all"
             :class="mode === 'camera' ? 'bg-white text-black' : 'text-white'"
             @click="mode = 'camera'"
           >Chụp ảnh</button>
           <button
-            class="px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+            class="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all"
             :class="mode === 'manual' ? 'bg-white text-black' : 'text-white'"
             @click="mode = 'manual'"
           >Nhập tay</button>
+          <button
+            class="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+            :class="mode === 'mine' ? 'bg-white text-black' : 'text-white'"
+            @click="mode = 'mine'"
+          >Món của tôi</button>
         </div>
 
         <!-- Flash -->
@@ -476,6 +546,104 @@ onUnmounted(() => {
           </svg>
           Phân tích ngay
         </button>
+      </div>
+    </Transition>
+
+    <!-- Tab "Món của tôi": ăn lại món thường ăn / yêu thích, không gọi AI -->
+    <Transition
+      enter-active-class="transition-transform duration-300 ease-out"
+      enter-from-class="translate-y-full"
+      enter-to-class="translate-y-0"
+      leave-active-class="transition-transform duration-250 ease-in"
+      leave-from-class="translate-y-0"
+      leave-to-class="translate-y-full"
+    >
+      <div
+        v-if="mode === 'mine'"
+        class="absolute inset-x-0 bottom-0 bg-white rounded-t-[28px] overflow-y-auto"
+        style="top: 120px; padding-bottom: calc(env(safe-area-inset-bottom) + 24px)"
+      >
+        <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mt-3 mb-4 sticky top-0"/>
+
+        <div v-if="mineLoading" class="flex justify-center py-10">
+          <div class="w-7 h-7 rounded-full border-2 border-ios-blue border-t-transparent animate-spin"/>
+        </div>
+
+        <template v-else-if="!favorites.length && !allFrequent.length">
+          <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
+            <span class="text-4xl">🍽️</span>
+            <p class="text-[15px] font-medium text-black">Chưa có món nào</p>
+            <p class="text-[13px] text-ios-gray leading-relaxed">Hãy scan vài bữa, món bạn ăn thường xuyên sẽ xuất hiện ở đây.</p>
+          </div>
+        </template>
+
+        <template v-else>
+          <!-- Gợi ý theo khung giờ -->
+          <div v-if="slotItems.length" class="mb-5">
+            <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-5">Bạn hay ăn giờ này</p>
+            <div class="flex gap-2 overflow-x-auto px-5 pb-1">
+              <button
+                v-for="item in slotItems" :key="'slot-' + item.food_name + (item.serving ?? '')"
+                class="flex-shrink-0 bg-ios-gray6 rounded-[14px] px-3.5 py-2.5 ios-press text-left disabled:opacity-50"
+                :disabled="loggingKey === item.food_name + (item.serving ?? '')"
+                @click="quickRelog(item)"
+              >
+                <p class="text-[13px] font-medium text-black whitespace-nowrap">{{ item.food_name }}</p>
+                <p class="text-[11px] text-ios-gray mt-0.5">{{ item.calories }} kcal</p>
+              </button>
+            </div>
+          </div>
+
+          <!-- Yêu thích -->
+          <div v-if="favorites.length" class="mb-5 px-5">
+            <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Yêu thích</p>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div
+                v-for="fav in favorites" :key="fav.id"
+                class="bg-white border border-ios-gray5 rounded-[14px] p-3 relative"
+              >
+                <button class="absolute top-2 right-2 text-ios-gray3 ios-press" @click="unfavorite(fav)">
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+                <p class="text-[13px] font-medium text-black pr-4 truncate">{{ fav.food_name }}</p>
+                <p class="text-[11px] text-ios-gray mt-0.5 mb-2">{{ fav.calories }} kcal<template v-if="fav.serving"> · {{ fav.serving }}</template></p>
+                <button
+                  class="w-full py-1.5 bg-ios-blue text-white text-[12px] font-semibold rounded-[8px] ios-press disabled:opacity-50"
+                  :disabled="loggingKey === 'fav-' + fav.id"
+                  @click="quickLogFavorite(fav)"
+                >{{ loggingKey === 'fav-' + fav.id ? '...' : 'Ghi' }}</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thường ăn -->
+          <div v-if="allFrequent.length" class="px-5">
+            <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Thường ăn</p>
+            <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+              <div v-for="(item, idx) in allFrequent" :key="'freq-' + item.food_name + (item.serving ?? '')">
+                <div class="flex items-center gap-3 px-4 py-3">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[14px] font-medium text-black truncate">{{ item.food_name }}</p>
+                    <p class="text-[12px] text-ios-gray mt-0.5">{{ item.calories }} kcal · {{ item.count }} lần</p>
+                  </div>
+                  <button
+                    v-if="!item.is_favorite"
+                    class="ios-press p-1.5 text-ios-gray3"
+                    @click="promoteToFavorite(item)"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                  </button>
+                  <button
+                    class="px-3 py-1.5 bg-ios-blue/10 text-ios-blue text-[12px] font-semibold rounded-[8px] ios-press disabled:opacity-50"
+                    :disabled="loggingKey === item.food_name + (item.serving ?? '')"
+                    @click="quickRelog(item)"
+                  >{{ loggingKey === item.food_name + (item.serving ?? '') ? '...' : 'Ghi' }}</button>
+                </div>
+                <div v-if="idx < allFrequent.length - 1" class="ios-separator mx-4"/>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </Transition>
   </div>

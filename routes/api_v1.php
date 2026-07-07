@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
+use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\FoodController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\IntegrationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\V1\StreakController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WaterController;
 use App\Http\Controllers\Api\V1\WebAuthnController;
+use App\Http\Controllers\Api\V1\WeightController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
@@ -55,6 +57,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
+
+    // Log nhanh: ăn lại món cũ (không gọi AI) + món thường ăn 30 ngày theo khung giờ
+    Route::post('/food/relog/{log}', [FoodController::class, 'relog']);
+    Route::get('/food/frequent', [FoodController::class, 'frequent']);
+
+    // Món yêu thích
+    Route::get('/food/favorites', [FavoriteController::class, 'index']);
+    Route::post('/food/favorites', [FavoriteController::class, 'store']);
+    Route::post('/food/favorites/{favorite}/log', [FavoriteController::class, 'logFavorite']);
+    Route::delete('/food/favorites/{favorite}', [FavoriteController::class, 'destroy']);
 
     // Nhiệm vụ tập luyện hôm nay theo kế hoạch AI
     Route::get('/home/daily-tasks', [\App\Http\Controllers\Api\V1\DailyTaskController::class, 'index']);
@@ -115,6 +127,13 @@ Route::middleware('auth:sanctum')->prefix('water')->group(function () {
     Route::get('/today',        [WaterController::class, 'today']);
     Route::post('/log',         [WaterController::class, 'log']);
     Route::delete('/log/{waterLog}', [WaterController::class, 'delete']);
+});
+
+Route::middleware('auth:sanctum')->prefix('weight')->group(function () {
+    Route::post('/log',              [WeightController::class, 'log']);
+    Route::get('/history',           [WeightController::class, 'history']);
+    Route::delete('/log/{weightLog}', [WeightController::class, 'destroy']);
+    Route::post('/apply-goal',       [WeightController::class, 'applyGoal']);
 });
 
 // ── Tích hợp app sức khoẻ (Strava…) + log buổi tập thủ công ──

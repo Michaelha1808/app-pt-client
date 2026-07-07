@@ -20,6 +20,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/plan', component: () => import('@/pages/MealPlan.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile', component: () => import('@/pages/Profile.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/activities', component: () => import('@/pages/Activities.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+  { path: '/weight', component: () => import('@/pages/Weight.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/integrations/callback', component: () => import('@/pages/integrations/Callback.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/edit', component: () => import('@/pages/profile/Edit.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/change-password', component: () => import('@/pages/profile/ChangePassword.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },

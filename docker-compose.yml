@@ -6,6 +6,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pt_client}
       POSTGRES_USER: ${POSTGRES_USER:-pt_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      TZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

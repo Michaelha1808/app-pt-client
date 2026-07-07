@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\User;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Log;
 
 class MealPlanService
 {
@@ -18,6 +20,28 @@ class MealPlanService
         $this->apiKey = config('services.gemini.key');
         $this->model  = config('services.gemini.model', 'gemini-2.0-flash');
         $this->http   = new Client(['timeout' => 45]);
+    }
+
+    /**
+     * Ghi log chi tiết khi gọi Gemini thất bại — kèm HTTP status + response body
+     * (thường chứa lý do thật: hết quota, rate limit 429, key sai...).
+     * Không đổi thông báo phía client.
+     */
+    private function logGeminiFailure(string $where, \Throwable $e): void
+    {
+        $status = null;
+        $body   = null;
+        if ($e instanceof RequestException && $e->hasResponse()) {
+            $status = $e->getResponse()->getStatusCode();
+            $body   = mb_substr((string) $e->getResponse()->getBody(), 0, 1500);
+        }
+
+        Log::error("Gemini API thất bại [{$where}]", [
+            'model'   => $this->model,
+            'status'  => $status,
+            'message' => $e->getMessage(),
+            'body'    => $body,
+        ]);
     }
 
     /**
@@ -153,6 +177,7 @@ class MealPlanService
 
             return $plan;
         } catch (GuzzleException $e) {
+            $this->logGeminiFailure('getStructuredPlan:' . $scope, $e);
             throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
         }
     }
@@ -219,6 +244,7 @@ PROMPT;
                 }
             }
         } catch (GuzzleException $e) {
+            $this->logGeminiFailure('streamReasoning:' . $scope, $e);
             throw new \RuntimeException('Gemini streaming error: ' . $e->getMessage(), 0, $e);
         }
     }
@@ -273,11 +299,16 @@ PROMPT;
             $plan = json_decode($raw, true) ?: [];
 
             if (!isset($plan['meals']) || !is_array($plan['meals'])) {
+                Log::warning('MealPlan planFromConversation: JSON kế hoạch không hợp lệ', [
+                    'finish_reason' => $body['candidates'][0]['finishReason'] ?? null,
+                    'raw'           => mb_substr($raw, 0, 1000),
+                ]);
                 throw new \RuntimeException('Kế hoạch trả về không hợp lệ.');
             }
 
             return $plan;
         } catch (GuzzleException $e) {
+            $this->logGeminiFailure('planFromConversation', $e);
             throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
         }
     }

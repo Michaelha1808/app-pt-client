@@ -9,6 +9,7 @@ use App\Services\PreferenceService;
 use App\Support\UsageTracker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
@@ -135,6 +136,7 @@ class ChatController extends Controller
         try {
             $plan = $service->planFromConversation($context, $request->input('messages'));
         } catch (\Throwable $e) {
+            Log::error('applyPlan thất bại', ['user_id' => $user->id, 'error' => $e->getMessage()]);
             report($e);
 
             return response()->json(['message' => 'Không thể thiết lập kế hoạch. Vui lòng thử lại.'], 500);

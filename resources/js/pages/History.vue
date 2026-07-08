@@ -10,14 +10,19 @@ import { useAuthStore } from '@/stores/auth'
 const store = useAuthStore()
 const { historyStats, loading, fetchHistory, deleteLog, relogMeal } = useMealLog()
 const { activities, loading: actLoading, hasMore, fetchActivities } = useHealthIntegration()
-const { addFavorite } = useQuickLog()
+const { favorites, fetchFavorites, addFavorite, removeFavorite } = useQuickLog()
 const toast = useToast()
+
+// Favorite của 1 bữa (match theo tên + khẩu phần — favorite tạo từ meal log copy nguyên chuỗi)
+function favoriteOf(meal: { food_name: string; serving: string | null }) {
+  return favorites.value.find(f => f.food_name === meal.food_name && (f.serving ?? null) === (meal.serving ?? null)) ?? null
+}
 
 const activeTab    = ref<'food' | 'exercise'>('food')
 const selectedDate = ref(todayStr())
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return localDateStr()
 }
 
 // Tổng calo đốt hôm nay = các buổi tập có started_at trong ngày hôm nay
@@ -103,13 +108,20 @@ async function eatAgain(id: number) {
   toast[ok ? 'success' : 'error'](ok ? 'Đã thêm vào hôm nay' : 'Không thể ăn lại món này')
 }
 
-async function toggleFavorite(meal: { id: number; food_name: string; serving: string | null; calories: number; protein: number; carbs: number; fat: number; sodium: number }) {
-  const ok = await addFavorite({ meal_log_id: meal.id })
-  toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${meal.food_name}" vào yêu thích` : 'Món này đã có trong yêu thích')
+async function toggleFavorite(meal: { id: number; food_name: string; serving: string | null }) {
+  const fav = favoriteOf(meal)
+  if (fav) {
+    await removeFavorite(fav.id)
+    toast.success(`Đã bỏ yêu thích "${meal.food_name}"`)
+  } else {
+    const ok = await addFavorite({ meal_log_id: meal.id })
+    toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${meal.food_name}" vào yêu thích` : 'Không thể thêm vào yêu thích')
+  }
 }
 
 onMounted(async () => {
   if (store.token) {
+    fetchFavorites()   // để sao ⭐ hiển thị đúng trạng thái yêu thích
     await fetchHistory(selectedDate.value)
   }
 })
@@ -289,7 +301,11 @@ onMounted(async () => {
                   </div>
                   <p class="text-[12px] text-ios-gray">{{ meal.logged_at }}{{ meal.serving ? ` · ${meal.serving}` : '' }}</p>
                 </div>
-                <button class="ios-press p-1 text-ios-gray3 flex-shrink-0" @click.stop="toggleFavorite(meal)">
+                <button
+                  class="ios-press p-1 flex-shrink-0 transition-colors"
+                  :class="favoriteOf(meal) ? 'text-ios-yellow' : 'text-ios-gray3'"
+                  @click.stop="toggleFavorite(meal)"
+                >
                   <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                 </button>
                 <div class="text-right flex-shrink-0">

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\FavoriteMeal;
 use App\Models\MealLog;
+use App\Models\User;
 use App\Services\PreferenceService;
 use App\Services\StreakService;
 use App\Support\UsageTracker;
+use App\Support\VietnameseText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -67,6 +69,9 @@ class FavoriteController extends Controller
 
         $favorite = $user->favoriteMeals()->create($payload);
 
+        // Món yêu thích cũng là món "thích" → AI ưu tiên gợi ý (trang /profile/preferences mục Thích)
+        $this->syncLikePreference($user, $favorite->food_name);
+
         return response()->json(['item' => $this->format($favorite)], 201);
     }
 
@@ -102,9 +107,34 @@ class FavoriteController extends Controller
     {
         abort_if($favorite->user_id !== $request->user()->id, 404);
 
+        $foodName = $favorite->food_name;
         $favorite->delete();
 
+        // Bỏ yêu thích → gỡ khỏi mục "Thích" (chỉ kind=like; không đụng allergy/dislike/diet)
+        $request->user()->preferences()
+            ->where('kind', 'like')
+            ->where('value', VietnameseText::normalize($foodName))
+            ->delete();
+
         return response()->noContent();
+    }
+
+    /**
+     * Ghi món vào user_preferences kind=like nếu nguyên liệu/món này chưa mang
+     * "thái độ" nào khác (allergy/dislike/diet giữ nguyên — không ghi đè).
+     * Best-effort: đạt trần 50 preferences hay lỗi khác thì favorite vẫn thành công.
+     */
+    private function syncLikePreference(User $user, string $foodName): void
+    {
+        try {
+            $value = VietnameseText::normalize($foodName);
+            if ($value === '' || $user->preferences()->where('value', $value)->exists()) {
+                return;
+            }
+            app(PreferenceService::class)->add($user, 'like', $foodName, 'manual');
+        } catch (\Throwable) {
+            // nuốt lỗi — sync preference là phụ, không chặn luồng yêu thích
+        }
     }
 
     private function format(FavoriteMeal $f): array

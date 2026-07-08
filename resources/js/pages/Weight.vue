@@ -42,7 +42,7 @@ const bmi = computed(() => history.value?.bmi ?? null)
 const goalSuggestion = computed(() => suggestionDismissed.value ? null : history.value?.goal_suggestion ?? null)
 const currentWeight = computed(() => trend.value?.current_weight_kg ?? user.value?.weight_kg ?? null)
 
-const todayStr = new Date().toISOString().slice(0, 10)
+const todayStr = localDateStr()
 const hasTodayEntry = computed(() => entries.value.some(e => e.logged_date === todayStr))
 
 const bmiLabelColor = computed(() => {

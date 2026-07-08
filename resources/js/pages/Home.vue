@@ -54,8 +54,7 @@ const streakOpen   = ref(false)
 const unreadCount  = ref(0)
 
 const WEIGHT_REMINDER_KEY = 'weight_reminder_dismissed_date'
-const todayIso = () => new Date().toISOString().slice(0, 10)
-const weightReminderDismissed = ref(localStorage.getItem(WEIGHT_REMINDER_KEY) === todayIso())
+const weightReminderDismissed = ref(localStorage.getItem(WEIGHT_REMINDER_KEY) === localDateStr())
 
 const lastWeighDate = computed(() => {
   const entries = weightHistory.value?.entries ?? []
@@ -69,7 +68,7 @@ const daysSinceWeigh = computed(() => {
 const showWeightReminder = computed(() => daysSinceWeigh.value >= 7 && !weightReminderDismissed.value)
 
 function dismissWeightReminder() {
-  localStorage.setItem(WEIGHT_REMINDER_KEY, todayIso())
+  localStorage.setItem(WEIGHT_REMINDER_KEY, localDateStr())
   weightReminderDismissed.value = true
 }
 

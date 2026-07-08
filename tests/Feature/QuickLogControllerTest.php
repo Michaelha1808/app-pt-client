@@ -207,4 +207,55 @@ class QuickLogControllerTest extends TestCase
 
         $this->assertDatabaseMissing('favorite_meals', ['id' => $fav->id]);
     }
+
+    public function test_add_favorite_also_creates_like_preference(): void
+    {
+        $user = User::factory()->create();
+        $log  = $this->createMeal($user);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/food/favorites', ['meal_log_id' => $log->id])
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('user_preferences', [
+            'user_id' => $user->id,
+            'kind'    => 'like',
+            'value'   => 'pho bo',
+            'label'   => 'Phở bò',
+        ]);
+    }
+
+    public function test_add_favorite_does_not_override_existing_allergy(): void
+    {
+        $user = User::factory()->create();
+        $user->preferences()->create([
+            'kind' => 'allergy', 'value' => 'pho bo', 'label' => 'Phở bò',
+            'source' => 'manual', 'last_confirmed_at' => now(),
+        ]);
+        $log = $this->createMeal($user);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/food/favorites', ['meal_log_id' => $log->id])
+            ->assertStatus(201);
+
+        // Thái độ allergy giữ nguyên, không bị đổi thành like
+        $this->assertDatabaseHas('user_preferences', ['user_id' => $user->id, 'value' => 'pho bo', 'kind' => 'allergy']);
+        $this->assertDatabaseMissing('user_preferences', ['user_id' => $user->id, 'value' => 'pho bo', 'kind' => 'like']);
+    }
+
+    public function test_delete_favorite_removes_matching_like_preference(): void
+    {
+        $user = User::factory()->create();
+        $log  = $this->createMeal($user);
+
+        $favId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/v1/food/favorites', ['meal_log_id' => $log->id])
+            ->json('item.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->deleteJson("/api/v1/food/favorites/{$favId}")
+            ->assertStatus(204);
+
+        $this->assertDatabaseMissing('user_preferences', ['user_id' => $user->id, 'value' => 'pho bo', 'kind' => 'like']);
+    }
 }

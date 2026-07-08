@@ -7,6 +7,16 @@ import { useAuth } from '@/composables/useAuth'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import type { AdminUserDetail } from '@/types/admin'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { ArrowLeft, Loader2, Monitor, Smartphone, Globe } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +33,12 @@ const saving = ref(false)
 const form = ref({ name: '', email: '', role: 'user' as 'user' | 'admin', calorie_goal: 2000, birth_year: null as number | null, gender: '' as string, height_cm: null as number | null, weight_kg: null as number | null })
 
 const isSelf = computed(() => me.value && user.value && String(me.value.id) === String(user.value.id))
+
+// shadcn Select không nhận value rỗng → sentinel 'none' cho "chưa chọn giới tính"
+const genderModel = computed({
+  get: () => form.value.gender || 'none',
+  set: (v: string) => { form.value.gender = v === 'none' ? '' : v },
+})
 
 async function load() {
   loading.value = true
@@ -95,10 +111,10 @@ function fmtTime(iso: string | null): string {
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function deviceIcon(device: string): string {
-  if (/iPhone|iPad|iPod|Android/i.test(device)) return '📱'
-  if (/Windows|macOS|Linux|ChromeOS/i.test(device)) return '💻'
-  return '🌐'
+function deviceIcon(device: string) {
+  if (/iPhone|iPad|iPod|Android/i.test(device)) return Smartphone
+  if (/Windows|macOS|Linux|ChromeOS/i.test(device)) return Monitor
+  return Globe
 }
 
 async function onRevokeSession(tokenId: number) {
@@ -128,132 +144,156 @@ onMounted(load)
 
 <template>
   <div>
-    <button class="mb-4 text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1" @click="router.push('/admin/users')">
-      ← Quay lại danh sách
-    </button>
+    <Button variant="ghost" size="sm" class="mb-4 -ml-2 text-muted-foreground" @click="router.push('/admin/users')">
+      <ArrowLeft class="w-4 h-4" /> Quay lại danh sách
+    </Button>
 
-    <div v-if="loading" class="text-gray-400 py-10 text-center">Đang tải…</div>
+    <div v-if="loading" class="space-y-4">
+      <Skeleton class="h-24 rounded-xl" />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Skeleton class="lg:col-span-2 h-80 rounded-xl" />
+        <Skeleton class="h-80 rounded-xl" />
+      </div>
+    </div>
 
     <template v-else-if="user">
       <!-- Header -->
-      <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 flex items-center gap-4">
+      <Card class="p-5 mb-4 flex-row items-center gap-4">
         <img v-if="user.avatar_url" :src="user.avatar_url" class="w-16 h-16 rounded-full object-cover" alt="" />
         <div v-else class="w-16 h-16 rounded-full bg-calor-light text-calor-deep flex items-center justify-center text-xl font-bold">
           {{ user.name.charAt(0).toUpperCase() }}
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
-            <h1 class="text-lg font-bold text-gray-900">{{ user.name }}</h1>
-            <span class="text-xs px-2 py-0.5 rounded-full" :class="user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'">{{ user.role }}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full" :class="user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">{{ user.status === 'active' ? 'Active' : 'Bị khoá' }}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 capitalize">{{ user.provider }}</span>
+            <h1 class="text-lg font-bold">{{ user.name }}</h1>
+            <Badge :variant="user.role === 'admin' ? 'default' : 'secondary'" class="capitalize">{{ user.role }}</Badge>
+            <Badge variant="secondary" :class="user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+              {{ user.status === 'active' ? 'Active' : 'Bị khoá' }}
+            </Badge>
+            <Badge variant="outline" class="capitalize">{{ user.provider }}</Badge>
           </div>
-          <div class="text-sm text-gray-400">{{ user.email }}</div>
-          <div v-if="user.status === 'suspended' && user.suspend_reason" class="text-xs text-red-500 mt-1">Lý do khoá: {{ user.suspend_reason }}</div>
+          <div class="text-sm text-muted-foreground">{{ user.email }}</div>
+          <div v-if="user.status === 'suspended' && user.suspend_reason" class="text-xs text-destructive mt-1">Lý do khoá: {{ user.suspend_reason }}</div>
         </div>
-      </div>
+      </Card>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Edit form -->
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-          <h2 class="font-semibold text-gray-800 mb-4">Thông tin tài khoản</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label class="block">
-              <span class="text-xs text-gray-500">Tên</span>
-              <input v-model="form.name" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Email</span>
-              <input v-model="form.email" type="email" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Vai trò</span>
-              <select v-model="form.role" :disabled="isSelf" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg disabled:bg-gray-100">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-              <span v-if="isSelf" class="text-[11px] text-gray-400">Không thể đổi vai trò của chính bạn</span>
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Mục tiêu calo</span>
-              <input v-model.number="form.calorie_goal" type="number" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Năm sinh</span>
-              <input v-model.number="form.birth_year" type="number" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Giới tính</span>
-              <select v-model="form.gender" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
-                <option value="">—</option>
-                <option value="male">Nam</option>
-                <option value="female">Nữ</option>
-                <option value="other">Khác</option>
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Chiều cao (cm)</span>
-              <input v-model.number="form.height_cm" type="number" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Cân nặng (kg)</span>
-              <input v-model.number="form.weight_kg" type="number" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg" />
-            </label>
-          </div>
-          <button class="mt-5 px-4 py-2 bg-calor-green text-white text-sm font-semibold rounded-lg hover:bg-calor-dark disabled:opacity-60" :disabled="saving" @click="save">
-            {{ saving ? 'Đang lưu…' : 'Lưu thay đổi' }}
-          </button>
-        </div>
+        <Card class="lg:col-span-2 gap-4">
+          <CardHeader>
+            <CardTitle class="text-base">Thông tin tài khoản</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <Label>Tên</Label>
+                <Input v-model="form.name" />
+              </div>
+              <div class="space-y-1.5">
+                <Label>Email</Label>
+                <Input v-model="form.email" type="email" />
+              </div>
+              <div class="space-y-1.5">
+                <Label>Vai trò</Label>
+                <Select v-model="form.role" :disabled="!!isSelf">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span v-if="isSelf" class="text-[11px] text-muted-foreground">Không thể đổi vai trò của chính bạn</span>
+              </div>
+              <div class="space-y-1.5">
+                <Label>Mục tiêu calo</Label>
+                <Input v-model.number="form.calorie_goal" type="number" />
+              </div>
+              <div class="space-y-1.5">
+                <Label>Năm sinh</Label>
+                <Input v-model.number="form.birth_year" type="number" />
+              </div>
+              <div class="space-y-1.5">
+                <Label>Giới tính</Label>
+                <Select v-model="genderModel">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="male">Nam</SelectItem>
+                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label>Chiều cao (cm)</Label>
+                <Input v-model.number="form.height_cm" type="number" />
+              </div>
+              <div class="space-y-1.5">
+                <Label>Cân nặng (kg)</Label>
+                <Input v-model.number="form.weight_kg" type="number" />
+              </div>
+            </div>
+            <Button class="mt-5" :disabled="saving" @click="save">
+              <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
+              {{ saving ? 'Đang lưu…' : 'Lưu thay đổi' }}
+            </Button>
+          </CardContent>
+        </Card>
 
         <!-- Side: stats + danger -->
         <div class="space-y-4">
-          <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 class="font-semibold text-gray-800 mb-3">Hoạt động</h2>
-            <div class="grid grid-cols-2 gap-3">
-              <div v-for="s in statItems" :key="s.label" class="bg-gray-50 rounded-lg p-3">
-                <div class="text-lg font-bold text-gray-800">{{ s.value }}</div>
-                <div class="text-xs text-gray-400">{{ s.label }}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 class="font-semibold text-gray-800 mb-3">Thông báo</h2>
-            <ul class="text-sm space-y-1.5">
-              <li class="flex justify-between"><span class="text-gray-500">Buổi sáng</span><span>{{ user.notify.morning ? '✅' : '—' }}</span></li>
-              <li class="flex justify-between"><span class="text-gray-500">Buổi trưa</span><span>{{ user.notify.midday ? '✅' : '—' }}</span></li>
-              <li class="flex justify-between"><span class="text-gray-500">Buổi tối</span><span>{{ user.notify.evening ? '✅' : '—' }}</span></li>
-              <li class="flex justify-between"><span class="text-gray-500">Email re-engage</span><span>{{ user.notify.email_reengagement ? '✅' : '—' }}</span></li>
-            </ul>
-          </div>
-
-          <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 class="font-semibold text-gray-800 mb-3">Thiết bị đăng nhập</h2>
-            <p v-if="!user.sessions.length" class="text-sm text-gray-400">Không có phiên đăng nhập nào.</p>
-            <ul v-else class="space-y-2">
-              <li v-for="s in user.sessions" :key="s.id" class="flex items-center gap-2 text-sm">
-                <span class="text-base">{{ deviceIcon(s.device) }}</span>
-                <div class="flex-1 min-w-0">
-                  <div class="text-gray-800 truncate">{{ s.device }}</div>
-                  <div class="text-xs text-gray-400">Hoạt động: {{ fmtTime(s.last_used_at) }}</div>
+          <Card class="gap-3">
+            <CardHeader><CardTitle class="text-base">Hoạt động</CardTitle></CardHeader>
+            <CardContent>
+              <div class="grid grid-cols-2 gap-3">
+                <div v-for="s in statItems" :key="s.label" class="bg-muted rounded-lg p-3">
+                  <div class="text-lg font-bold">{{ s.value }}</div>
+                  <div class="text-xs text-muted-foreground">{{ s.label }}</div>
                 </div>
-                <button
-                  class="text-xs px-2 py-1 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 shrink-0"
-                  @click="onRevokeSession(s.id)"
-                >Thu hồi</button>
-              </li>
-            </ul>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div class="bg-white rounded-xl border border-red-200 p-5">
-            <h2 class="font-semibold text-red-600 mb-3">Vùng nguy hiểm</h2>
-            <div class="space-y-2">
-              <button v-if="user.status === 'active'" class="w-full py-2 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 disabled:opacity-40" :disabled="!!isSelf || user.role === 'admin'" @click="onSuspend">Khoá tài khoản</button>
-              <button v-else class="w-full py-2 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50" @click="onRestore">Mở khoá tài khoản</button>
-              <button class="w-full py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50" @click="onReset">Gửi reset mật khẩu</button>
-              <button class="w-full py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-40" :disabled="!!isSelf || user.role === 'admin'" @click="onDelete">Xoá tài khoản</button>
-            </div>
-          </div>
+          <Card class="gap-3">
+            <CardHeader><CardTitle class="text-base">Thông báo</CardTitle></CardHeader>
+            <CardContent>
+              <ul class="text-sm space-y-1.5">
+                <li class="flex justify-between"><span class="text-muted-foreground">Buổi sáng</span><span>{{ user.notify.morning ? '✅' : '—' }}</span></li>
+                <li class="flex justify-between"><span class="text-muted-foreground">Buổi trưa</span><span>{{ user.notify.midday ? '✅' : '—' }}</span></li>
+                <li class="flex justify-between"><span class="text-muted-foreground">Buổi tối</span><span>{{ user.notify.evening ? '✅' : '—' }}</span></li>
+                <li class="flex justify-between"><span class="text-muted-foreground">Email re-engage</span><span>{{ user.notify.email_reengagement ? '✅' : '—' }}</span></li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card class="gap-3">
+            <CardHeader><CardTitle class="text-base">Thiết bị đăng nhập</CardTitle></CardHeader>
+            <CardContent>
+              <p v-if="!user.sessions.length" class="text-sm text-muted-foreground">Không có phiên đăng nhập nào.</p>
+              <ul v-else class="space-y-2">
+                <li v-for="s in user.sessions" :key="s.id" class="flex items-center gap-2 text-sm">
+                  <component :is="deviceIcon(s.device)" class="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <div class="truncate">{{ s.device }}</div>
+                    <div class="text-xs text-muted-foreground">Hoạt động: {{ fmtTime(s.last_used_at) }}</div>
+                  </div>
+                  <Button variant="outline" size="sm" class="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0 h-7" @click="onRevokeSession(s.id)">
+                    Thu hồi
+                  </Button>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card class="border-destructive/30 gap-3">
+            <CardHeader><CardTitle class="text-base text-destructive">Vùng nguy hiểm</CardTitle></CardHeader>
+            <CardContent class="space-y-2">
+              <Button v-if="user.status === 'active'" variant="outline" class="w-full text-orange-600 border-orange-200 hover:bg-orange-50" :disabled="!!isSelf || user.role === 'admin'" @click="onSuspend">Khoá tài khoản</Button>
+              <Button v-else variant="outline" class="w-full text-green-600 border-green-200 hover:bg-green-50" @click="onRestore">Mở khoá tài khoản</Button>
+              <Button variant="outline" class="w-full" @click="onReset">Gửi reset mật khẩu</Button>
+              <Button variant="outline" class="w-full text-destructive border-destructive/30 hover:bg-destructive/10" :disabled="!!isSelf || user.role === 'admin'" @click="onDelete">Xoá tài khoản</Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </template>

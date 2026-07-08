@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import type { AdminStats, SeriesPoint } from '@/types/admin'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const { fetchStats } = useAdmin()
 const { extractError } = useAuth()
@@ -89,85 +92,94 @@ const genderColors: Record<string, string> = {
 <template>
   <div>
     <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-      <h1 class="text-xl font-bold text-gray-900">Tổng quan</h1>
-      <div class="inline-flex bg-white rounded-lg border border-gray-200 p-0.5">
-        <button
+      <h1 class="text-xl font-bold">Tổng quan</h1>
+      <div class="inline-flex bg-background rounded-lg border p-0.5 gap-0.5">
+        <Button
           v-for="r in (['7d','30d','90d'] as const)" :key="r"
-          class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-          :class="range === r ? 'bg-calor-green text-white' : 'text-gray-600 hover:bg-gray-50'"
+          :variant="range === r ? 'default' : 'ghost'" size="sm"
           @click="setRange(r)"
-        >{{ r === '7d' ? '7 ngày' : r === '30d' ? '30 ngày' : '90 ngày' }}</button>
+        >{{ r === '7d' ? '7 ngày' : r === '30d' ? '30 ngày' : '90 ngày' }}</Button>
       </div>
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center justify-between">
+    <div v-if="error" class="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg flex items-center justify-between">
       <span>{{ error }}</span>
-      <button class="text-sm font-semibold underline" @click="load">Thử lại</button>
+      <Button variant="link" class="text-destructive underline h-auto p-0" @click="load">Thử lại</Button>
     </div>
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div v-for="i in 8" :key="i" class="h-24 bg-white rounded-xl border border-gray-200 animate-pulse" />
+      <Skeleton v-for="i in 8" :key="i" class="h-24 rounded-xl" />
     </div>
 
     <template v-else-if="stats">
       <!-- KPI cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div v-for="c in kpiCards" :key="c.label" class="bg-white rounded-xl border border-gray-200 p-4">
-          <div class="text-xs text-gray-500 font-medium">{{ c.label }}</div>
-          <div class="mt-1 text-2xl font-bold" :class="c.color">{{ fmt(c.value) }}</div>
-          <div class="text-xs text-gray-400 mt-0.5">{{ c.sub }}</div>
-        </div>
+        <Card v-for="c in kpiCards" :key="c.label" class="py-4 gap-1">
+          <CardContent class="px-4">
+            <div class="text-xs text-muted-foreground font-medium">{{ c.label }}</div>
+            <div class="mt-1 text-2xl font-bold" :class="c.color">{{ fmt(c.value) }}</div>
+            <div class="text-xs text-muted-foreground/70 mt-0.5">{{ c.sub }}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <!-- Charts -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div v-for="ch in charts" :key="ch.title" class="bg-white rounded-xl border border-gray-200 p-4">
-          <div class="text-sm font-semibold text-gray-700 mb-2">{{ ch.title }}</div>
-          <svg viewBox="0 0 600 120" class="w-full h-28" preserveAspectRatio="none">
-            <path :d="buildPath(ch.data)" fill="none" :stroke="ch.stroke" stroke-width="3"
-                  stroke-linejoin="round" stroke-linecap="round" />
-          </svg>
-          <div class="flex justify-between text-[10px] text-gray-400 mt-1">
-            <span>{{ ch.data[0]?.date.slice(5) }}</span>
-            <span>{{ ch.data[ch.data.length - 1]?.date.slice(5) }}</span>
-          </div>
-        </div>
+        <Card v-for="ch in charts" :key="ch.title" class="py-4 gap-2">
+          <CardHeader class="px-4">
+            <CardTitle class="text-sm">{{ ch.title }}</CardTitle>
+          </CardHeader>
+          <CardContent class="px-4">
+            <svg viewBox="0 0 600 120" class="w-full h-28" preserveAspectRatio="none">
+              <path :d="buildPath(ch.data)" fill="none" :stroke="ch.stroke" stroke-width="3"
+                    stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+            <div class="flex justify-between text-[10px] text-muted-foreground mt-1">
+              <span>{{ ch.data[0]?.date.slice(5) }}</span>
+              <span>{{ ch.data[ch.data.length - 1]?.date.slice(5) }}</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <!-- Breakdown -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <div class="text-sm font-semibold text-gray-700 mb-3">Theo nguồn đăng nhập</div>
-          <div class="space-y-2">
+        <Card class="py-4 gap-2">
+          <CardHeader class="px-4">
+            <CardTitle class="text-sm">Theo nguồn đăng nhập</CardTitle>
+          </CardHeader>
+          <CardContent class="px-4 space-y-2">
             <div v-for="[name, val] in providerBreakdown" :key="name">
               <div class="flex justify-between text-xs mb-1">
-                <span class="capitalize text-gray-600">{{ name }}</span>
-                <span class="text-gray-400">{{ fmt(val) }}</span>
+                <span class="capitalize text-muted-foreground">{{ name }}</span>
+                <span class="text-muted-foreground/70">{{ fmt(val) }}</span>
               </div>
-              <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-2 bg-muted rounded-full overflow-hidden">
                 <div class="h-full rounded-full"
                      :style="{ width: (val / sumValues(providerBreakdown) * 100) + '%', background: providerColors[name] || '#8E8E93' }" />
               </div>
             </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <div class="text-sm font-semibold text-gray-700 mb-3">Theo giới tính</div>
-          <div class="space-y-2">
+          </CardContent>
+        </Card>
+        <Card class="py-4 gap-2">
+          <CardHeader class="px-4">
+            <CardTitle class="text-sm">Theo giới tính</CardTitle>
+          </CardHeader>
+          <CardContent class="px-4 space-y-2">
             <div v-for="[name, val] in genderBreakdown" :key="name">
               <div class="flex justify-between text-xs mb-1">
-                <span class="capitalize text-gray-600">{{ name === 'male' ? 'Nam' : name === 'female' ? 'Nữ' : name === 'other' ? 'Khác' : 'Chưa rõ' }}</span>
-                <span class="text-gray-400">{{ fmt(val) }}</span>
+                <span class="capitalize text-muted-foreground">{{ name === 'male' ? 'Nam' : name === 'female' ? 'Nữ' : name === 'other' ? 'Khác' : 'Chưa rõ' }}</span>
+                <span class="text-muted-foreground/70">{{ fmt(val) }}</span>
               </div>
-              <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-2 bg-muted rounded-full overflow-hidden">
                 <div class="h-full rounded-full"
                      :style="{ width: (val / sumValues(genderBreakdown) * 100) + '%', background: genderColors[name] || '#8E8E93' }" />
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </template>
   </div>

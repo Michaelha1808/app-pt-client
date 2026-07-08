@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import type { AdminUserRow, UsersQuery } from '@/types/admin'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import { ChevronLeft, ChevronRight, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-vue-next'
 
 const router = useRouter()
 const { fetchUsers, suspendUser, restoreUser, resetUserPassword, deleteUser } = useAdmin()
@@ -21,7 +36,6 @@ const filters = ref<UsersQuery>({
 })
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
-const menuOpen = ref<number | null>(null)
 
 async function load() {
   loading.value = true
@@ -43,6 +57,17 @@ watch(() => filters.value.search, () => {
 
 function applyFilter() { filters.value.page = 1; load() }
 
+// shadcn Select không cho value rỗng → dùng sentinel 'all' map về ''
+function filterModel(key: 'role' | 'status' | 'provider') {
+  return computed({
+    get: () => (filters.value[key] as string) || 'all',
+    set: (v: string) => { filters.value[key] = v === 'all' ? '' : v; applyFilter() },
+  })
+}
+const roleFilter = filterModel('role')
+const statusFilter = filterModel('status')
+const providerFilter = filterModel('provider')
+
 function setSort(col: string) {
   if (filters.value.sort === col) {
     filters.value.order = filters.value.order === 'asc' ? 'desc' : 'asc'
@@ -58,7 +83,6 @@ function goPage(p: number) {
 }
 
 async function onSuspend(u: AdminUserRow) {
-  menuOpen.value = null
   const reason = window.prompt(`Khoá tài khoản "${u.name}"? Nhập lý do (tuỳ chọn):`)
   if (reason === null) return
   try {
@@ -68,7 +92,6 @@ async function onSuspend(u: AdminUserRow) {
 }
 
 async function onRestore(u: AdminUserRow) {
-  menuOpen.value = null
   try {
     await restoreUser(u.id)
     toast.success('Đã mở khoá'); load()
@@ -76,7 +99,6 @@ async function onRestore(u: AdminUserRow) {
 }
 
 async function onReset(u: AdminUserRow) {
-  menuOpen.value = null
   if (!confirm(`Gửi email đặt lại mật khẩu cho ${u.email}?`)) return
   try {
     const res = await resetUserPassword(u.id)
@@ -85,7 +107,6 @@ async function onReset(u: AdminUserRow) {
 }
 
 async function onDelete(u: AdminUserRow) {
-  menuOpen.value = null
   if (!confirm(`Xoá tài khoản "${u.name}"? Hành động này có thể khôi phục nhưng người dùng sẽ mất truy cập.`)) return
   try {
     await deleteUser(u.id)
@@ -102,125 +123,147 @@ onMounted(load)
 </script>
 
 <template>
-  <div @click="menuOpen = null">
-    <h1 class="text-xl font-bold text-gray-900 mb-4">Người dùng</h1>
+  <div>
+    <h1 class="text-xl font-bold mb-4">Người dùng</h1>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl border border-gray-200 p-3 mb-4 flex flex-wrap gap-2 items-center">
-      <input
+    <Card class="p-3 mb-4 flex-row flex-wrap gap-2 items-center">
+      <Input
         v-model="filters.search" placeholder="Tìm tên hoặc email…"
-        class="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-calor-green/40"
+        class="flex-1 min-w-[200px]"
       />
-      <select v-model="filters.role" @change="applyFilter" class="px-2 py-2 text-sm border border-gray-200 rounded-lg">
-        <option value="">Tất cả vai trò</option>
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
-      <select v-model="filters.status" @change="applyFilter" class="px-2 py-2 text-sm border border-gray-200 rounded-lg">
-        <option value="">Mọi trạng thái</option>
-        <option value="active">Active</option>
-        <option value="suspended">Bị khoá</option>
-      </select>
-      <select v-model="filters.provider" @change="applyFilter" class="px-2 py-2 text-sm border border-gray-200 rounded-lg">
-        <option value="">Mọi nguồn</option>
-        <option value="email">Email</option>
-        <option value="google">Google</option>
-        <option value="facebook">Facebook</option>
-      </select>
-    </div>
+      <Select v-model="roleFilter">
+        <SelectTrigger class="w-40"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tất cả vai trò</SelectItem>
+          <SelectItem value="user">User</SelectItem>
+          <SelectItem value="admin">Admin</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="statusFilter">
+        <SelectTrigger class="w-40"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Mọi trạng thái</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="suspended">Bị khoá</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="providerFilter">
+        <SelectTrigger class="w-40"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Mọi nguồn</SelectItem>
+          <SelectItem value="email">Email</SelectItem>
+          <SelectItem value="google">Google</SelectItem>
+          <SelectItem value="facebook">Facebook</SelectItem>
+        </SelectContent>
+      </Select>
+    </Card>
 
     <!-- Table -->
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th class="text-left font-medium px-4 py-3 cursor-pointer" @click="setSort('name')">
-                Người dùng <span v-if="filters.sort === 'name'">{{ filters.order === 'asc' ? '▲' : '▼' }}</span>
-              </th>
-              <th class="text-left font-medium px-4 py-3">Vai trò</th>
-              <th class="text-left font-medium px-4 py-3">Trạng thái</th>
-              <th class="text-right font-medium px-4 py-3">Streak</th>
-              <th class="text-right font-medium px-4 py-3">Meal logs</th>
-              <th class="text-left font-medium px-4 py-3 cursor-pointer" @click="setSort('last_seen_at')">
-                Hoạt động <span v-if="filters.sort === 'last_seen_at'">{{ filters.order === 'asc' ? '▲' : '▼' }}</span>
-              </th>
-              <th class="text-left font-medium px-4 py-3 cursor-pointer" @click="setSort('created_at')">
-                Tạo lúc <span v-if="filters.sort === 'created_at'">{{ filters.order === 'asc' ? '▲' : '▼' }}</span>
-              </th>
-              <th class="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-if="loading">
-              <td colspan="8" class="px-4 py-10 text-center text-gray-400">Đang tải…</td>
-            </tr>
-            <tr v-else-if="!rows.length">
-              <td colspan="8" class="px-4 py-10 text-center text-gray-400">Không tìm thấy người dùng</td>
-            </tr>
-            <tr
-              v-for="u in rows" :key="u.id"
-              class="hover:bg-gray-50 cursor-pointer"
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead class="cursor-pointer select-none" @click="setSort('name')">
+                <span class="inline-flex items-center gap-1">
+                  Người dùng
+                  <component :is="filters.order === 'asc' ? ArrowUp : ArrowDown" v-if="filters.sort === 'name'" class="w-3.5 h-3.5" />
+                </span>
+              </TableHead>
+              <TableHead>Vai trò</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead class="text-right">Streak</TableHead>
+              <TableHead class="text-right">Meal logs</TableHead>
+              <TableHead class="cursor-pointer select-none" @click="setSort('last_seen_at')">
+                <span class="inline-flex items-center gap-1">
+                  Hoạt động
+                  <component :is="filters.order === 'asc' ? ArrowUp : ArrowDown" v-if="filters.sort === 'last_seen_at'" class="w-3.5 h-3.5" />
+                </span>
+              </TableHead>
+              <TableHead class="cursor-pointer select-none" @click="setSort('created_at')">
+                <span class="inline-flex items-center gap-1">
+                  Tạo lúc
+                  <component :is="filters.order === 'asc' ? ArrowUp : ArrowDown" v-if="filters.sort === 'created_at'" class="w-3.5 h-3.5" />
+                </span>
+              </TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading">
+              <TableRow v-for="i in 5" :key="i">
+                <TableCell v-for="j in 8" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
+              </TableRow>
+            </template>
+            <TableRow v-else-if="!rows.length">
+              <TableCell colspan="8" class="py-10 text-center text-muted-foreground">Không tìm thấy người dùng</TableCell>
+            </TableRow>
+            <TableRow
+              v-for="u in rows" v-else :key="u.id"
+              class="cursor-pointer"
               @click="router.push(`/admin/users/${u.id}`)"
             >
-              <td class="px-4 py-3">
+              <TableCell>
                 <div class="flex items-center gap-3">
                   <img v-if="u.avatar_url" :src="u.avatar_url" class="w-8 h-8 rounded-full object-cover" alt="" />
                   <div v-else class="w-8 h-8 rounded-full bg-calor-light text-calor-deep flex items-center justify-center text-xs font-semibold">
                     {{ u.name.charAt(0).toUpperCase() }}
                   </div>
                   <div class="min-w-0">
-                    <div class="font-medium text-gray-800 truncate">{{ u.name }}</div>
-                    <div class="text-xs text-gray-400 truncate">{{ u.email }}</div>
+                    <div class="font-medium truncate">{{ u.name }}</div>
+                    <div class="text-xs text-muted-foreground truncate">{{ u.email }}</div>
                   </div>
                 </div>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-xs px-2 py-0.5 rounded-full"
-                      :class="u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'">
-                  {{ u.role }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-xs px-2 py-0.5 rounded-full"
-                      :class="u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                  {{ u.status === 'active' ? 'Active' : 'Khoá' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-right text-gray-600">{{ u.calorie_streak }}</td>
-              <td class="px-4 py-3 text-right text-gray-600">{{ u.meal_logs_count }}</td>
-              <td class="px-4 py-3 text-gray-500">{{ fmtDate(u.last_seen_at) }}</td>
-              <td class="px-4 py-3 text-gray-500">{{ fmtDate(u.created_at) }}</td>
-              <td class="px-4 py-3 text-right relative" @click.stop>
-                <button class="p-1.5 rounded hover:bg-gray-100 text-gray-500"
-                        @click="menuOpen = menuOpen === u.id ? null : u.id">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z" /></svg>
-                </button>
-                <div v-if="menuOpen === u.id"
-                     class="absolute right-2 top-10 z-10 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-left">
-                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" @click="router.push(`/admin/users/${u.id}`)">Xem chi tiết</button>
-                  <button v-if="u.status === 'active'" class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-orange-600" @click="onSuspend(u)">Khoá tài khoản</button>
-                  <button v-else class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-green-600" @click="onRestore(u)">Mở khoá</button>
-                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" @click="onReset(u)">Reset mật khẩu</button>
-                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600" @click="onDelete(u)">Xoá</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </TableCell>
+              <TableCell>
+                <Badge :variant="u.role === 'admin' ? 'default' : 'secondary'" class="capitalize">{{ u.role }}</Badge>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  :class="u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  variant="secondary"
+                >{{ u.status === 'active' ? 'Active' : 'Khoá' }}</Badge>
+              </TableCell>
+              <TableCell class="text-right text-muted-foreground tabular-nums">{{ u.calorie_streak }}</TableCell>
+              <TableCell class="text-right text-muted-foreground tabular-nums">{{ u.meal_logs_count }}</TableCell>
+              <TableCell class="text-muted-foreground">{{ fmtDate(u.last_seen_at) }}</TableCell>
+              <TableCell class="text-muted-foreground">{{ fmtDate(u.created_at) }}</TableCell>
+              <TableCell class="text-right" @click.stop>
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-8 w-8">
+                      <MoreHorizontal class="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-44">
+                    <DropdownMenuItem @click="router.push(`/admin/users/${u.id}`)">Xem chi tiết</DropdownMenuItem>
+                    <DropdownMenuItem v-if="u.status === 'active'" @click="onSuspend(u)">Khoá tài khoản</DropdownMenuItem>
+                    <DropdownMenuItem v-else @click="onRestore(u)">Mở khoá</DropdownMenuItem>
+                    <DropdownMenuItem @click="onReset(u)">Reset mật khẩu</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" @click="onDelete(u)">Xoá</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
 
       <!-- Pagination -->
-      <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+      <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
         <span>Tổng {{ meta.total }} người dùng</span>
         <div class="flex items-center gap-1">
-          <button class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40"
-                  :disabled="meta.current_page <= 1" @click="goPage(meta.current_page - 1)">‹</button>
+          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="goPage(meta.current_page - 1)">
+            <ChevronLeft class="w-4 h-4" />
+          </Button>
           <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <button class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40"
-                  :disabled="meta.current_page >= meta.last_page" @click="goPage(meta.current_page + 1)">›</button>
+          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="goPage(meta.current_page + 1)">
+            <ChevronRight class="w-4 h-4" />
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   </div>
 </template>

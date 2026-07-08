@@ -1,9 +1,24 @@
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import type { NotificationSegment, NotificationCampaign } from '@/types/admin'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import { Loader2, RefreshCw } from 'lucide-vue-next'
 
 const { previewNotification, sendNotification, fetchCampaigns } = useAdmin()
 const { extractError } = useAuth()
@@ -14,6 +29,18 @@ const segment = reactive<NotificationSegment>({
   audience: 'all', role: '', provider: '', gender: '', activity: '',
   has_streak: false, only_subscribed: false,
 })
+
+// shadcn Select không nhận value rỗng → sentinel 'any' map về ''
+function segmentModel(key: 'role' | 'provider' | 'gender' | 'activity') {
+  return computed({
+    get: () => (segment[key] as string) || 'any',
+    set: (v: string) => { (segment[key] as string) = v === 'any' ? '' : v },
+  })
+}
+const roleModel = segmentModel('role')
+const providerModel = segmentModel('provider')
+const genderModel = segmentModel('gender')
+const activityModel = segmentModel('activity')
 
 const preview = ref<{ audience_count: number; subscribed_count: number } | null>(null)
 const previewing = ref(false)
@@ -88,141 +115,168 @@ onMounted(() => { runPreview(); loadHistory() })
 
 <template>
   <div class="max-w-4xl">
-    <h1 class="text-xl font-bold text-gray-900 mb-4">Gửi thông báo</h1>
+    <h1 class="text-xl font-bold mb-4">Gửi thông báo</h1>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <!-- Compose -->
-      <section class="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 class="font-semibold text-gray-800 mb-4">Nội dung</h2>
-        <label class="block mb-3">
-          <span class="text-xs text-gray-500">Tiêu đề</span>
-          <input v-model="form.title" maxlength="120" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                 placeholder="VD: Cập nhật mới 🎉" />
-        </label>
-        <label class="block mb-3">
-          <span class="text-xs text-gray-500">Nội dung</span>
-          <textarea v-model="form.body" maxlength="500" rows="3"
-                    class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none"
-                    placeholder="Nội dung thông báo…"></textarea>
-          <span class="text-[11px] text-gray-400">{{ form.body.length }}/500</span>
-        </label>
-        <label class="block">
-          <span class="text-xs text-gray-500">Mở màn hình khi chạm (tuỳ chọn)</span>
-          <input v-model="form.url" class="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono"
-                 placeholder="/home" />
-        </label>
+      <Card class="gap-4">
+        <CardHeader><CardTitle class="text-base">Nội dung</CardTitle></CardHeader>
+        <CardContent class="space-y-3">
+          <div class="space-y-1.5">
+            <Label>Tiêu đề</Label>
+            <Input v-model="form.title" maxlength="120" placeholder="VD: Cập nhật mới 🎉" />
+          </div>
+          <div class="space-y-1.5">
+            <Label>Nội dung</Label>
+            <Textarea v-model="form.body" maxlength="500" rows="3" class="resize-none" placeholder="Nội dung thông báo…" />
+            <span class="text-[11px] text-muted-foreground">{{ form.body.length }}/500</span>
+          </div>
+          <div class="space-y-1.5">
+            <Label>Mở màn hình khi chạm (tuỳ chọn)</Label>
+            <Input v-model="form.url" class="font-mono" placeholder="/home" />
+          </div>
 
-        <!-- Live preview card -->
-        <div class="mt-4 p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <div class="text-[11px] text-gray-400 mb-1">Xem trước</div>
-          <div class="text-sm font-semibold text-gray-800">{{ form.title || 'Tiêu đề thông báo' }}</div>
-          <div class="text-sm text-gray-600">{{ form.body || 'Nội dung thông báo sẽ hiển thị ở đây' }}</div>
-        </div>
-      </section>
+          <!-- Live preview card -->
+          <div class="mt-1 p-3 rounded-lg bg-muted border">
+            <div class="text-[11px] text-muted-foreground mb-1">Xem trước</div>
+            <div class="text-sm font-semibold">{{ form.title || 'Tiêu đề thông báo' }}</div>
+            <div class="text-sm text-muted-foreground">{{ form.body || 'Nội dung thông báo sẽ hiển thị ở đây' }}</div>
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- Segment -->
-      <section class="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 class="font-semibold text-gray-800 mb-4">Đối tượng nhận</h2>
+      <Card class="gap-4">
+        <CardHeader><CardTitle class="text-base">Đối tượng nhận</CardTitle></CardHeader>
+        <CardContent>
+          <div class="inline-flex bg-muted rounded-lg p-0.5 mb-4 gap-0.5">
+            <Button size="sm" :variant="segment.audience === 'all' ? 'default' : 'ghost'" @click="segment.audience = 'all'">Tất cả</Button>
+            <Button size="sm" :variant="segment.audience === 'segment' ? 'default' : 'ghost'" @click="segment.audience = 'segment'">Theo phân khúc</Button>
+          </div>
 
-        <div class="inline-flex bg-gray-100 rounded-lg p-0.5 mb-4">
-          <button class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-                  :class="segment.audience === 'all' ? 'bg-calor-green text-white' : 'text-gray-600'"
-                  @click="segment.audience = 'all'">Tất cả</button>
-          <button class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-                  :class="segment.audience === 'segment' ? 'bg-calor-green text-white' : 'text-gray-600'"
-                  @click="segment.audience = 'segment'">Theo phân khúc</button>
-        </div>
-
-        <div v-if="segment.audience === 'segment'" class="space-y-3">
-          <div class="grid grid-cols-2 gap-3">
-            <label class="block">
-              <span class="text-xs text-gray-500">Vai trò</span>
-              <select v-model="segment.role" class="mt-1 w-full px-2 py-2 text-sm border border-gray-200 rounded-lg">
-                <option value="">Bất kỳ</option><option value="user">User</option><option value="admin">Admin</option>
-              </select>
+          <div v-if="segment.audience === 'segment'" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <Label>Vai trò</Label>
+                <Select v-model="roleModel">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Bất kỳ</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label>Nguồn đăng nhập</Label>
+                <Select v-model="providerModel">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Bất kỳ</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label>Giới tính</Label>
+                <Select v-model="genderModel">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Bất kỳ</SelectItem>
+                    <SelectItem value="male">Nam</SelectItem>
+                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="space-y-1.5">
+                <Label>Hoạt động</Label>
+                <Select v-model="activityModel">
+                  <SelectTrigger class="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Bất kỳ</SelectItem>
+                    <SelectItem value="active_7d">Active 7 ngày</SelectItem>
+                    <SelectItem value="inactive_7d">Không hoạt động 7 ngày</SelectItem>
+                    <SelectItem value="inactive_30d">Không hoạt động 30 ngày</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+              <Switch v-model="segment.has_streak" /> Đang có chuỗi streak
             </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Nguồn đăng nhập</span>
-              <select v-model="segment.provider" class="mt-1 w-full px-2 py-2 text-sm border border-gray-200 rounded-lg">
-                <option value="">Bất kỳ</option><option value="email">Email</option><option value="google">Google</option><option value="facebook">Facebook</option>
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Giới tính</span>
-              <select v-model="segment.gender" class="mt-1 w-full px-2 py-2 text-sm border border-gray-200 rounded-lg">
-                <option value="">Bất kỳ</option><option value="male">Nam</option><option value="female">Nữ</option><option value="other">Khác</option>
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs text-gray-500">Hoạt động</span>
-              <select v-model="segment.activity" class="mt-1 w-full px-2 py-2 text-sm border border-gray-200 rounded-lg">
-                <option value="">Bất kỳ</option>
-                <option value="active_7d">Active 7 ngày</option>
-                <option value="inactive_7d">Không hoạt động 7 ngày</option>
-                <option value="inactive_30d">Không hoạt động 30 ngày</option>
-              </select>
+            <label class="flex items-center gap-2 text-sm">
+              <Switch v-model="segment.only_subscribed" /> Chỉ người đã bật push
             </label>
           </div>
-          <label class="flex items-center gap-2 text-sm"><input type="checkbox" v-model="segment.has_streak" /> Đang có chuỗi streak</label>
-          <label class="flex items-center gap-2 text-sm"><input type="checkbox" v-model="segment.only_subscribed" /> Chỉ người đã bật push</label>
-        </div>
 
-        <!-- Audience count -->
-        <div class="mt-4 p-4 rounded-lg bg-calor-light/60 border border-calor-mint/40">
-          <div class="text-xs text-calor-deep/70">Số người nhận ước tính</div>
-          <div class="text-2xl font-bold text-calor-deep">
-            <span v-if="previewing" class="text-base text-gray-400">Đang tính…</span>
-            <span v-else>{{ preview?.audience_count ?? 0 }}</span>
+          <!-- Audience count -->
+          <div class="mt-4 p-4 rounded-lg bg-calor-light/60 border border-calor-mint/40">
+            <div class="text-xs text-calor-deep/70">Số người nhận ước tính</div>
+            <div class="text-2xl font-bold text-calor-deep">
+              <span v-if="previewing" class="text-base text-muted-foreground">Đang tính…</span>
+              <span v-else>{{ preview?.audience_count ?? 0 }}</span>
+            </div>
+            <div v-if="preview" class="text-xs text-calor-deep/60">
+              trong đó {{ preview.subscribed_count }} người có thiết bị nhận push
+            </div>
           </div>
-          <div class="text-xs text-calor-deep/60" v-if="preview">
-            trong đó {{ preview.subscribed_count }} người có thiết bị nhận push
-          </div>
-        </div>
 
-        <button class="mt-4 w-full py-2.5 bg-calor-green text-white text-sm font-semibold rounded-lg hover:bg-calor-dark disabled:opacity-60"
-                :disabled="sending" @click="submit">
-          {{ sending ? 'Đang gửi…' : 'Gửi thông báo' }}
-        </button>
-      </section>
+          <Button class="mt-4 w-full" :disabled="sending" @click="submit">
+            <Loader2 v-if="sending" class="w-4 h-4 animate-spin" />
+            {{ sending ? 'Đang gửi…' : 'Gửi thông báo' }}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- History -->
-    <section class="bg-white rounded-xl border border-gray-200 mt-4 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-800">Lịch sử chiến dịch</h2>
-        <button class="text-sm text-calor-green hover:underline" @click="loadHistory">Làm mới</button>
+    <Card class="mt-4 py-0 gap-0 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b">
+        <h2 class="font-semibold">Lịch sử chiến dịch</h2>
+        <Button variant="ghost" size="sm" @click="loadHistory">
+          <RefreshCw class="w-3.5 h-3.5" /> Làm mới
+        </Button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th class="text-left font-medium px-4 py-3">Tiêu đề</th>
-              <th class="text-left font-medium px-4 py-3">Trạng thái</th>
-              <th class="text-right font-medium px-4 py-3">Mục tiêu</th>
-              <th class="text-right font-medium px-4 py-3">Đã gửi</th>
-              <th class="text-right font-medium px-4 py-3">Push</th>
-              <th class="text-left font-medium px-4 py-3">Thời gian</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-if="loadingHistory"><td colspan="6" class="px-4 py-8 text-center text-gray-400">Đang tải…</td></tr>
-            <tr v-else-if="!campaigns.length"><td colspan="6" class="px-4 py-8 text-center text-gray-400">Chưa có chiến dịch nào</td></tr>
-            <tr v-for="c in campaigns" :key="c.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3">
-                <div class="font-medium text-gray-800">{{ c.title }}</div>
-                <div class="text-xs text-gray-400 truncate max-w-[260px]">{{ c.body }}</div>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-xs px-2 py-0.5 rounded-full" :class="STATUS_LABEL[c.status]?.cls">{{ STATUS_LABEL[c.status]?.text || c.status }}</span>
-              </td>
-              <td class="px-4 py-3 text-right text-gray-600">{{ c.audience_count }}</td>
-              <td class="px-4 py-3 text-right text-gray-600">{{ c.sent_count }}</td>
-              <td class="px-4 py-3 text-right text-gray-600">{{ c.push_count }}</td>
-              <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ fmt(c.created_at) }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tiêu đề</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead class="text-right">Mục tiêu</TableHead>
+              <TableHead class="text-right">Đã gửi</TableHead>
+              <TableHead class="text-right">Push</TableHead>
+              <TableHead>Thời gian</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loadingHistory">
+              <TableRow v-for="i in 3" :key="i">
+                <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
+              </TableRow>
+            </template>
+            <TableRow v-else-if="!campaigns.length">
+              <TableCell colspan="6" class="py-8 text-center text-muted-foreground">Chưa có chiến dịch nào</TableCell>
+            </TableRow>
+            <TableRow v-for="c in campaigns" v-else :key="c.id">
+              <TableCell>
+                <div class="font-medium">{{ c.title }}</div>
+                <div class="text-xs text-muted-foreground truncate max-w-[260px]">{{ c.body }}</div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary" :class="STATUS_LABEL[c.status]?.cls">{{ STATUS_LABEL[c.status]?.text || c.status }}</Badge>
+              </TableCell>
+              <TableCell class="text-right text-muted-foreground tabular-nums">{{ c.audience_count }}</TableCell>
+              <TableCell class="text-right text-muted-foreground tabular-nums">{{ c.sent_count }}</TableCell>
+              <TableCell class="text-right text-muted-foreground tabular-nums">{{ c.push_count }}</TableCell>
+              <TableCell class="text-muted-foreground whitespace-nowrap">{{ fmt(c.created_at) }}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
-    </section>
+    </Card>
   </div>
 </template>

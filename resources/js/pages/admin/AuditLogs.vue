@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import type { AuditLogRow } from '@/types/admin'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const { fetchAuditLogs } = useAdmin()
 const { extractError } = useAuth()
@@ -13,6 +24,12 @@ const rows = ref<AuditLogRow[]>([])
 const loading = ref(true)
 const meta = ref({ current_page: 1, per_page: 30, total: 0, last_page: 1 })
 const actionFilter = ref('')
+
+// shadcn Select không nhận value rỗng → sentinel 'all'
+const actionModel = computed({
+  get: () => actionFilter.value || 'all',
+  set: (v: string) => { actionFilter.value = v === 'all' ? '' : v; load(1) },
+})
 
 const ACTION_LABELS: Record<string, string> = {
   'user.update': 'Sửa người dùng',
@@ -46,54 +63,67 @@ onMounted(() => load())
 <template>
   <div>
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <h1 class="text-xl font-bold text-gray-900">Nhật ký quản trị</h1>
-      <select v-model="actionFilter" @change="load(1)" class="px-2 py-2 text-sm border border-gray-200 rounded-lg bg-white">
-        <option value="">Tất cả hành động</option>
-        <option v-for="(label, key) in ACTION_LABELS" :key="key" :value="key">{{ label }}</option>
-      </select>
+      <h1 class="text-xl font-bold">Nhật ký quản trị</h1>
+      <Select v-model="actionModel">
+        <SelectTrigger class="w-52"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tất cả hành động</SelectItem>
+          <SelectItem v-for="(label, key) in ACTION_LABELS" :key="key" :value="key">{{ label }}</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th class="text-left font-medium px-4 py-3">Thời gian</th>
-              <th class="text-left font-medium px-4 py-3">Admin</th>
-              <th class="text-left font-medium px-4 py-3">Hành động</th>
-              <th class="text-left font-medium px-4 py-3">Đối tượng</th>
-              <th class="text-left font-medium px-4 py-3">IP</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-if="loading"><td colspan="5" class="px-4 py-10 text-center text-gray-400">Đang tải…</td></tr>
-            <tr v-else-if="!rows.length"><td colspan="5" class="px-4 py-10 text-center text-gray-400">Chưa có nhật ký</td></tr>
-            <tr v-for="l in rows" :key="l.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ fmt(l.created_at) }}</td>
-              <td class="px-4 py-3">
-                <div class="text-gray-800">{{ l.admin?.name || '—' }}</div>
-                <div class="text-xs text-gray-400">{{ l.admin?.email }}</div>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{{ ACTION_LABELS[l.action] || l.action }}</span>
-              </td>
-              <td class="px-4 py-3 text-gray-500">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Thời gian</TableHead>
+              <TableHead>Admin</TableHead>
+              <TableHead>Hành động</TableHead>
+              <TableHead>Đối tượng</TableHead>
+              <TableHead>IP</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="loading">
+              <TableRow v-for="i in 5" :key="i">
+                <TableCell v-for="j in 5" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
+              </TableRow>
+            </template>
+            <TableRow v-else-if="!rows.length">
+              <TableCell colspan="5" class="py-10 text-center text-muted-foreground">Chưa có nhật ký</TableCell>
+            </TableRow>
+            <TableRow v-for="l in rows" v-else :key="l.id">
+              <TableCell class="text-muted-foreground whitespace-nowrap">{{ fmt(l.created_at) }}</TableCell>
+              <TableCell>
+                <div>{{ l.admin?.name || '—' }}</div>
+                <div class="text-xs text-muted-foreground">{{ l.admin?.email }}</div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">{{ ACTION_LABELS[l.action] || l.action }}</Badge>
+              </TableCell>
+              <TableCell class="text-muted-foreground">
                 <span v-if="l.target_type">{{ l.target_type }}#{{ l.target_id }}</span>
                 <span v-else>—</span>
-              </td>
-              <td class="px-4 py-3 text-gray-400 font-mono text-xs">{{ l.ip || '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
+              </TableCell>
+              <TableCell class="text-muted-foreground font-mono text-xs">{{ l.ip || '—' }}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
-      <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+      <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
         <span>Tổng {{ meta.total }} bản ghi</span>
         <div class="flex items-center gap-1">
-          <button class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">‹</button>
+          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
+            <ChevronLeft class="w-4 h-4" />
+          </Button>
           <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <button class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">›</button>
+          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
+            <ChevronRight class="w-4 h-4" />
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   </div>
 </template>

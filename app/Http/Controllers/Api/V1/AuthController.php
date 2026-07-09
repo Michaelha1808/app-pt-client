@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\EmailVerificationService;
 use App\Support\DeviceName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -49,6 +51,14 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
+
+        // Best-effort: lỗi gửi mail không được chặn đăng ký (user vẫn tạo được tài khoản,
+        // có thể bấm "Gửi lại mã" sau).
+        try {
+            app(EmailVerificationService::class)->sendCode($user);
+        } catch (\Throwable $e) {
+            Log::warning('Gửi mã xác thực email thất bại lúc đăng ký', ['user_id' => $user->id, 'message' => $e->getMessage()]);
+        }
 
         return response()->json([
             'access_token' => $token,
@@ -151,19 +161,22 @@ class AuthController extends Controller
             // Link Google account if not already linked
             if (!$user->google_id) {
                 $user->update([
-                    'google_id'  => $googleUser->getId(),
-                    'provider'   => 'google',
-                    'avatar_url' => $user->avatar_url ?? $googleUser->getAvatar(),
+                    'google_id'         => $googleUser->getId(),
+                    'provider'          => 'google',
+                    'avatar_url'        => $user->avatar_url ?? $googleUser->getAvatar(),
+                    // Email khớp Google → coi như đã xác thực (Google đã xác minh hộ)
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ]);
             }
         } else {
             $user = User::create([
-                'name'       => $googleUser->getName(),
-                'email'      => $googleUser->getEmail(),
-                'google_id'  => $googleUser->getId(),
-                'provider'   => 'google',
-                'avatar_url' => $googleUser->getAvatar(),
-                'password'   => null,
+                'name'              => $googleUser->getName(),
+                'email'             => $googleUser->getEmail(),
+                'google_id'         => $googleUser->getId(),
+                'provider'          => 'google',
+                'avatar_url'        => $googleUser->getAvatar(),
+                'password'          => null,
+                'email_verified_at' => now(), // Google đã xác thực email hộ
             ]);
         }
 
@@ -203,17 +216,19 @@ class AuthController extends Controller
         if ($user) {
             if (!$user->facebook_id) {
                 $user->update([
-                    'facebook_id' => $fbUser->getId(),
-                    'provider'    => 'facebook',
-                    'avatar_url'  => $user->avatar_url ?? $fbUser->getAvatar(),
+                    'facebook_id'       => $fbUser->getId(),
+                    'provider'          => 'facebook',
+                    'avatar_url'        => $user->avatar_url ?? $fbUser->getAvatar(),
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ]);
             }
         } else {
             $user = User::create([
-                'name'        => $fbUser->getName(),
-                'email'       => $fbUser->getEmail(),
-                'facebook_id' => $fbUser->getId(),
-                'provider'    => 'facebook',
+                'name'              => $fbUser->getName(),
+                'email'             => $fbUser->getEmail(),
+                'facebook_id'       => $fbUser->getId(),
+                'provider'          => 'facebook',
+                'email_verified_at' => now(),
                 'avatar_url'  => $fbUser->getAvatar(),
                 'password'    => null,
             ]);
@@ -247,6 +262,56 @@ class AuthController extends Controller
         return response()->json(['message' => 'Mật khẩu đã được cập nhật']);
     }
 
+    public function verifyEmail(Request $request, EmailVerificationService $service)
+    {
+        $request->validate(['code' => 'required|string|size:6']);
+
+        $user = $request->user();
+
+        if ($user->email_verified_at) {
+            return response()->json(['user' => $this->formatUser($user)]);
+        }
+
+        $result = $service->verify($user, $request->code);
+
+        if (!$result['ok']) {
+            $messages = [
+                'invalid'           => 'Mã xác thực không đúng.',
+                'expired'           => 'Mã xác thực đã hết hạn. Vui lòng gửi lại mã.',
+                'too_many_attempts' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng gửi lại mã.',
+                'no_code'           => 'Chưa có mã nào được gửi. Vui lòng bấm gửi lại mã.',
+            ];
+            $status = in_array($result['reason'], ['expired', 'too_many_attempts', 'no_code'], true) ? 410 : 422;
+
+            return response()->json(['detail' => $messages[$result['reason']] ?? 'Xác thực thất bại.'], $status);
+        }
+
+        return response()->json([
+            'message' => 'Đã xác thực email thành công',
+            'user'    => $this->formatUser($user->fresh()),
+        ]);
+    }
+
+    public function resendVerificationCode(Request $request, EmailVerificationService $service)
+    {
+        $user = $request->user();
+
+        if ($user->email_verified_at) {
+            return response()->json(['detail' => 'Email đã được xác thực.'], 422);
+        }
+
+        if (!$service->canResend($user)) {
+            return response()->json([
+                'detail'             => 'Vui lòng đợi trước khi gửi lại mã.',
+                'retry_after_seconds' => $service->secondsUntilResendAllowed($user),
+            ], 429);
+        }
+
+        $service->sendCode($user);
+
+        return response()->json(['message' => 'Đã gửi lại mã xác thực']);
+    }
+
     private function formatUser($user): array
     {
         return [
@@ -255,6 +320,7 @@ class AuthController extends Controller
             'name'           => $user->name,
             'avatar_url'     => $user->avatar_url,
             'provider'       => $user->provider ?? 'email',
+            'email_verified' => $user->email_verified_at !== null,
             'role'           => $user->role ?? 'user',
             'status'         => $user->status ?? 'active',
             'birth_year'     => $user->birth_year,

@@ -355,6 +355,17 @@ async function handleLogout() {
       <div class="px-5 mb-2 animate-fadeInUp delay-5" style="opacity:0">
         <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Tài khoản</p>
         <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
+          <NuxtLink v-if="!user?.email_verified" to="/profile/verify-email" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-orange/10 flex items-center justify-center">
+              <span class="text-base">✉️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] text-black">Xác thực email</p>
+              <p class="text-[12px] text-ios-orange">Chưa xác thực — bấm để xác thực ngay</p>
+            </div>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </NuxtLink>
+          <div v-if="!user?.email_verified" class="ios-separator mx-4"/>
           <NuxtLink to="/profile/edit" class="flex items-center gap-3 px-4 py-3.5 ios-press">
             <div class="w-8 h-8 rounded-[8px] bg-ios-blue/10 flex items-center justify-center">
               <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#007AFF"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>

@@ -1,8 +1,8 @@
 # Spec: Authentication — Đăng nhập / Đăng ký / Quên mật khẩu
 
 > **App:** CaloEye — Nuxt 3 + Vue 3 + Tailwind CSS 4 (iOS-style PWA)  
-> **Cập nhật lần cuối:** 2026-06-17  
-> **Trạng thái tổng:** ✅ TẤT CẢ PHASE HOÀN THÀNH — Sẵn sàng test
+> **Cập nhật lần cuối:** 2026-07-09  
+> **Trạng thái tổng:** ✅ TẤT CẢ PHASE HOÀN THÀNH (kể cả xác thực email OTP, mục 2.3b) — Sẵn sàng test
 
 ---
 
@@ -93,11 +93,56 @@
 }
 
 // Response 201
-{ "access_token": "...", "token_type": "Bearer", "user": { ... } }
+{ "access_token": "...", "token_type": "Bearer", "user": { ..., "email_verified": false } }
 
 // Response 409
 { "detail": "Email này đã được đăng ký" }
 ```
+
+Sau khi tạo tài khoản, backend gửi (best-effort, không chặn response) mã OTP 6 số qua email —
+xem mục 2.3b. Đăng ký qua Google/Facebook (mục 8) coi như đã xác thực ngay (`email_verified: true`),
+không cần OTP.
+
+### 2.3b Xác thực email (OTP 6 số)
+
+Không dùng link xác thực dạng "click vào email" — token của app chỉ lưu in-memory (không
+localStorage), một link mở ở tab/trình duyệt khác sẽ không có phiên đăng nhập. Thay vào đó dùng
+mã 6 số nhập ngay trong app, xác thực qua endpoint có Bearer token (đã đăng nhập từ lúc đăng ký).
+
+**Mức độ bắt buộc: KHÔNG chặn truy cập.** Đăng ký xong vẫn đăng nhập và dùng đầy đủ tính năng như
+bình thường. Có banner nhắc nhở dismiss-được (Home) + dòng cảnh báo trong Hồ sơ cho tới khi xác thực.
+
+```
+POST /auth/email/verify   (auth:sanctum)
+Request: { "code": "123456" }
+Response 200: { "message": "...", "user": { ..., "email_verified": true } }
+Response 422: { "detail": "Mã xác thực không đúng." }              — sai mã, tăng attempts
+Response 410: { "detail": "Mã xác thực đã hết hạn..." }            — hết hạn (15 phút) hoặc quá 5 lần sai
+```
+
+```
+POST /auth/email/resend   (auth:sanctum)
+Response 200: { "message": "Đã gửi lại mã xác thực" }
+Response 429: { "detail": "...", "retry_after_seconds": 42 }       — cooldown 60s giữa 2 lần gửi
+Response 422: { "detail": "Email đã được xác thực." }
+```
+
+**Backend:**
+- Bảng `email_verification_codes` (user_id unique, code_hash, attempts, expires_at) — 1 user chỉ có
+  1 mã hiệu lực tại một thời điểm, `sendCode()` upsert (ghi đè mã cũ khi resend).
+- `App\Services\EmailVerificationService` — sinh mã, hash (không lưu plaintext), verify, cooldown.
+- `App\Mail\EmailVerificationMail` + `resources/views/emails/verify-email.blade.php` — gửi qua
+  `Mail::queue()` (không chặn response đăng ký), theo style `ReengagementMail`.
+- `email_verified` (bool, dẫn xuất từ `email_verified_at !== null`) trả trong mọi response chứa
+  `user` (`/auth/register`, `/auth/login`, `/auth/me`, `/user/profile`, `/auth/email/verify`).
+
+**Frontend:**
+- `resources/js/pages/profile/VerifyEmail.vue` (route `/profile/verify-email`, middleware
+  `auth-strict`) — 1 ô nhập 6 số, nút Xác nhận, nút Gửi lại mã kèm đếm ngược 60s (cùng pattern
+  cooldown với `forgot-password.vue`).
+- Banner dismiss-theo-ngày ở `Home.vue` (cùng pattern với banner nhắc cân nặng, dùng
+  `localDateStr()`) + dòng "Xác thực email" trong mục Tài khoản ở `Profile.vue` (chỉ hiện khi
+  `!user.email_verified`).
 
 ### 2.3 POST `/auth/forgot-password`
 ```json

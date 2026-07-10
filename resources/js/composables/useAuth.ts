@@ -59,6 +59,19 @@ export function useAuth() {
     })
   }
 
+  async function verifyEmail(code: string): Promise<void> {
+    const res = await apiFetch<{ user: User }>('/auth/email/verify', {
+      method: 'POST',
+      body: { code },
+    })
+    store.user = res.user
+  }
+
+  async function resendVerificationCode(): Promise<string> {
+    const res = await apiFetch<{ message: string }>('/auth/email/resend', { method: 'POST' })
+    return res.message
+  }
+
   function loginWithGoogle(): void {
     const redirectUri = `${window.location.origin}/auth/callback`
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`
@@ -90,5 +103,5 @@ export function useAuth() {
     router.push('/auth/login')
   }
 
-  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, loginWithGoogle, loginWithFacebook, handleOAuthCallback, loginAsGuest, logout, extractError }
+  return { user, token, isLoggedIn, isGuest, sessionReady, login, register, forgotPassword, resetPassword, verifyEmail, resendVerificationCode, loginWithGoogle, loginWithFacebook, handleOAuthCallback, loginAsGuest, logout, extractError }
 }

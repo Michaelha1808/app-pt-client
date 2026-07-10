@@ -72,6 +72,15 @@ function dismissWeightReminder() {
   weightReminderDismissed.value = true
 }
 
+const EMAIL_VERIFY_KEY = 'email_verify_reminder_dismissed_date'
+const emailVerifyDismissed = ref(localStorage.getItem(EMAIL_VERIFY_KEY) === localDateStr())
+const showEmailVerifyReminder = computed(() => store.user && !store.user.email_verified && !emailVerifyDismissed.value)
+
+function dismissEmailVerifyReminder() {
+  localStorage.setItem(EMAIL_VERIFY_KEY, localDateStr())
+  emailVerifyDismissed.value = true
+}
+
 async function fetchUnreadCount() {
   if (!store.token) return
   try {
@@ -196,6 +205,21 @@ onMounted(() => {
           <template v-else>Còn <strong>{{ (goal - consumed).toLocaleString('vi') }} kcal</strong> cho hôm nay 🌿</template>
         </p>
       </div>
+    </div>
+
+    <!-- Nhắc xác thực email -->
+    <div
+      v-if="showEmailVerifyReminder"
+      class="mx-5 mb-4 bg-white rounded-[16px] px-4 py-3.5 flex items-center gap-3 shadow-sm animate-fadeInUp delay-1"
+      style="opacity:0"
+    >
+      <div class="w-9 h-9 rounded-full bg-ios-orange/10 flex items-center justify-center text-lg flex-shrink-0">✉️</div>
+      <NuxtLink to="/profile/verify-email" class="flex-1 min-w-0">
+        <p class="text-[13px] font-medium text-black leading-snug">Xác thực email để bảo vệ tài khoản của bạn</p>
+      </NuxtLink>
+      <button class="ios-press p-1 text-ios-gray3 flex-shrink-0" @click="dismissEmailVerifyReminder">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
     </div>
 
     <!-- Nhắc cập nhật cân nặng (≥7 ngày chưa ghi) -->

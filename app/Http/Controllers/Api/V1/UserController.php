@@ -108,6 +108,7 @@ class UserController extends Controller
             'name'           => $user->name,
             'avatar_url'     => $user->avatar_url,
             'provider'       => 'email',
+            'email_verified' => $user->email_verified_at !== null,
             'birth_year'     => $user->birth_year,
             'gender'         => $user->gender,
             'height_cm'      => $user->height_cm !== null ? (float) $user->height_cm : null,

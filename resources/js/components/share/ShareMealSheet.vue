@@ -106,6 +106,17 @@ const previewStyle = computed(() => {
   }
 })
 
+// 16:9 dùng layout ngang (ảnh trái, card phải) — khớp với ảnh canvas xuất ra
+const isLandscape = computed(() => prefs.value.ratio === '16:9')
+
+// % chiều cao vùng ảnh theo tỷ lệ — khớp hệ số trong utils/shareImage.ts
+const imgHeightPct = computed(() =>
+  prefs.value.ratio === '9:16' ? 54 : prefs.value.ratio === '4:5' ? 44 : 40,
+)
+
+// Khung thấp (1:1, 16:9) → giảm cỡ chữ/khoảng cách để card vừa khung
+const compact = computed(() => isLandscape.value || prefs.value.ratio === '1:1')
+
 // ── Hành động chia sẻ ──
 async function onNativeShare() {
   if (!shareData.value || generating.value) return
@@ -152,9 +163,12 @@ async function onDownload() {
               class="relative mx-auto rounded-[20px] shadow-lg overflow-hidden transition-all duration-300"
               :style="previewStyle"
             >
-              <div class="absolute inset-0 flex flex-col p-3">
+              <div class="absolute inset-0 flex p-3" :class="isLandscape ? 'flex-row gap-2' : 'flex-col'">
                 <!-- Ảnh món ăn -->
-                <div class="relative rounded-[14px] overflow-hidden" :class="prefs.ratio === '16:9' ? 'h-[52%]' : 'h-[46%]'">
+                <div
+                  class="relative rounded-[14px] overflow-hidden flex-shrink-0"
+                  :style="isLandscape ? 'width: 46%; height: 100%' : `width: 100%; height: ${imgHeightPct}%`"
+                >
                   <img v-if="meal.image" :src="meal.image" class="w-full h-full object-cover" alt="" />
                   <div
                     v-else
@@ -173,30 +187,36 @@ async function onDownload() {
                   <div v-if="prefs.sticker" class="absolute top-1 right-2 text-3xl rotate-12 drop-shadow">{{ prefs.sticker }}</div>
                 </div>
 
-                <!-- Card thông tin -->
+                <!-- Card thông tin (overflow-hidden để nội dung không tràn ra ngoài khung ở tỷ lệ thấp) -->
                 <div
-                  class="flex-1 mt-2 rounded-[14px] px-3.5 py-2.5 flex flex-col min-h-0"
+                  class="flex-1 rounded-[14px] px-3.5 py-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden"
+                  :class="isLandscape ? '' : 'mt-2'"
                   :style="`background: ${template.card}; ${template.dark ? '' : 'box-shadow: 0 4px 14px rgba(0,0,0,0.07)'}`"
                 >
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <p class="text-[14px] font-bold leading-tight line-clamp-2" :style="`color: ${template.text}`">{{ meal.food_name }}</p>
+                      <p
+                        class="font-bold leading-tight"
+                        :class="compact ? 'text-[12px] line-clamp-1' : 'text-[14px] line-clamp-2'"
+                        :style="`color: ${template.text}`"
+                      >{{ meal.food_name }}</p>
                       <p class="text-[10px] mt-0.5 truncate" :style="`color: ${template.sub}`">
                         {{ [meal.serving, prefs.show.time ? meal.logged_at : null].filter(Boolean).join(' · ') }}
                       </p>
                     </div>
                     <div v-if="prefs.show.calories" class="text-right flex-shrink-0">
-                      <p class="text-[22px] font-extrabold leading-none" :style="`color: ${template.accent}`">{{ meal.calories }}</p>
+                      <p class="font-extrabold leading-none" :class="compact ? 'text-[17px]' : 'text-[22px]'" :style="`color: ${template.accent}`">{{ meal.calories }}</p>
                       <p class="text-[9px] font-semibold" :style="`color: ${template.sub}`">kcal</p>
                     </div>
                   </div>
 
                   <!-- Macro chips -->
-                  <div v-if="prefs.show.macros" class="grid grid-cols-3 gap-1.5 mt-2">
+                  <div v-if="prefs.show.macros" class="grid grid-cols-3 gap-1.5" :class="compact ? 'mt-1' : 'mt-2'">
                     <div
                       v-for="m in [{ l: 'Protein', v: `${meal.protein}g` }, { l: 'Carb', v: `${meal.carbs}g` }, { l: 'Chất béo', v: `${meal.fat}g` }]"
                       :key="m.l"
-                      class="rounded-[8px] py-1.5 text-center"
+                      class="rounded-[8px] text-center"
+                      :class="compact ? 'py-1' : 'py-1.5'"
                       :style="`background: ${template.dark ? 'rgba(255,255,255,0.10)' : 'rgba(24,168,116,0.08)'}`"
                     >
                       <p class="text-[11px] font-bold leading-tight" :style="`color: ${template.text}`">{{ m.v }}</p>
@@ -205,7 +225,7 @@ async function onDownload() {
                   </div>
 
                   <!-- Mục tiêu -->
-                  <div v-if="prefs.show.goal && meal.goal_percent != null" class="mt-2">
+                  <div v-if="prefs.show.goal && meal.goal_percent != null" :class="compact ? 'mt-1' : 'mt-2'">
                     <div class="flex justify-between text-[9px] font-semibold mb-1">
                       <span :style="`color: ${template.sub}`">Mục tiêu hôm nay</span>
                       <span :style="`color: ${template.accent}`">{{ meal.goal_percent }}%</span>

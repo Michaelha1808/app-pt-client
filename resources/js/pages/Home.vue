@@ -7,6 +7,7 @@ import { useWater } from '@/composables/useWater'
 import { useWeight } from '@/composables/useWeight'
 import { currentMealSlot, useQuickLog, type FrequentMealItem } from '@/composables/useQuickLog'
 import { useToast } from '@/composables/useToast'
+import { usePublicConfig } from '@/composables/usePublicConfig'
 import { apiFetch } from '@/utils/api'
 import { setAppBadge } from '@/utils/badge'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
@@ -27,6 +28,10 @@ const { fetchWaterToday } = useWater()
 const { history: weightHistory, fetchHistory: fetchWeightHistory } = useWeight()
 const { frequentItems, fetchFrequent } = useQuickLog()
 const toast = useToast()
+
+// Flag admin: tắt chat AI → ẩn nút vào chat ở Home
+const { loadPublicConfig, flag } = usePublicConfig()
+const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
 
 const quickAddTarget = ref<FrequentMealItem | null>(null)
 const quickAddSaving = ref(false)
@@ -125,6 +130,7 @@ const userName = computed(() => store.user?.name?.split(' ').at(-1) ?? 'bạn')
 const userInitial = computed(() => store.user?.name?.[0]?.toUpperCase() ?? '?')
 
 onMounted(() => {
+  loadPublicConfig()
   if (store.token) {
     fetchTodayStats()
     fetchUnreadCount()
@@ -312,6 +318,7 @@ onMounted(() => {
         </NuxtLink>
 
         <NuxtLink
+          v-if="chatEnabled"
           to="/chat"
           class="bg-gradient-to-br from-ios-purple to-ios-pink rounded-[16px] p-4 flex flex-col items-center gap-2 ios-press shadow-md shadow-ios-purple/25"
         >

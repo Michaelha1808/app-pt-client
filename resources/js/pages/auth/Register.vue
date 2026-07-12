@@ -1,5 +1,15 @@
 <script setup lang="ts">
+import { usePublicConfig } from '@/composables/usePublicConfig'
+
 const { register, loginWithGoogle, loginWithFacebook, extractError } = useAuth()
+const { config, loadPublicConfig, flag } = usePublicConfig()
+
+// Feature flags admin cấu hình runtime
+const googleEnabled = computed(() => flag(c => c.oauth.google_enabled))
+const facebookEnabled = computed(() => flag(c => c.oauth.facebook_enabled))
+const registrationClosed = computed(() => config.value?.features.registration_open === false)
+
+onMounted(loadPublicConfig)
 
 const step = ref(1)
 const totalSteps = 3
@@ -202,6 +212,16 @@ const caloriePresets = [
       <p class="text-[14px] text-ios-gray mt-1">{{ stepSubtitles[step - 1] }}</p>
     </div>
 
+    <!-- Đăng ký đang tạm khoá (admin tắt trong Settings) -->
+    <div v-if="registrationClosed" class="mx-6 mb-4 bg-amber-50 border border-amber-200 rounded-[14px] px-4 py-3 flex items-start gap-2.5">
+      <svg viewBox="0 0 24 24" class="w-5 h-5 text-amber-500 flex-shrink-0" fill="currentColor">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+      </svg>
+      <p class="text-[13px] text-amber-700 leading-snug">
+        Đăng ký tài khoản mới hiện đang tạm khoá. Vui lòng quay lại sau hoặc đăng nhập bằng tài khoản có sẵn.
+      </p>
+    </div>
+
     <!-- Step 1: Account -->
     <div v-if="step === 1" class="px-6 flex flex-col gap-3 animate-fadeInUp delay-1" style="opacity:0">
       <!-- Email -->
@@ -253,15 +273,16 @@ const caloriePresets = [
       </div>
 
       <!-- Divider -->
-      <div class="flex items-center gap-3 mt-2">
+      <div v-if="googleEnabled || facebookEnabled" class="flex items-center gap-3 mt-2">
         <div class="flex-1 h-px bg-ios-gray5"/>
         <span class="text-[12px] text-ios-gray">hoặc đăng ký với</span>
         <div class="flex-1 h-px bg-ios-gray5"/>
       </div>
 
       <!-- Social shortcuts (round icon only) -->
-      <div class="flex justify-center gap-4">
+      <div v-if="googleEnabled || facebookEnabled" class="flex justify-center gap-4">
         <button
+          v-if="googleEnabled"
           aria-label="Đăng ký với Google"
           class="w-12 h-12 rounded-full bg-white border border-ios-gray5 shadow-sm flex items-center justify-center ios-press"
           @click="loginWithGoogle"
@@ -275,6 +296,7 @@ const caloriePresets = [
         </button>
 
         <button
+          v-if="facebookEnabled"
           aria-label="Đăng ký với Facebook"
           class="w-12 h-12 rounded-full bg-[#1877F2] shadow-sm flex items-center justify-center ios-press"
           @click="loginWithFacebook"

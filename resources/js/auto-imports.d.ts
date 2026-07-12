@@ -112,6 +112,7 @@ declare global {
   const usePasskey: typeof import('./composables/usePasskey').usePasskey
   const usePreferences: typeof import('./composables/usePreferences').usePreferences
   const useProfile: typeof import('./composables/useProfile').useProfile
+  const usePublicConfig: typeof import('./composables/usePublicConfig').usePublicConfig
   const useQuickLog: typeof import('./composables/useQuickLog').useQuickLog
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
@@ -144,6 +145,9 @@ declare global {
   // @ts-ignore
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
+  // @ts-ignore
+  export type { PublicConfig } from './composables/usePublicConfig'
+  import('./composables/usePublicConfig')
   // @ts-ignore
   export type { FrequentMealItem, FavoriteMeal, MealSlot } from './composables/useQuickLog'
   import('./composables/useQuickLog')
@@ -269,6 +273,7 @@ declare module 'vue' {
     readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
     readonly usePreferences: UnwrapRef<typeof import('./composables/usePreferences')['usePreferences']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
+    readonly usePublicConfig: UnwrapRef<typeof import('./composables/usePublicConfig')['usePublicConfig']>
     readonly useQuickLog: UnwrapRef<typeof import('./composables/useQuickLog')['useQuickLog']>
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>

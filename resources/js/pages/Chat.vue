@@ -3,6 +3,7 @@ import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import { useChat } from '@/composables/useChat'
 import { useGuestQuota } from '@/composables/useGuestQuota'
+import { usePublicConfig } from '@/composables/usePublicConfig'
 import { useAuthStore } from '@/stores/auth'
 import { navigateTo } from '@/utils/navigate'
 import type { ChatAction, ChatMessage } from '@/types/chat'
@@ -19,6 +20,9 @@ const MEMORY_KIND_LABEL: Record<PreferenceKind, string> = {
 
 const auth = useAuthStore()
 const { streaming, send } = useChat()
+// Flag admin: tắt chat AI → hiện empty-state, khoá ô nhập (vào thẳng URL vẫn thấy thông báo)
+const { loadPublicConfig, flag } = usePublicConfig()
+const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
 const { canUse, increment } = useGuestQuota()
 const { success, error: toastError } = useToast()
 const gateOpen = ref(false)
@@ -120,7 +124,7 @@ const suggestions = [
 
 async function sendMessage() {
   const text = inputText.value.trim()
-  if (!text || streaming.value) return
+  if (!text || streaming.value || !chatEnabled.value) return
 
   // Giới hạn lượt tư vấn cho khách
   if (!canUse('chat')) {
@@ -266,6 +270,7 @@ function scrollToBottom() {
 // Câu hỏi mồi khi đi từ Home (vd: "Lên kế hoạch ăn uống cho ngày mai")
 const route = useRoute()
 onMounted(() => {
+  loadPublicConfig()
   const ask = route.query.ask
   if (typeof ask === 'string' && ask.trim()) {
     inputText.value = ask.trim()
@@ -301,8 +306,15 @@ onMounted(() => {
       </button>
     </div>
 
+    <!-- Empty-state khi admin tắt chat AI -->
+    <div v-if="!chatEnabled" class="flex-1 flex flex-col items-center justify-center gap-3 px-10">
+      <CaloeyeCharacter mood="idle" :size="72" />
+      <p class="text-[15px] font-medium text-black text-center">Tính năng tư vấn AI đang tạm tắt</p>
+      <p class="text-[13px] text-ios-gray text-center leading-relaxed">Vui lòng quay lại sau nhé!</p>
+    </div>
+
     <!-- Messages area -->
-    <div class="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+    <div v-else class="flex-1 overflow-y-auto px-4 py-2 space-y-3">
       <div
         v-for="msg in messages"
         :key="msg.id"
@@ -403,7 +415,7 @@ onMounted(() => {
 
     <!-- Suggestions (shown when no user messages yet or after AI) -->
     <div
-      v-if="messages.length <= 1"
+      v-if="chatEnabled && messages.length <= 1"
       class="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide"
     >
       <button
@@ -421,8 +433,8 @@ onMounted(() => {
           <textarea
             ref="textareaRef"
             v-model="inputText"
-            :disabled="streaming"
-            placeholder="Hỏi về dinh dưỡng, kế hoạch ăn/tập..."
+            :disabled="streaming || !chatEnabled"
+            :placeholder="chatEnabled ? 'Hỏi về dinh dưỡng, kế hoạch ăn/tập...' : 'Tính năng đang tạm tắt'"
             rows="1"
             class="flex-1 bg-transparent text-[15px] text-black placeholder-ios-gray3 outline-none resize-none leading-5 disabled:opacity-60"
             @keydown.enter.exact.prevent="sendMessage"
@@ -430,8 +442,8 @@ onMounted(() => {
         </div>
         <button
           class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ios-press transition-colors"
-          :class="inputText.trim() && !streaming ? 'bg-ios-blue' : 'bg-ios-gray5'"
-          :disabled="!inputText.trim() || streaming"
+          :class="inputText.trim() && !streaming && chatEnabled ? 'bg-ios-blue' : 'bg-ios-gray5'"
+          :disabled="!inputText.trim() || streaming || !chatEnabled"
           @click="sendMessage"
         >
           <svg viewBox="0 0 24 24" class="w-5 h-5" :fill="inputText.trim() ? 'white' : '#8E8E93'">

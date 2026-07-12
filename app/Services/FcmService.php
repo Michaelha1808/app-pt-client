@@ -24,7 +24,13 @@ class FcmService
     /** TTL (giây) push còn giá trị để hiển thị nếu thiết bị offline — 1 ngày. */
     private const TTL_SECONDS = 86400;
 
-    public function __construct(private Messaging $messaging) {}
+    public function __construct(private Messaging $messaging, private SettingsService $settings) {}
+
+    /** Admin tắt notifications.fcm_enabled trong Settings → mọi push bị bỏ qua (log in-app vẫn giữ). */
+    private function pushDisabled(): bool
+    {
+        return $this->settings->get('notifications.fcm_enabled', true) !== true;
+    }
 
     /**
      * Gửi push tới một token.
@@ -35,6 +41,8 @@ class FcmService
      */
     public function send(string $token, string $title, string $body, array $data = []): bool
     {
+        if ($this->pushDisabled()) return false;
+
         try {
             $this->messaging->send($this->buildMessage($title, $body, $data)->toToken($token));
             return true;
@@ -59,6 +67,8 @@ class FcmService
      */
     public function sendMulticast(array $tokens, string $title, string $body, array $data = []): array
     {
+        if ($this->pushDisabled()) return [];
+
         $tokens = array_values(array_unique(array_filter($tokens)));
         if (empty($tokens)) return [];
 

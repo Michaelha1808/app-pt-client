@@ -22,7 +22,8 @@ class CheckAccountStatus
         // Maintenance mode — admin vẫn truy cập được
         if ($this->settings->get('features.maintenance_mode', false) === true) {
             if (! $user || ! $user->isAdmin()) {
-                if (! $request->is('api/*/health') && ! $request->is('api/health')) {
+                // /health và /config vẫn mở để FE biết trạng thái hệ thống khi bảo trì
+                if (! $request->is('api/*/health', 'api/health', 'api/*/config')) {
                     return response()->json([
                         'detail' => 'Hệ thống đang bảo trì, vui lòng quay lại sau.',
                         'code'   => 'maintenance',

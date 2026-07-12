@@ -4,11 +4,16 @@ import type { FoodAnalysisResult } from '@/types/food'
 import { currentMealSlot, useQuickLog, type FrequentMealItem, type FavoriteMeal } from '@/composables/useQuickLog'
 import { useMealLog } from '@/composables/useMealLog'
 import { useToast } from '@/composables/useToast'
+import { usePublicConfig } from '@/composables/usePublicConfig'
 
 const route    = useRoute()
 const isManual = computed(() => route.query.manual === 'true')
 const mode     = ref<'camera' | 'manual' | 'mine'>(isManual.value ? 'manual' : 'camera')
 const manualText = ref('')
+
+// Flag admin: tắt phân tích món ăn → chặn camera/nhập tay, tab "Món của tôi" vẫn dùng được
+const { loadPublicConfig, flag } = usePublicConfig()
+const foodAnalysisEnabled = computed(() => flag(c => c.ai.food_analysis_enabled))
 
 // ── Tab "Món của tôi" ────────────────────────────────────────────
 const { favorites, fetchFrequent, fetchFavorites, addFavorite, removeFavorite, logFavorite } = useQuickLog()
@@ -263,11 +268,24 @@ async function handleBarcode(code: string) {
 watch([stream, videoEl], ([s, v]) => { if (s && v) v.srcObject = s })
 watch(mode, (val) => {
   stopBarcodeMode()
-  if (val === 'camera') startCamera()
+  if (val === 'camera' && foodAnalysisEnabled.value) startCamera()
   else stream.value?.getTracks().forEach(t => t.stop())
 })
 
+// Flag đổi sau khi /config load xong: tắt → dừng camera; bật lại → mở camera nếu đang ở tab chụp
+watch(foodAnalysisEnabled, (on) => {
+  if (!on) {
+    stopBarcodeMode()
+    stream.value?.getTracks().forEach(t => t.stop())
+    stream.value = null
+  } else if (mode.value === 'camera') {
+    startCamera()
+  }
+})
+
 onMounted(async () => {
+  loadPublicConfig()
+
   // Check BarcodeDetector support
   if ('BarcodeDetector' in window) {
     try {
@@ -281,7 +299,7 @@ onMounted(async () => {
     } catch { /* BarcodeDetector not usable */ }
   }
 
-  if (mode.value === 'camera') startCamera()
+  if (mode.value === 'camera' && foodAnalysisEnabled.value) startCamera()
 })
 
 onUnmounted(() => {
@@ -295,16 +313,32 @@ onUnmounted(() => {
     <!-- Hidden gallery input -->
     <input ref="galleryInput" type="file" accept="image/*" class="hidden" @change="onGalleryPick" />
 
+    <!-- Empty-state khi admin tắt phân tích món ăn (giữ layout, tab "Món của tôi" vẫn dùng được) -->
+    <div
+      v-if="!foodAnalysisEnabled && mode !== 'mine'"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-4 px-10"
+    >
+      <svg viewBox="0 0 24 24" class="w-16 h-16 opacity-30" fill="white">
+        <path d="M4 4h3V2H2v5h2V4zm13-2v2h3v3h2V2h-5zm3 16h-3v2h5v-5h-2v3zM4 17H2v5h5v-2H4v-3zM15 9H9v6h6V9zm-2 4h-2v-2h2v2z"/>
+      </svg>
+      <p class="text-white/70 text-[15px] text-center leading-relaxed">
+        Tính năng phân tích món ăn đang tạm tắt, vui lòng quay lại sau
+      </p>
+      <button class="bg-white/20 text-white px-6 py-3 rounded-[14px] text-[15px] font-semibold ios-press" @click="mode = 'mine'">
+        Xem món của tôi
+      </button>
+    </div>
+
     <!-- Camera feed -->
     <video
-      v-if="mode === 'camera' && !cameraError"
+      v-if="mode === 'camera' && !cameraError && foodAnalysisEnabled"
       ref="videoEl"
       autoplay playsinline muted
       class="absolute inset-0 w-full h-full object-cover"
     />
 
     <!-- Camera error -->
-    <div v-if="mode === 'camera' && cameraError" class="absolute inset-0 flex flex-col items-center justify-center gap-4 px-10">
+    <div v-if="mode === 'camera' && cameraError && foodAnalysisEnabled" class="absolute inset-0 flex flex-col items-center justify-center gap-4 px-10">
       <svg viewBox="0 0 24 24" class="w-16 h-16 opacity-30" fill="white">
         <path d="M12 15.2A3.2 3.2 0 018.8 12 3.2 3.2 0 0112 8.8a3.2 3.2 0 013.2 3.2A3.2 3.2 0 0112 15.2M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"/>
       </svg>
@@ -345,7 +379,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Flash -->
-        <button class="w-9 h-9 rounded-full bg-black/30 flex items-center justify-center ios-press" @click="toggleFlash">
+        <button class="w-9 h-9 rounded-full bg-black/30 flex items-center justify-center ios-press" :class="foodAnalysisEnabled ? '' : 'invisible'" @click="toggleFlash">
           <svg viewBox="0 0 24 24" class="w-5 h-5" :fill="flashOn ? '#FFCC00' : 'white'">
             <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
           </svg>
@@ -355,7 +389,7 @@ onUnmounted(() => {
 
     <!-- Viewfinder: food mode (square) -->
     <div
-      v-if="mode === 'camera' && !cameraError && !barcodeMode"
+      v-if="mode === 'camera' && !cameraError && !barcodeMode && foodAnalysisEnabled"
       class="absolute inset-0 flex items-center justify-center pointer-events-none"
     >
       <div class="relative w-64 h-64">
@@ -371,7 +405,7 @@ onUnmounted(() => {
 
     <!-- Viewfinder: barcode mode (wide rectangle) -->
     <div
-      v-if="mode === 'camera' && !cameraError && barcodeMode"
+      v-if="mode === 'camera' && !cameraError && barcodeMode && foodAnalysisEnabled"
       class="absolute inset-0 flex items-center justify-center pointer-events-none"
     >
       <div class="relative w-72 h-32">
@@ -402,7 +436,7 @@ onUnmounted(() => {
 
     <!-- AVO hint (camera mode, no barcode) -->
     <div
-      v-if="mode === 'camera' && !cameraError && !barcodeMode"
+      v-if="mode === 'camera' && !cameraError && !barcodeMode && foodAnalysisEnabled"
       class="absolute left-5 pointer-events-none animate-fadeInUp"
       style="bottom: 160px; opacity:0; animation-delay:0.8s"
     >
@@ -419,7 +453,7 @@ onUnmounted(() => {
 
     <!-- Bottom controls (camera mode) -->
     <div
-      v-if="mode === 'camera'"
+      v-if="mode === 'camera' && foodAnalysisEnabled"
       class="absolute bottom-0 inset-x-0 flex items-center justify-around px-8"
       style="padding-bottom: calc(env(safe-area-inset-bottom) + 24px); padding-top: 20px"
     >
@@ -510,7 +544,7 @@ onUnmounted(() => {
       leave-to-class="translate-y-full"
     >
       <div
-        v-if="mode === 'manual'"
+        v-if="mode === 'manual' && foodAnalysisEnabled"
         class="absolute bottom-0 inset-x-0 bg-[#1c1c1e] rounded-t-[28px] px-5 pt-4"
         style="padding-bottom: calc(env(safe-area-inset-bottom) + 16px)"
       >

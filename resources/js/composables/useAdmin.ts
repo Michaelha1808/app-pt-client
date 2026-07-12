@@ -2,6 +2,7 @@ import { apiFetch } from '@/utils/api'
 import type {
   AdminStats, AdminUserRow, AdminUserDetail, Paginated,
   AdminSettings, AuditLogRow, UsersQuery,
+  SystemInfo, SystemLogs, CacheTarget, FailedJobRow,
   NotificationSegment, NotificationPreview, NotificationCampaign,
   DishRow, DishInput, DatasetStats, DatasetRow, DatasetDetail,
 } from '@/types/admin'
@@ -54,6 +55,29 @@ export function useAdmin() {
       `/admin/settings/test/${service}`, { method: 'POST' },
     )
 
+  // ── Quan trắc hệ thống ──
+  const fetchSystemInfo = () =>
+    apiFetch<SystemInfo>('/admin/system')
+
+  const clearSystemCache = (target: CacheTarget) =>
+    apiFetch<{ ok: boolean; message: string }>('/admin/system/cache-clear', { method: 'POST', body: { target } })
+
+  const fetchSystemLogs = (params: { lines?: number; level?: string } = {}) =>
+    apiFetch<SystemLogs>(`/admin/system/logs${qs(params as Record<string, unknown>)}`)
+
+  // ── Failed jobs ──
+  const fetchFailedJobs = (params: { page?: number; per_page?: number } = {}) =>
+    apiFetch<Paginated<FailedJobRow>>(`/admin/system/failed-jobs${qs(params as Record<string, unknown>)}`)
+
+  // Không truyền uuid → retry toàn bộ
+  const retryFailedJobs = (uuid?: string) =>
+    apiFetch<{ ok: boolean; message: string; retried: number }>(
+      '/admin/system/failed-jobs/retry', { method: 'POST', body: uuid ? { uuid } : {} },
+    )
+
+  const deleteFailedJob = (uuid: string) =>
+    apiFetch<{ ok: boolean; message: string }>(`/admin/system/failed-jobs/${uuid}`, { method: 'DELETE' })
+
   const fetchAuditLogs = (params: Record<string, unknown> = {}) =>
     apiFetch<Paginated<AuditLogRow>>(`/admin/audit-logs${qs(params)}`)
 
@@ -95,6 +119,8 @@ export function useAdmin() {
   return {
     fetchStats, fetchUsers, fetchUser, updateUser, suspendUser, restoreUser,
     resetUserPassword, deleteUser, revokeUserSession, fetchSettings, saveSettings, testService, fetchAuditLogs,
+    fetchSystemInfo, clearSystemCache, fetchSystemLogs,
+    fetchFailedJobs, retryFailedJobs, deleteFailedJob,
     previewNotification, sendNotification, fetchCampaigns,
     fetchDishes, createDish, updateDish, deleteDish,
     fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample,

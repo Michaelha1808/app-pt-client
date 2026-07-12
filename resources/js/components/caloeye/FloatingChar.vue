@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import { usePublicConfig } from '@/composables/usePublicConfig'
 
 const route = useRoute()
 const router = useRouter()
+
+// Flag admin: tắt chat AI → bỏ các action dẫn tới /chat trong menu AVO
+const { loadPublicConfig, flag } = usePublicConfig()
+const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
 const isOpen = ref(false)
 const isIn = ref(false)
 
@@ -15,7 +20,10 @@ const isDragging = ref(false)
 const hasMoved = ref(false)
 let dragStart = { x: 0, y: 0, posX: 0, posY: 0 }
 
-onMounted(() => setTimeout(() => { isIn.value = true }, 1000))
+onMounted(() => {
+  loadPublicConfig()
+  setTimeout(() => { isIn.value = true }, 1000)
+})
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val))
@@ -116,7 +124,9 @@ const contexts: Record<string, Ctx> = {
 const ctx = computed<Ctx>(() => {
   const path = route.path
   const key = Object.keys(contexts).find(k => path === k || path.startsWith(k + '/')) ?? '/home'
-  return contexts[key]
+  const c = contexts[key]
+  if (chatEnabled.value) return c
+  return { ...c, actions: c.actions.filter(a => !a.to.startsWith('/chat')) }
 })
 
 const floatMood = computed<Mood>(() => isOpen.value ? 'wave' : ctx.value.mood)

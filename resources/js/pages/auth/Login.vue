@@ -1,9 +1,25 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 
+import { usePublicConfig } from '@/composables/usePublicConfig'
+
 const { login, loginWithGoogle, loginWithFacebook, loginAsGuest, extractError } = useAuth()
 const { registered: bioEnabled, loginWithPasskey } = usePasskey()
+const { loadPublicConfig, flag } = usePublicConfig()
 const router = useRouter()
+const route = useRoute()
+
+// Feature flags admin cấu hình runtime — mặc định hiện đủ nút cho tới khi load xong
+const googleEnabled = computed(() => flag(c => c.oauth.google_enabled))
+const facebookEnabled = computed(() => flag(c => c.oauth.facebook_enabled))
+const guestEnabled = computed(() => flag(c => c.features.guest_mode_enabled))
+
+onMounted(() => {
+  loadPublicConfig()
+  if (route.query.error === 'oauth_disabled') {
+    formError.value = 'Phương thức đăng nhập này đang tạm tắt. Vui lòng dùng email hoặc cách khác.'
+  }
+})
 
 const email = ref('')
 const password = ref('')
@@ -164,15 +180,16 @@ async function handleBiometricLogin() {
     </div>
 
     <!-- Divider -->
-    <div class="flex items-center gap-3 mt-5 mb-4 animate-fadeInUp delay-2" style="opacity:0">
+    <div v-if="googleEnabled || facebookEnabled" class="flex items-center gap-3 mt-5 mb-4 animate-fadeInUp delay-2" style="opacity:0">
       <div class="flex-1 h-px bg-ios-gray5"/>
       <span class="text-[12px] text-ios-gray">hoặc đăng nhập với</span>
       <div class="flex-1 h-px bg-ios-gray5"/>
     </div>
 
     <!-- Social sign-in (round icon only) -->
-    <div class="flex justify-center gap-4 animate-fadeInUp delay-2" style="opacity:0">
+    <div v-if="googleEnabled || facebookEnabled" class="flex justify-center gap-4 animate-fadeInUp delay-2" style="opacity:0">
       <button
+        v-if="googleEnabled"
         aria-label="Đăng nhập với Google"
         class="w-12 h-12 rounded-full bg-white border border-ios-gray5 shadow-sm flex items-center justify-center ios-press"
         @click="loginWithGoogle"
@@ -186,6 +203,7 @@ async function handleBiometricLogin() {
       </button>
 
       <button
+        v-if="facebookEnabled"
         aria-label="Đăng nhập với Facebook"
         class="w-12 h-12 rounded-full bg-[#1877F2] shadow-sm flex items-center justify-center ios-press"
         @click="loginWithFacebook"
@@ -209,6 +227,7 @@ async function handleBiometricLogin() {
     <!-- Bottom actions -->
     <div class="mt-auto pt-4 flex flex-col items-center gap-3 animate-fadeInUp delay-3" style="opacity:0">
       <button
+        v-if="guestEnabled"
         class="w-full h-[46px] rounded-[14px] bg-ios-gray6 border border-ios-gray5 text-[14px] text-ios-gray font-medium flex items-center justify-center gap-2 ios-press"
         @click="loginAsGuest"
       >

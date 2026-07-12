@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
 
+// Feature flags public cho FE (ẩn/hiện OAuth, guest mode, đăng ký…) — không lộ secret
+Route::get('/config', [\App\Http\Controllers\Api\V1\AppConfigController::class, 'index']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -41,17 +44,17 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Food analysis — public (guest được phép), rate limit 10/min
-Route::middleware('throttle:10,1')->post('/food/analyze', [FoodController::class, 'analyze']);
+// Food analysis — public (guest được phép), rate limit động theo Settings (rate_limit.food_analyze_per_min)
+Route::middleware('throttle:food-analyze')->post('/food/analyze', [FoodController::class, 'analyze']);
 
-// Multi-dish detect — public (guest được phép), rate limit 10/min
-Route::middleware('throttle:10,1')->post('/food/detect', [FoodController::class, 'detect']);
+// Multi-dish detect — public (guest được phép), chung quota với food analysis
+Route::middleware('throttle:food-analyze')->post('/food/detect', [FoodController::class, 'detect']);
 
 // Ghi nhận kết quả user chốt cho 1 lần detect (dataset cải thiện model) — public, rate limit 20/min
 Route::middleware('throttle:20,1')->post('/food/detect/{sample}/feedback', [FoodController::class, 'detectFeedback']);
 
-// Nhận xét AI cho cả bữa (SSE) — public, rate limit 10/min
-Route::middleware('throttle:10,1')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
+// Nhận xét AI cho cả bữa (SSE) — public, chung quota với food analysis
+Route::middleware('throttle:food-analyze')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
 
 // Food log — auth required
 Route::middleware('auth:sanctum')->group(function () {
@@ -79,7 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->prefix('plan')->group(function () {
     Route::get('/', [PlanController::class, 'show']);
     Route::get('/history', [PlanController::class, 'history']);
-    Route::middleware('throttle:5,1')->post('/generate', [PlanController::class, 'generate']);
+    Route::middleware('throttle:plan-generate')->post('/generate', [PlanController::class, 'generate']);
 });
 
 // Passkey / WebAuthn (vân tay, Face ID)
@@ -96,12 +99,12 @@ Route::prefix('webauthn')->group(function () {
     });
 });
 
-// AI chat tư vấn — cho phép khách (quota client-side), rate limit 15/min
+// AI chat tư vấn — cho phép khách (quota client-side), rate limit động theo Settings (rate_limit.chat_per_min)
 // User đăng nhập gửi kèm Bearer token → có ngữ cảnh cá nhân hóa; khách → tư vấn chung.
-Route::middleware('throttle:15,1')->post('/chat', [ChatController::class, 'send']);
+Route::middleware('throttle:chat')->post('/chat', [ChatController::class, 'send']);
 
 // "Thiết lập kế hoạch ăn hôm nay" từ lời tư vấn — auth required, tốn token AI nên siết chặt.
-Route::middleware(['auth:sanctum', 'throttle:5,1'])->post('/chat/apply-plan', [ChatController::class, 'applyPlan']);
+Route::middleware(['auth:sanctum', 'throttle:plan-generate'])->post('/chat/apply-plan', [ChatController::class, 'applyPlan']);
 
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);
@@ -181,6 +184,16 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('/settings/test/{service}', [\App\Http\Controllers\Api\V1\Admin\SettingsController::class, 'test']);
 
     Route::get('/audit-logs', [\App\Http\Controllers\Api\V1\Admin\AuditLogController::class, 'index']);
+
+    // Quan trắc hệ thống: info + health check, xoá cache, xem log
+    Route::get('/system', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'info']);
+    Route::post('/system/cache-clear', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'clearCache']);
+    Route::get('/system/logs', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'logs']);
+
+    // Quản lý failed jobs: liệt kê, retry (1 hoặc all), xoá
+    Route::get('/system/failed-jobs', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'failedJobs']);
+    Route::post('/system/failed-jobs/retry', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'retryFailedJobs']);
+    Route::delete('/system/failed-jobs/{uuid}', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'deleteFailedJob']);
 
     // Thư viện món ăn chuẩn (nutrition DB) — CRUD
     Route::get('/dishes', [\App\Http\Controllers\Api\V1\Admin\DishController::class, 'index']);

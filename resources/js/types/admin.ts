@@ -104,6 +104,54 @@ export interface AdminSettings {
   }
 }
 
+export interface SystemHealthCheck {
+  name: string
+  label: string
+  ok: boolean
+  detail: string | null
+}
+
+export interface SystemInfo {
+  app: {
+    name: string; env: string; debug: boolean; url: string
+    timezone: string; locale: string; laravel: string; php: string
+  }
+  server: {
+    os: string; memory_limit: string
+    upload_max_filesize: string; post_max_size: string; server_time: string
+  }
+  database: { driver: string; version: string | null; size: number | null }
+  cache: { driver: string }
+  queue: { driver: string; pending: number | null; failed: number | null }
+  storage: { logs_size: number; disk_free: number | null; disk_total: number | null }
+  health: SystemHealthCheck[]
+}
+
+export type CacheTarget = 'cache' | 'config' | 'route' | 'view'
+
+// ── Failed jobs (bảng failed_jobs chuẩn Laravel) ──
+export interface FailedJobRow {
+  id: number
+  uuid: string
+  connection: string
+  queue: string
+  job_name: string
+  exception_excerpt: string
+  failed_at: string
+}
+
+export interface SystemLogEntry {
+  timestamp: string
+  level: string
+  message: string
+}
+
+export interface SystemLogs {
+  file: string | null
+  size?: number
+  entries: SystemLogEntry[]
+}
+
 export interface AuditLogRow {
   id: number
   admin: { id: number; name: string; email: string } | null

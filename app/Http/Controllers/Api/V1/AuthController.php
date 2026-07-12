@@ -134,8 +134,19 @@ class AuthController extends Controller
         ])->cookie('refresh_token', $newToken, self::REFRESH_TOKEN_MINUTES, '/', null, false, true, false, 'Lax');
     }
 
+    /** OAuth provider bị admin tắt trong Settings → đưa user về trang login kèm mã lỗi. */
+    private function oauthDisabledRedirect(string $provider): ?\Illuminate\Http\RedirectResponse
+    {
+        $enabled = app(\App\Services\SettingsService::class)->get("oauth.{$provider}_enabled", true);
+        if ($enabled === true) return null;
+
+        return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=oauth_disabled');
+    }
+
     public function googleRedirect(Request $request)
     {
+        if ($blocked = $this->oauthDisabledRedirect('google')) return $blocked;
+
         $redirectUri = $request->query('redirect_uri', env('FRONTEND_URL') . '/auth/callback');
 
         return Socialite::driver('google')
@@ -146,6 +157,8 @@ class AuthController extends Controller
 
     public function googleCallback(Request $request)
     {
+        if ($blocked = $this->oauthDisabledRedirect('google')) return $blocked;
+
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Exception $e) {
@@ -192,6 +205,8 @@ class AuthController extends Controller
 
     public function facebookRedirect(Request $request)
     {
+        if ($blocked = $this->oauthDisabledRedirect('facebook')) return $blocked;
+
         $redirectUri = $request->query('redirect_uri', env('FRONTEND_URL') . '/auth/callback');
 
         return Socialite::driver('facebook')
@@ -202,6 +217,8 @@ class AuthController extends Controller
 
     public function facebookCallback(Request $request)
     {
+        if ($blocked = $this->oauthDisabledRedirect('facebook')) return $blocked;
+
         try {
             $fbUser = Socialite::driver('facebook')->stateless()->user();
         } catch (\Exception $e) {

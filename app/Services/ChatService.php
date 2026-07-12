@@ -12,13 +12,17 @@ class ChatService
     private Client $http;
     private string $apiKey;
     private string $model;
+    private float $temperature;
+    private int $maxTokens;
     private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
     public function __construct(SettingsService $settings, private PreferenceService $preferences, private WeightService $weightService)
     {
-        $this->apiKey = $settings->get('ai.api_key', config('services.gemini.key'));
-        $this->model  = $settings->get('ai.model', config('services.gemini.model', 'gemini-2.0-flash'));
-        $this->http   = new Client(['timeout' => 60]);
+        $this->apiKey      = $settings->get('ai.api_key', config('services.gemini.key'));
+        $this->model       = $settings->get('ai.model', config('services.gemini.model', 'gemini-2.0-flash'));
+        $this->temperature = (float) $settings->get('ai.temperature', 0.8);
+        $this->maxTokens   = (int) $settings->get('ai.max_tokens', 2048);
+        $this->http        = new Client(['timeout' => 60]);
     }
 
     /**
@@ -344,8 +348,9 @@ SYS;
                         ],
                         'contents'         => $contents,
                         'generationConfig' => [
-                            'maxOutputTokens' => 2048,
-                            'temperature'     => 0.8,
+                            // Admin cấu hình runtime trong Settings (ai.max_tokens / ai.temperature)
+                            'maxOutputTokens' => $this->maxTokens,
+                            'temperature'     => $this->temperature,
                             'thinkingConfig'  => ['thinkingBudget' => 0],
                         ],
                     ],

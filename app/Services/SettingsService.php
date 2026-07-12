@@ -22,7 +22,7 @@ class SettingsService
                 'provider'              => 'gemini',
                 'model'                 => config('services.gemini.model', 'gemini-2.0-flash'),
                 'api_key'               => config('services.gemini.key'),
-                'temperature'           => 0.4,
+                'temperature'           => 0.8,
                 'max_tokens'            => 2048,
                 'food_analysis_enabled' => true,
                 'chat_enabled'          => true,

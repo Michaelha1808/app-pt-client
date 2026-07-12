@@ -10,13 +10,20 @@ use Illuminate\Support\Facades\Mail;
 class SendReengagementEmails extends Command
 {
     protected $signature   = 'notify:reengagement';
-    protected $description = 'Gửi email cho users không hoạt động hơn 7 ngày';
+    protected $description = 'Gửi email cho users không hoạt động lâu ngày (số ngày cấu hình trong Settings)';
 
-    public function handle(): void
+    public function handle(\App\Services\SettingsService $settings): void
     {
-        $cutoff = now()->subDays(7);
+        // Công tắc global trong Admin Settings — tắt là dừng toàn bộ, bất kể user pref.
+        if ($settings->get('mail.reengagement_enabled', true) !== true) {
+            $this->info('[notify:reengagement] Đã tắt trong Settings — bỏ qua.');
+            return;
+        }
 
-        // Chỉ gửi 1 lần mỗi 7 ngày — tránh spam
+        $days   = max(1, (int) $settings->get('notifications.reengagement_days', 7));
+        $cutoff = now()->subDays($days);
+
+        // Chỉ gửi 1 lần mỗi chu kỳ $days ngày — tránh spam
         $users = User::where('email_reengagement_enabled', true)
             ->where(function ($q) use ($cutoff) {
                 $q->whereNull('last_seen_at')

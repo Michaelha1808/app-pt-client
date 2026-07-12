@@ -38,6 +38,15 @@ const ACTION_LABELS: Record<string, string> = {
   'user.reset_password': 'Reset mật khẩu',
   'user.delete': 'Xoá tài khoản',
   'settings.update': 'Cập nhật cấu hình',
+  'system.cache_clear': 'Xoá cache',
+  'system.failed_jobs_retry': 'Retry failed job',
+  'system.failed_jobs_delete': 'Xoá failed job',
+}
+
+// Meta JSON rút gọn 1 dòng — đầy đủ nằm trong title (hover)
+function fmtMeta(meta: Record<string, unknown> | null): string {
+  if (!meta || !Object.keys(meta).length) return ''
+  return JSON.stringify(meta)
 }
 
 async function load(page = 1) {
@@ -82,17 +91,18 @@ onMounted(() => load())
               <TableHead>Admin</TableHead>
               <TableHead>Hành động</TableHead>
               <TableHead>Đối tượng</TableHead>
+              <TableHead>Chi tiết</TableHead>
               <TableHead>IP</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <template v-if="loading">
               <TableRow v-for="i in 5" :key="i">
-                <TableCell v-for="j in 5" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
+                <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
             <TableRow v-else-if="!rows.length">
-              <TableCell colspan="5" class="py-10 text-center text-muted-foreground">Chưa có nhật ký</TableCell>
+              <TableCell colspan="6" class="py-10 text-center text-muted-foreground">Chưa có nhật ký</TableCell>
             </TableRow>
             <TableRow v-for="l in rows" v-else :key="l.id">
               <TableCell class="text-muted-foreground whitespace-nowrap">{{ fmt(l.created_at) }}</TableCell>
@@ -104,8 +114,11 @@ onMounted(() => load())
                 <Badge variant="secondary">{{ ACTION_LABELS[l.action] || l.action }}</Badge>
               </TableCell>
               <TableCell class="text-muted-foreground">
-                <span v-if="l.target_type">{{ l.target_type }}#{{ l.target_id }}</span>
+                <span v-if="l.target_type">{{ l.target_type }}<template v-if="l.target_id">#{{ l.target_id }}</template></span>
                 <span v-else>—</span>
+              </TableCell>
+              <TableCell class="text-muted-foreground font-mono text-xs max-w-64">
+                <span class="block truncate" :title="fmtMeta(l.meta)">{{ fmtMeta(l.meta) || '—' }}</span>
               </TableCell>
               <TableCell class="text-muted-foreground font-mono text-xs">{{ l.ip || '—' }}</TableCell>
             </TableRow>

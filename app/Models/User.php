@@ -28,6 +28,21 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        // Giờ nhắc mặc định cho user mới lấy từ Admin Settings (notifications.*_default);
+        // nếu DB settings chưa sẵn sàng thì giữ default của cột.
+        static::creating(function (User $user) {
+            try {
+                $settings = app(\App\Services\SettingsService::class);
+                $user->morning_notify ??= $settings->get('notifications.morning_default', '07:00');
+                $user->evening_notify ??= $settings->get('notifications.evening_default', '21:00');
+            } catch (\Throwable) {
+                // bỏ qua — dùng default của schema
+            }
+        });
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

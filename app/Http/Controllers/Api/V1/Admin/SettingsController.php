@@ -46,32 +46,42 @@ class SettingsController extends Controller
             'features.maintenance_mode'   => 'sometimes|boolean',
         ];
 
-        // Flatten payload "group.name" => value
-        $flat = [];
-        foreach ($request->all() as $group => $values) {
-            if (! is_array($values)) continue;
-            foreach ($values as $name => $value) {
-                $flat["{$group}.{$name}"] = $value;
-            }
-        }
-
-        $validator = validator($flat, array_intersect_key($rules, $flat));
-        $validator->validate();
+        // Validate trực tiếp payload lồng {group: {name: value}} — rule dot-notation
+        // của Laravel khớp mảng lồng. (Validate mảng phẳng có key chứa dấu chấm sẽ
+        // bị validator bỏ qua hoàn toàn → mọi giá trị rác đều lọt.)
+        $validated = $request->validate($rules);
 
         $secretKeys = $this->settings->secretKeys();
         $toSave = [];
-        foreach ($flat as $key => $value) {
-            if (! array_key_exists($key, $rules)) continue; // bỏ key lạ
-            // Secret: bỏ qua nếu rỗng hoặc vẫn là chuỗi đã mask (không thay đổi)
-            if (in_array($key, $secretKeys, true)) {
-                if (! $value || str_contains((string) $value, '•')) continue;
+        foreach ($validated as $group => $values) {
+            if (! is_array($values)) continue;
+            foreach ($values as $name => $value) {
+                $key = "{$group}.{$name}";
+                // Secret: bỏ qua nếu rỗng hoặc vẫn là chuỗi đã mask (không thay đổi)
+                if (in_array($key, $secretKeys, true)) {
+                    if (! $value || str_contains((string) $value, '•')) continue;
+                }
+                $toSave[$key] = $value;
             }
-            $toSave[$key] = $value;
         }
 
         if ($toSave) {
+            // Ghi lại old→new cho audit TRƯỚC khi lưu; secret không bao giờ ghi giá trị raw
+            $changes = [];
+            foreach ($toSave as $key => $value) {
+                $old = $this->settings->get($key);
+                if (in_array($key, $secretKeys, true)) {
+                    $changes[$key] = ['from' => $old ? '(đã đặt)' : '(trống)', 'to' => '(đã thay đổi)'];
+                } elseif ($old != $value) {
+                    $changes[$key] = ['from' => $old, 'to' => $value];
+                }
+            }
+
             $this->settings->setMany($toSave);
-            AuditLogger::log('settings.update', 'settings', null, ['keys' => array_keys($toSave)]);
+            AuditLogger::log('settings.update', 'settings', null, [
+                'keys'    => array_keys($toSave),
+                'changes' => $changes,
+            ]);
         }
 
         return response()->json($this->settings->all(maskSecrets: true));
@@ -113,12 +123,16 @@ class SettingsController extends Controller
 
     private function testFcm(): JsonResponse
     {
+        $start = microtime(true);
         try {
             $messaging = app(\Kreait\Firebase\Contract\Messaging::class);
-            // Validate token rỗng sẽ ném lỗi InvalidArgument → chứng tỏ credentials hợp lệ/kết nối được
-            return response()->json(['ok' => true, 'message' => 'Firebase Messaging đã sẵn sàng']);
+            // Gọi thật tới FCM (validate_only) — credentials sai/hết hạn sẽ ném lỗi,
+            // token dummy không hợp lệ chỉ nằm trong report (không phải exception).
+            $messaging->validateRegistrationTokens(['caloeye-connectivity-check']);
+            $ms = (int) round((microtime(true) - $start) * 1000);
+            return response()->json(['ok' => true, 'latency_ms' => $ms, 'message' => 'Kết nối Firebase Messaging thành công']);
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'message' => 'Không khởi tạo được Firebase: ' . $e->getMessage()]);
+            return response()->json(['ok' => false, 'message' => 'Không kết nối được Firebase: ' . $e->getMessage()]);
         }
     }
 

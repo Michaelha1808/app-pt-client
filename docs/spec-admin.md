@@ -526,6 +526,91 @@ $table->timestamps();
 - [x] `Notifications.vue` (soạn nội dung + preview noti, chọn phân khúc, đếm người nhận realtime, gửi, bảng lịch sử trạng thái) + nav link + route
 - [x] Verify Docker: preview all=8/google=1, send→queue→done sent=8 push=2, 8 broadcast logs, audit ghi `notification.broadcast`
 
+### Phase 7 — Rà soát Settings + Hệ thống (2026-07-12) ✅
+**Sửa lỗi (settings "chết" → có hiệu lực thật):**
+- [x] **Bug validation nghiêm trọng:** rule key `group.name` validate trên mảng PHẲNG bị Laravel bỏ qua hoàn toàn (dot = nested path) → mọi giá trị rác đều lưu được. Fix: validate thẳng payload lồng của request + dùng `validated()` (test: `max_tokens=99999` → 422)
+- [x] `rate_limit.*` trước đây chỉ "định hướng" (route hardcode `throttle:10,1`) → limiter động `food-analyze`/`chat`/`plan-generate` đọc SettingsService, key theo user id/IP (`AppServiceProvider`)
+- [x] `ai.temperature`/`ai.max_tokens` không được dùng → wire vào `ChatService::streamReply` (default đổi 0.4→0.8 khớp hành vi cũ)
+- [x] `ai.food_analysis_enabled`/`ai.chat_enabled` không được enforce → gate 503 `feature_disabled` ở FoodController (analyze/detect/advise-meal) + ChatController (send/apply-plan)
+- [x] `notifications.fcm_enabled` không được check → `FcmService::send/sendMulticast` bỏ qua push khi tắt (log in-app vẫn giữ)
+- [x] `mail.from_address/from_name` không áp dụng → override `config('mail.from')` lúc boot
+- [x] `mail.reengagement_enabled` + `notifications.reengagement_days` không dùng (hardcode 7 ngày) → `SendReengagementEmails` đọc settings
+- [x] `notifications.morning_default/evening_default` không áp dụng → `User::booted()` set giờ nhắc cho user mới
+- [x] `oauth.*_enabled` không enforce → chặn redirect/callback (redirect FE `?error=oauth_disabled`) + FE ẩn nút
+- [x] `features.guest_mode_enabled` không có tác dụng → FE ẩn nút khách theo `GET /config`
+- [x] Test FCM giả (chỉ resolve container) → gọi thật `validateRegistrationTokens` đo latency
+
+**Endpoint mới:**
+- [x] `GET /config` (public, qua được maintenance): feature flags cho FE (registration/guest/oauth/ai) — không lộ secret
+- [x] `GET /admin/system`: app/server/database/cache/queue/storage info + 6 health checks (DB ping, cache RW, storage writable, AI key, Firebase, mail)
+- [x] `POST /admin/system/cache-clear` (`target: cache|config|route|view`, có audit log)
+- [x] `GET /admin/system/logs?lines=&level=`: parse ~512KB cuối laravel.log, entry mới nhất trước
+
+**UI redesign `Settings.vue`:**
+- [x] 4 tabs (AI & Giới hạn / Thông báo & Email / Đăng nhập & Tính năng / Hệ thống) — component `ui/tabs` mới (reka-ui)
+- [x] Dirty-state tracking + thanh "Lưu thay đổi/Hoàn tác" sticky (lưu nhiều group 1 lần PUT), mô tả từng setting, icon per card
+- [x] Maintenance mode confirm bằng `AlertDialog` (thay `window.confirm`), badge "Đang bảo trì" trên header
+- [x] Secret input: value trống + placeholder masked ("để trống = giữ nguyên")
+- [x] `SystemPanel.vue`: health grid, info 2 cột, cache actions, log viewer (filter level, monospace)
+- [x] Tests: `AdminSettingsTest` (14) + `AdminSystemTest` (3) — 17 pass; vue-tsc + vite build pass
+
+### Phase 8 — Hoàn thiện Settings v2 (2026-07-12) ✅
+
+Ba cải tiến nối tiếp Phase 7. Không thay đổi schema DB (dùng bảng `failed_jobs`, `admin_audit_logs` có sẵn).
+
+#### 8.1 FE tôn trọng AI flags trong app chính (P1)
+
+Khi admin tắt `ai.food_analysis_enabled` / `ai.chat_enabled`, hiện tại app chính vẫn hiện UI scan/chat và chỉ nhận 503 khi gọi API. Yêu cầu:
+
+- `usePublicConfig`: thêm **TTL 60s** (cache module hiện tại giữ vĩnh viễn trong session → flag đổi không được cập nhật). Refetch khi quá TTL, giữ nguyên hành vi "null = hiện đủ" để tránh nháy UI.
+- Trang **Scan** (`/scan`): nếu `ai.food_analysis_enabled=false` → thay vùng camera/upload bằng empty-state "Tính năng phân tích món ăn đang tạm tắt, vui lòng quay lại sau" (icon + text, giữ layout). Tab "Món của tôi" (quick log, không gọi AI) **vẫn dùng được**.
+- Điểm vào **Chat** (nút/FAB chat ở Home hoặc bottom nav, trang chat): nếu `ai.chat_enabled=false` → ẩn nút vào chat; nếu vào thẳng URL chat → hiện empty-state tương tự, input disabled.
+- Không đổi logic guest quota hay các luồng khác.
+
+**Checklist:**
+- [x] `usePublicConfig` TTL 60s + hàm `refresh()`
+- [x] Scan.vue (hoặc trang tương ứng) empty-state khi food analysis off
+- [x] Ẩn entry chat + empty-state trang chat khi chat off
+- [x] `vue-tsc` + `vite build` pass
+
+#### 8.2 Quản lý failed jobs trong tab Hệ thống (P2)
+
+**API (nhóm `/admin`, middleware admin, audit log đủ 3 action):**
+
+```
+GET    /admin/system/failed-jobs?page=&per_page=   → Paginated: [{ id, uuid, connection, queue, job_name, exception_excerpt, failed_at }]
+POST   /admin/system/failed-jobs/retry             → body { uuid?: string } — có uuid: retry 1 job; không có: retry ALL. Response { ok, message, retried }
+DELETE /admin/system/failed-jobs/{uuid}            → xoá 1 job. Response { ok, message }
+```
+
+- `job_name`: parse từ cột `payload` JSON (`displayName`), fallback `uuid`.
+- `exception_excerpt`: dòng đầu cột `exception`, cắt 500 ký tự.
+- Retry qua `Artisan::call('queue:retry', ...)`; xoá qua `queue:forget` hoặc delete DB row trực tiếp.
+- Audit actions: `system.failed_jobs_retry` (meta: uuid|all + retried), `system.failed_jobs_delete` (meta: uuid).
+
+**UI (`SystemPanel.vue`):** card "Failed jobs" dưới card cache — bảng (job, queue, thời gian, excerpt rút gọn), nút "Thử lại" từng dòng + "Thử lại tất cả", nút xoá từng dòng (confirm bằng AlertDialog), đếm tổng; ẩn card khi 0 failed job? KHÔNG — hiện card với trạng thái "Không có job lỗi 🎉" để admin biết đang sạch.
+
+**Checklist:**
+- [x] 3 endpoint + routes + audit
+- [x] `useAdmin`: fetchFailedJobs / retryFailedJobs / deleteFailedJob + types
+- [x] Card Failed jobs trong SystemPanel (empty-state, confirm xoá)
+- [x] Feature tests: list/retry/delete + quyền admin
+
+#### 8.3 Audit log ghi thay đổi old→new của Settings (P2)
+
+`settings.update` hiện chỉ ghi `{keys: [...]}` — không biết đổi từ gì sang gì.
+
+- `SettingsController::update`: trước khi lưu, đọc giá trị cũ qua `SettingsService`, ghi meta dạng `{"changes": {"ai.model": {"from": "gemini-2.0-flash", "to": "gemini-2.5-flash"}}}`.
+- **Secret key (`ai.api_key`)**: KHÔNG ghi giá trị — ghi `{"from": "(đã đặt)|(trống)", "to": "(đã thay đổi)"}`.
+- `AuditLogs.vue` đã render meta JSON sẵn → không cần đổi UI (kiểm tra lại, nếu meta hiển thị xấu thì format lại tối thiểu).
+
+**Checklist:**
+- [x] Meta old→new trong SettingsController (mask secret)
+- [x] Feature test: audit chứa from/to, secret không lộ raw value
+
+#### Ghi chú vận hành (không bắt buộc code)
+- Khuyến nghị đặt `LOG_CHANNEL=daily` (+ `LOG_DAILY_DAYS=14`) trên VPS để log viewer nhẹ — `SystemController::latestLogFile()` đã tự chọn file mới nhất, tương thích sẵn.
+
 ### Còn lại (môi trường)
 - [ ] `php artisan migrate` (cần PHP ≥ 8.4.1 — sandbox chỉ có 8.3)
 - [ ] `php artisan app:make-admin <email>` để tạo admin đầu tiên

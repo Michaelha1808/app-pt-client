@@ -22,8 +22,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FoodController extends Controller
 {
-    public function analyze(Request $request, FoodAnalysisService $service): StreamedResponse
+    /** Admin tắt ai.food_analysis_enabled trong Settings → chặn các endpoint gọi AI nhận diện món. */
+    private function foodAnalysisDisabled(): ?JsonResponse
     {
+        if (app(\App\Services\SettingsService::class)->get('ai.food_analysis_enabled', true) !== true) {
+            return response()->json([
+                'detail' => 'Tính năng phân tích món ăn bằng AI đang tạm tắt. Vui lòng quay lại sau.',
+                'code'   => 'feature_disabled',
+            ], 503);
+        }
+        return null;
+    }
+
+    public function analyze(Request $request, FoodAnalysisService $service): StreamedResponse|JsonResponse
+    {
+        if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
+
         $request->validate([
             'image'                  => 'nullable|string',
             'text'                   => 'nullable|string|min:3|max:500',
@@ -99,6 +113,8 @@ class FoodController extends Controller
         FoodSampleService $samples,
         DishCatalogService $catalog,
     ): JsonResponse {
+        if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
+
         $request->validate([
             'image' => 'nullable|string',
             'text'  => 'nullable|string|max:500',
@@ -162,8 +178,10 @@ class FoodController extends Controller
         return response()->json(['message' => 'ok']);
     }
 
-    public function adviseMeal(Request $request, FoodAnalysisService $service): StreamedResponse
+    public function adviseMeal(Request $request, FoodAnalysisService $service): StreamedResponse|JsonResponse
     {
+        if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
+
         $request->validate([
             'dishes'            => 'required|array|min:1|max:30',
             'dishes.*.name'     => 'required|string|max:200',

@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { usePublicConfig } from '@/composables/usePublicConfig'
 
 const route = useRoute()
+
+// Flag admin: tắt chat AI → ẩn tab Tư vấn khỏi bottom nav
+const { loadPublicConfig, flag } = usePublicConfig()
+const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
+onMounted(loadPublicConfig)
 
 const tabs = [
   {
@@ -36,6 +43,8 @@ const tabs = [
   },
 ]
 
+const visibleTabs = computed(() => tabs.filter(t => t.path !== '/chat' || chatEnabled.value))
+
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
 }
@@ -46,7 +55,7 @@ function isActive(path: string) {
     <!-- Blur background as separate layer so -mt-6 center button isn't clipped by backdrop-filter stacking context -->
     <div class="absolute inset-0 ios-blur-white border-t-hairline border-black/12 pointer-events-none"/>
     <div class="relative flex items-end justify-around px-2 pt-2 pb-6">
-      <template v-for="tab in tabs" :key="tab.path">
+      <template v-for="tab in visibleTabs" :key="tab.path">
         <!-- Center scan button -->
         <NuxtLink
           v-if="tab.path === '/scan'"

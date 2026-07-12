@@ -18,8 +18,10 @@ class ChatController extends Controller
      * Tư vấn dinh dưỡng & kế hoạch ăn uống/tập luyện — SSE streaming.
      * Mỗi request rebuild ngữ cảnh từ DB → luôn dựa trên dữ liệu mới nhất.
      */
-    public function send(Request $request, ChatService $service, PreferenceService $preferences): StreamedResponse
+    public function send(Request $request, ChatService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
     {
+        if ($disabled = $this->chatDisabled()) return $disabled;
+
         $request->validate([
             'messages'        => 'required|array|min:1|max:30',
             'messages.*.role' => 'required|string|in:user,ai,model',
@@ -118,6 +120,8 @@ class ChatController extends Controller
      */
     public function applyPlan(Request $request, MealPlanService $service): JsonResponse
     {
+        if ($disabled = $this->chatDisabled()) return $disabled;
+
         $request->validate([
             'messages'        => 'required|array|min:1|max:30',
             'messages.*.role' => 'required|string|in:user,ai,model',
@@ -159,5 +163,17 @@ class ChatController extends Controller
             'plan'        => $record->plan,
             'target_date' => $record->target_date->toDateString(),
         ]);
+    }
+
+    /** Admin tắt ai.chat_enabled trong Settings → chặn chat + apply-plan. */
+    private function chatDisabled(): ?JsonResponse
+    {
+        if (app(\App\Services\SettingsService::class)->get('ai.chat_enabled', true) !== true) {
+            return response()->json([
+                'detail' => 'Trợ lý AI chat đang tạm tắt. Vui lòng quay lại sau.',
+                'code'   => 'feature_disabled',
+            ], 503);
+        }
+        return null;
     }
 }

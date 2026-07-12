@@ -71,8 +71,11 @@ onMounted(() => load())
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <h1 class="text-xl font-bold">Nhật ký quản trị</h1>
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+      <div>
+        <h1 class="text-xl font-bold">Nhật ký quản trị</h1>
+        <p class="text-sm text-muted-foreground mt-0.5">Mọi hành động ghi/sửa của admin đều được lưu vết.</p>
+      </div>
       <Select v-model="actionModel">
         <SelectTrigger class="w-52"><SelectValue /></SelectTrigger>
         <SelectContent>

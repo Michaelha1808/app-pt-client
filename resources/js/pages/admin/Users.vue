@@ -5,21 +5,31 @@ import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import type { AdminUserRow, UsersQuery } from '@/types/admin'
+import EmptyState from '@/components/admin/EmptyState.vue'
+import IconAction from '@/components/admin/IconAction.vue'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { ChevronLeft, ChevronRight, MoreHorizontal, ArrowUp, ArrowDown } from 'lucide-vue-next'
+import {
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Search,
+  Eye, Lock, LockOpen, KeyRound, Trash2, SearchX, Loader2,
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const { fetchUsers, suspendUser, restoreUser, resetUserPassword, deleteUser } = useAdmin()
@@ -82,13 +92,32 @@ function goPage(p: number) {
   filters.value.page = p; load()
 }
 
-async function onSuspend(u: AdminUserRow) {
-  const reason = window.prompt(`Khoá tài khoản "${u.name}"? Nhập lý do (tuỳ chọn):`)
-  if (reason === null) return
+// ── Hành động (confirm bằng dialog thay window.confirm/prompt) ──
+const suspendTarget = ref<AdminUserRow | null>(null)
+const suspendReason = ref('')
+const suspendBusy = ref(false)
+const resetTarget = ref<AdminUserRow | null>(null)
+const deleteTarget = ref<AdminUserRow | null>(null)
+
+function askSuspend(u: AdminUserRow) {
+  suspendReason.value = ''
+  suspendTarget.value = u
+}
+
+async function confirmSuspend() {
+  const u = suspendTarget.value
+  if (!u) return
+  suspendBusy.value = true
   try {
-    await suspendUser(u.id, reason || undefined)
-    toast.success('Đã khoá tài khoản'); load()
-  } catch (e) { toast.error(extractError(e)) }
+    await suspendUser(u.id, suspendReason.value || undefined)
+    toast.success('Đã khoá tài khoản')
+    suspendTarget.value = null
+    load()
+  } catch (e) {
+    toast.error(extractError(e))
+  } finally {
+    suspendBusy.value = false
+  }
 }
 
 async function onRestore(u: AdminUserRow) {
@@ -98,16 +127,20 @@ async function onRestore(u: AdminUserRow) {
   } catch (e) { toast.error(extractError(e)) }
 }
 
-async function onReset(u: AdminUserRow) {
-  if (!confirm(`Gửi email đặt lại mật khẩu cho ${u.email}?`)) return
+async function confirmReset() {
+  const u = resetTarget.value
+  if (!u) return
+  resetTarget.value = null
   try {
     const res = await resetUserPassword(u.id)
     toast.success(res.message)
   } catch (e) { toast.error(extractError(e)) }
 }
 
-async function onDelete(u: AdminUserRow) {
-  if (!confirm(`Xoá tài khoản "${u.name}"? Hành động này có thể khôi phục nhưng người dùng sẽ mất truy cập.`)) return
+async function confirmDelete() {
+  const u = deleteTarget.value
+  if (!u) return
+  deleteTarget.value = null
   try {
     await deleteUser(u.id)
     toast.success('Đã xoá tài khoản'); load()
@@ -130,11 +163,11 @@ onMounted(load)
     </div>
 
     <!-- Filters -->
-    <Card class="p-3 mb-4 flex-row flex-wrap gap-2 items-center">
-      <Input
-        v-model="filters.search" placeholder="Tìm tên hoặc email…"
-        class="flex-1 min-w-[200px]"
-      />
+    <Card class="p-3 mb-4 flex-row flex-wrap gap-2 items-center shadow-xs">
+      <div class="relative flex-1 min-w-[220px]">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input v-model="filters.search" placeholder="Tìm tên hoặc email…" class="pl-9" />
+      </div>
       <Select v-model="roleFilter">
         <SelectTrigger class="w-40"><SelectValue /></SelectTrigger>
         <SelectContent>
@@ -163,11 +196,11 @@ onMounted(load)
     </Card>
 
     <!-- Table -->
-    <Card class="py-0 gap-0 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow class="hover:bg-transparent">
               <TableHead class="cursor-pointer select-none" @click="setSort('name')">
                 <span class="inline-flex items-center gap-1">
                   Người dùng
@@ -190,7 +223,7 @@ onMounted(load)
                   <component :is="filters.order === 'asc' ? ArrowUp : ArrowDown" v-if="filters.sort === 'created_at'" class="w-3.5 h-3.5" />
                 </span>
               </TableHead>
-              <TableHead />
+              <TableHead class="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -199,8 +232,10 @@ onMounted(load)
                 <TableCell v-for="j in 8" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
-            <TableRow v-else-if="!rows.length">
-              <TableCell colspan="8" class="py-10 text-center text-muted-foreground">Không tìm thấy người dùng</TableCell>
+            <TableRow v-else-if="!rows.length" class="hover:bg-transparent">
+              <TableCell colspan="8" class="p-0">
+                <EmptyState :icon="SearchX" title="Không tìm thấy người dùng" hint="Thử đổi từ khoá tìm kiếm hoặc bỏ bớt bộ lọc." />
+              </TableCell>
             </TableRow>
             <TableRow
               v-for="u in rows" v-else :key="u.id"
@@ -209,8 +244,8 @@ onMounted(load)
             >
               <TableCell>
                 <div class="flex items-center gap-3">
-                  <img v-if="u.avatar_url" :src="u.avatar_url" class="w-8 h-8 rounded-full object-cover" alt="" />
-                  <div v-else class="w-8 h-8 rounded-full bg-calor-light text-calor-deep flex items-center justify-center text-xs font-semibold">
+                  <img v-if="u.avatar_url" :src="u.avatar_url" class="w-9 h-9 rounded-full object-cover" alt="" />
+                  <div v-else class="w-9 h-9 rounded-full bg-calor-light text-calor-deep flex items-center justify-center text-xs font-semibold">
                     {{ u.name.charAt(0).toUpperCase() }}
                   </div>
                   <div class="min-w-0">
@@ -223,31 +258,23 @@ onMounted(load)
                 <Badge :variant="u.role === 'admin' ? 'default' : 'secondary'" class="capitalize">{{ u.role }}</Badge>
               </TableCell>
               <TableCell>
-                <Badge
-                  :class="u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                  variant="secondary"
-                >{{ u.status === 'active' ? 'Active' : 'Khoá' }}</Badge>
+                <Badge variant="outline" class="gap-1.5 font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="u.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'" />
+                  {{ u.status === 'active' ? 'Active' : 'Bị khoá' }}
+                </Badge>
               </TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ u.calorie_streak }}</TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ u.meal_logs_count }}</TableCell>
               <TableCell class="text-muted-foreground">{{ fmtDate(u.last_seen_at) }}</TableCell>
               <TableCell class="text-muted-foreground">{{ fmtDate(u.created_at) }}</TableCell>
               <TableCell class="text-right" @click.stop>
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="h-8 w-8">
-                      <MoreHorizontal class="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-44">
-                    <DropdownMenuItem @click="router.push(`/admin/users/${u.id}`)">Xem chi tiết</DropdownMenuItem>
-                    <DropdownMenuItem v-if="u.status === 'active'" @click="onSuspend(u)">Khoá tài khoản</DropdownMenuItem>
-                    <DropdownMenuItem v-else @click="onRestore(u)">Mở khoá</DropdownMenuItem>
-                    <DropdownMenuItem @click="onReset(u)">Reset mật khẩu</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" @click="onDelete(u)">Xoá</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div class="inline-flex items-center gap-0.5">
+                  <IconAction label="Xem chi tiết" tone="view" @click="router.push(`/admin/users/${u.id}`)"><Eye /></IconAction>
+                  <IconAction v-if="u.status === 'active'" label="Khoá tài khoản" tone="warn" @click="askSuspend(u)"><Lock /></IconAction>
+                  <IconAction v-else label="Mở khoá" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
+                  <IconAction label="Gửi email đặt lại mật khẩu" tone="edit" @click="resetTarget = u"><KeyRound /></IconAction>
+                  <IconAction label="Xoá tài khoản" tone="delete" @click="deleteTarget = u"><Trash2 /></IconAction>
+                </div>
               </TableCell>
             </TableRow>
           </TableBody>
@@ -256,17 +283,70 @@ onMounted(load)
 
       <!-- Pagination -->
       <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
-        <span>Tổng {{ meta.total }} người dùng</span>
+        <span>Tổng <span class="font-medium text-foreground">{{ meta.total }}</span> người dùng</span>
         <div class="flex items-center gap-1">
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="goPage(meta.current_page - 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="goPage(meta.current_page - 1)">
             <ChevronLeft class="w-4 h-4" />
           </Button>
-          <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="goPage(meta.current_page + 1)">
+          <span class="px-2 tabular-nums">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="goPage(meta.current_page + 1)">
             <ChevronRight class="w-4 h-4" />
           </Button>
         </div>
       </div>
     </Card>
+
+    <!-- Modal khoá tài khoản (có lý do) -->
+    <Dialog :open="!!suspendTarget" @update:open="(v: boolean) => { if (!v) suspendTarget = null }">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2"><Lock class="w-4 h-4 text-amber-600" /> Khoá tài khoản</DialogTitle>
+          <DialogDescription>
+            "{{ suspendTarget?.name }}" sẽ không đăng nhập / gọi API được cho tới khi mở khoá.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-1.5">
+          <Label for="suspend-reason">Lý do (tuỳ chọn)</Label>
+          <Input id="suspend-reason" v-model="suspendReason" placeholder="Vd: spam, vi phạm điều khoản…" @keydown.enter="confirmSuspend" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="suspendBusy" @click="suspendTarget = null">Huỷ</Button>
+          <Button class="bg-amber-600 hover:bg-amber-700 text-white" :disabled="suspendBusy" @click="confirmSuspend">
+            <Loader2 v-if="suspendBusy" class="w-4 h-4 animate-spin" />
+            Khoá tài khoản
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Confirm reset mật khẩu -->
+    <AlertDialog :open="!!resetTarget" @update:open="(v: boolean) => { if (!v) resetTarget = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><KeyRound class="w-4 h-4 text-blue-600" /> Đặt lại mật khẩu?</AlertDialogTitle>
+          <AlertDialogDescription>Hệ thống sẽ gửi email đặt lại mật khẩu tới {{ resetTarget?.email }}.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction @click="confirmReset">Gửi email</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Confirm xoá -->
+    <AlertDialog :open="!!deleteTarget" @update:open="(v: boolean) => { if (!v) deleteTarget = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><Trash2 class="w-4 h-4 text-destructive" /> Xoá tài khoản?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tài khoản "{{ deleteTarget?.name }}" sẽ bị xoá mềm — người dùng mất truy cập ngay nhưng dữ liệu có thể khôi phục.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="confirmDelete">Xoá</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

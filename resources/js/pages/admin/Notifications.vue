@@ -18,7 +18,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { Loader2, RefreshCw } from 'lucide-vue-next'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import EmptyState from '@/components/admin/EmptyState.vue'
+import { Loader2, RefreshCw, PenLine, Users, History, Send, BellOff } from 'lucide-vue-next'
 
 const { previewNotification, sendNotification, fetchCampaigns } = useAdmin()
 const { extractError } = useAuth()
@@ -78,13 +83,19 @@ async function loadHistory() {
   }
 }
 
-async function submit() {
+const confirmOpen = ref(false)
+
+function askSend() {
   if (!form.title.trim() || !form.body.trim()) {
     toast.error('Vui lòng nhập tiêu đề và nội dung')
     return
   }
+  confirmOpen.value = true
+}
+
+async function submit() {
+  confirmOpen.value = false
   const count = preview.value?.audience_count ?? 0
-  if (!confirm(`Gửi thông báo này tới ${count} người dùng?`)) return
 
   sending.value = true
   try {
@@ -99,11 +110,11 @@ async function submit() {
   }
 }
 
-const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
-  queued:  { text: 'Đang chờ',   cls: 'bg-gray-100 text-gray-600' },
-  sending: { text: 'Đang gửi',   cls: 'bg-blue-100 text-blue-700' },
-  done:    { text: 'Hoàn thành', cls: 'bg-green-100 text-green-700' },
-  failed:  { text: 'Lỗi',        cls: 'bg-red-100 text-red-700' },
+const STATUS_LABEL: Record<string, { text: string; dot: string }> = {
+  queued:  { text: 'Đang chờ',   dot: 'bg-gray-400' },
+  sending: { text: 'Đang gửi',   dot: 'bg-blue-500' },
+  done:    { text: 'Hoàn thành', dot: 'bg-emerald-500' },
+  failed:  { text: 'Lỗi',        dot: 'bg-red-500' },
 }
 
 function fmt(s: string): string {
@@ -122,8 +133,8 @@ onMounted(() => { runPreview(); loadHistory() })
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <!-- Compose -->
-      <Card class="gap-4">
-        <CardHeader><CardTitle class="text-base">Nội dung</CardTitle></CardHeader>
+      <Card class="gap-4 shadow-xs">
+        <CardHeader><CardTitle class="text-base flex items-center gap-2"><PenLine class="w-4 h-4 text-primary" /> Nội dung</CardTitle></CardHeader>
         <CardContent class="space-y-3">
           <div class="space-y-1.5">
             <Label>Tiêu đề</Label>
@@ -149,8 +160,8 @@ onMounted(() => { runPreview(); loadHistory() })
       </Card>
 
       <!-- Segment -->
-      <Card class="gap-4">
-        <CardHeader><CardTitle class="text-base">Đối tượng nhận</CardTitle></CardHeader>
+      <Card class="gap-4 shadow-xs">
+        <CardHeader><CardTitle class="text-base flex items-center gap-2"><Users class="w-4 h-4 text-primary" /> Đối tượng nhận</CardTitle></CardHeader>
         <CardContent>
           <div class="inline-flex bg-muted rounded-lg p-0.5 mb-4 gap-0.5">
             <Button size="sm" :variant="segment.audience === 'all' ? 'default' : 'ghost'" @click="segment.audience = 'all'">Tất cả</Button>
@@ -227,8 +238,9 @@ onMounted(() => { runPreview(); loadHistory() })
             </div>
           </div>
 
-          <Button class="mt-4 w-full" :disabled="sending" @click="submit">
+          <Button class="mt-4 w-full" :disabled="sending" @click="askSend">
             <Loader2 v-if="sending" class="w-4 h-4 animate-spin" />
+            <Send v-else class="w-4 h-4" />
             {{ sending ? 'Đang gửi…' : 'Gửi thông báo' }}
           </Button>
         </CardContent>
@@ -236,17 +248,17 @@ onMounted(() => { runPreview(); loadHistory() })
     </div>
 
     <!-- History -->
-    <Card class="mt-4 py-0 gap-0 overflow-hidden">
+    <Card class="mt-4 py-0 gap-0 overflow-hidden shadow-xs">
       <div class="flex items-center justify-between px-5 py-3 border-b">
-        <h2 class="font-semibold">Lịch sử chiến dịch</h2>
-        <Button variant="ghost" size="sm" @click="loadHistory">
+        <h2 class="font-semibold text-sm flex items-center gap-2"><History class="w-4 h-4 text-primary" /> Lịch sử chiến dịch</h2>
+        <Button variant="outline" size="sm" @click="loadHistory">
           <RefreshCw class="w-3.5 h-3.5" /> Làm mới
         </Button>
       </div>
       <div class="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow class="hover:bg-transparent">
               <TableHead>Tiêu đề</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead class="text-right">Mục tiêu</TableHead>
@@ -261,8 +273,10 @@ onMounted(() => { runPreview(); loadHistory() })
                 <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
-            <TableRow v-else-if="!campaigns.length">
-              <TableCell colspan="6" class="py-8 text-center text-muted-foreground">Chưa có chiến dịch nào</TableCell>
+            <TableRow v-else-if="!campaigns.length" class="hover:bg-transparent">
+              <TableCell colspan="6" class="p-0">
+                <EmptyState :icon="BellOff" title="Chưa có chiến dịch nào" hint="Chiến dịch đã gửi sẽ hiển thị tại đây kèm số liệu push." />
+              </TableCell>
             </TableRow>
             <TableRow v-for="c in campaigns" v-else :key="c.id">
               <TableCell>
@@ -270,7 +284,10 @@ onMounted(() => { runPreview(); loadHistory() })
                 <div class="text-xs text-muted-foreground truncate max-w-[260px]">{{ c.body }}</div>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary" :class="STATUS_LABEL[c.status]?.cls">{{ STATUS_LABEL[c.status]?.text || c.status }}</Badge>
+                <Badge variant="outline" class="gap-1.5 font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="STATUS_LABEL[c.status]?.dot || 'bg-gray-400'" />
+                  {{ STATUS_LABEL[c.status]?.text || c.status }}
+                </Badge>
               </TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ c.audience_count }}</TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ c.sent_count }}</TableCell>
@@ -281,5 +298,22 @@ onMounted(() => { runPreview(); loadHistory() })
         </Table>
       </div>
     </Card>
+
+    <!-- Confirm gửi chiến dịch -->
+    <AlertDialog v-model:open="confirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><Send class="w-4 h-4 text-primary" /> Gửi thông báo?</AlertDialogTitle>
+          <AlertDialogDescription>
+            "{{ form.title }}" sẽ được gửi tới <b>{{ preview?.audience_count ?? 0 }}</b> người dùng
+            ({{ preview?.subscribed_count ?? 0 }} người có thiết bị nhận push). Không thể thu hồi sau khi gửi.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction @click="submit">Gửi ngay</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

@@ -13,7 +13,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import EmptyState from '@/components/admin/EmptyState.vue'
+import IconAction from '@/components/admin/IconAction.vue'
+import { ChevronLeft, ChevronRight, Eye, Trash2, Database, Loader2, Image as ImageIcon, PenLine } from 'lucide-vue-next'
 
 const { fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample } = useAdmin()
 const { extractError } = useAuth()
@@ -62,8 +68,12 @@ async function openDetail(id: number) {
   }
 }
 
-async function remove(id: number) {
-  if (!confirm('Xoá mẫu này khỏi dataset?')) return
+const deleteId = ref<number | null>(null)
+
+async function confirmRemove() {
+  const id = deleteId.value
+  if (id === null) return
+  deleteId.value = null
   try {
     await deleteDatasetSample(id)
     toast.success('Đã xoá mẫu')
@@ -94,10 +104,12 @@ onMounted(() => load())
 
 <template>
   <div>
-    <h1 class="text-xl font-bold mb-1">Dataset nhận diện</h1>
-    <p class="text-sm text-muted-foreground mb-4">
-      AI đoán vs người dùng sửa. Dùng để xem model sai ở đâu và chọn món bổ sung vào thư viện.
-    </p>
+    <div class="mb-5">
+      <h1 class="text-xl font-bold">Dataset nhận diện</h1>
+      <p class="text-sm text-muted-foreground mt-0.5">
+        AI đoán vs người dùng sửa. Dùng để xem model sai ở đâu và chọn món bổ sung vào thư viện.
+      </p>
+    </div>
 
     <!-- Stats -->
     <div v-if="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -114,17 +126,17 @@ onMounted(() => load())
       Chỉ hiện mẫu có sửa
     </label>
 
-    <Card class="py-0 gap-0 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow class="hover:bg-transparent">
               <TableHead>#</TableHead>
               <TableHead>Nguồn</TableHead>
               <TableHead>Món</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thời gian</TableHead>
-              <TableHead />
+              <TableHead class="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -133,14 +145,18 @@ onMounted(() => load())
                 <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
-            <TableRow v-else-if="!rows.length">
-              <TableCell colspan="6" class="py-10 text-center text-muted-foreground">Chưa có mẫu nào</TableCell>
+            <TableRow v-else-if="!rows.length" class="hover:bg-transparent">
+              <TableCell colspan="6" class="p-0">
+                <EmptyState :icon="Database" title="Chưa có mẫu nào" hint="Mẫu được thu tự động mỗi lần người dùng scan món ăn." />
+              </TableCell>
             </TableRow>
             <TableRow v-for="r in rows" v-else :key="r.id" class="cursor-pointer" @click="openDetail(r.id)">
               <TableCell class="text-muted-foreground tabular-nums">{{ r.id }}</TableCell>
               <TableCell>
-                <Badge variant="secondary" :class="r.input_type === 'image' ? 'bg-blue-50 text-blue-600' : ''">
-                  {{ r.input_type === 'image' ? '📷 Ảnh' : '✍️ Mô tả' }}
+                <Badge variant="secondary" class="gap-1" :class="r.input_type === 'image' ? 'bg-blue-500/10 text-blue-600' : ''">
+                  <ImageIcon v-if="r.input_type === 'image'" class="w-3 h-3" />
+                  <PenLine v-else class="w-3 h-3" />
+                  {{ r.input_type === 'image' ? 'Ảnh' : 'Mô tả' }}
                 </Badge>
               </TableCell>
               <TableCell>{{ r.ai_count }} món</TableCell>
@@ -150,8 +166,11 @@ onMounted(() => load())
                 <span v-if="!r.has_correction && !r.saved" class="text-xs text-muted-foreground">—</span>
               </TableCell>
               <TableCell class="text-muted-foreground whitespace-nowrap">{{ fmt(r.created_at) }}</TableCell>
-              <TableCell class="text-right">
-                <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive h-7" @click.stop="remove(r.id)">Xoá</Button>
+              <TableCell class="text-right" @click.stop>
+                <div class="inline-flex items-center gap-0.5">
+                  <IconAction label="Xem chi tiết" tone="view" @click="openDetail(r.id)"><Eye /></IconAction>
+                  <IconAction label="Xoá mẫu" tone="delete" @click="deleteId = r.id"><Trash2 /></IconAction>
+                </div>
               </TableCell>
             </TableRow>
           </TableBody>
@@ -160,11 +179,11 @@ onMounted(() => load())
       <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
         <span>Tổng {{ meta.total }} mẫu</span>
         <div class="flex items-center gap-1">
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
             <ChevronLeft class="w-4 h-4" />
           </Button>
           <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
             <ChevronRight class="w-4 h-4" />
           </Button>
         </div>
@@ -174,7 +193,9 @@ onMounted(() => load())
     <!-- Detail dialog -->
     <Dialog v-model:open="dialogOpen">
       <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div v-if="detailLoading" class="py-10 text-center text-muted-foreground">Đang tải…</div>
+        <div v-if="detailLoading" class="py-10 flex items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 class="w-4 h-4 animate-spin" /> Đang tải…
+        </div>
         <template v-else-if="detail">
           <DialogHeader>
             <DialogTitle>Mẫu #{{ detail.id }}</DialogTitle>
@@ -217,10 +238,26 @@ onMounted(() => load())
           </div>
 
           <div class="flex justify-end">
-            <Button variant="ghost" class="text-destructive hover:text-destructive" @click="remove(detail.id)">Xoá mẫu này</Button>
+            <Button variant="outline" class="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5" @click="deleteId = detail.id">
+              <Trash2 class="w-4 h-4" /> Xoá mẫu này
+            </Button>
           </div>
         </template>
       </DialogContent>
     </Dialog>
+
+    <!-- Confirm xoá mẫu -->
+    <AlertDialog :open="deleteId !== null" @update:open="(v: boolean) => { if (!v) deleteId = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><Trash2 class="w-4 h-4 text-destructive" /> Xoá mẫu #{{ deleteId }}?</AlertDialogTitle>
+          <AlertDialogDescription>Mẫu sẽ bị xoá vĩnh viễn khỏi dataset huấn luyện.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="confirmRemove">Xoá</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

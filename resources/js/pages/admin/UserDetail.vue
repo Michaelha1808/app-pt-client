@@ -16,7 +16,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Loader2, Monitor, Smartphone, Globe } from 'lucide-vue-next'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  ArrowLeft, Loader2, Monitor, Smartphone, Globe, UserCog, Activity,
+  BellRing, MonitorSmartphone, ShieldAlert, Lock, LockOpen, KeyRound, Trash2, LogOut,
+} from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -78,23 +88,33 @@ async function save() {
   }
 }
 
-async function onSuspend() {
-  const reason = window.prompt('Nhập lý do khoá (tuỳ chọn):')
-  if (reason === null) return
-  try { await suspendUser(id, reason || undefined); toast.success('Đã khoá'); load() }
-  catch (e) { toast.error(extractError(e)) }
+// Confirm bằng dialog thay window.prompt/confirm
+const suspendOpen = ref(false)
+const suspendReason = ref('')
+const suspendBusy = ref(false)
+const resetOpen = ref(false)
+const deleteOpen = ref(false)
+const revokeId = ref<number | null>(null)
+
+async function confirmSuspend() {
+  suspendBusy.value = true
+  try {
+    await suspendUser(id, suspendReason.value || undefined)
+    toast.success('Đã khoá'); suspendOpen.value = false; load()
+  } catch (e) { toast.error(extractError(e)) }
+  finally { suspendBusy.value = false }
 }
 async function onRestore() {
   try { await restoreUser(id); toast.success('Đã mở khoá'); load() }
   catch (e) { toast.error(extractError(e)) }
 }
-async function onReset() {
-  if (!confirm('Gửi email đặt lại mật khẩu?')) return
+async function confirmReset() {
+  resetOpen.value = false
   try { const r = await resetUserPassword(id); toast.success(r.message) }
   catch (e) { toast.error(extractError(e)) }
 }
-async function onDelete() {
-  if (!confirm('Xoá tài khoản này?')) return
+async function confirmDelete() {
+  deleteOpen.value = false
   try { await deleteUser(id); toast.success('Đã xoá'); router.push('/admin/users') }
   catch (e) { toast.error(extractError(e)) }
 }
@@ -117,8 +137,10 @@ function deviceIcon(device: string) {
   return Globe
 }
 
-async function onRevokeSession(tokenId: number) {
-  if (!confirm('Thu hồi phiên đăng nhập này? Thiết bị sẽ bị đăng xuất.')) return
+async function confirmRevokeSession() {
+  const tokenId = revokeId.value
+  if (tokenId === null) return
+  revokeId.value = null
   try {
     await revokeUserSession(id, tokenId)
     if (user.value) user.value.sessions = user.value.sessions.filter(s => s.id !== tokenId)
@@ -167,7 +189,8 @@ onMounted(load)
           <div class="flex items-center gap-2 flex-wrap">
             <h1 class="text-lg font-bold">{{ user.name }}</h1>
             <Badge :variant="user.role === 'admin' ? 'default' : 'secondary'" class="capitalize">{{ user.role }}</Badge>
-            <Badge variant="secondary" :class="user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+            <Badge variant="outline" class="gap-1.5 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full" :class="user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'" />
               {{ user.status === 'active' ? 'Active' : 'Bị khoá' }}
             </Badge>
             <Badge variant="outline" class="capitalize">{{ user.provider }}</Badge>
@@ -181,7 +204,7 @@ onMounted(load)
         <!-- Edit form -->
         <Card class="lg:col-span-2 gap-4">
           <CardHeader>
-            <CardTitle class="text-base">Thông tin tài khoản</CardTitle>
+            <CardTitle class="text-base flex items-center gap-2"><UserCog class="w-4 h-4 text-primary" /> Thông tin tài khoản</CardTitle>
           </CardHeader>
           <CardContent>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -243,7 +266,7 @@ onMounted(load)
         <!-- Side: stats + danger -->
         <div class="space-y-4">
           <Card class="gap-3">
-            <CardHeader><CardTitle class="text-base">Hoạt động</CardTitle></CardHeader>
+            <CardHeader><CardTitle class="text-base flex items-center gap-2"><Activity class="w-4 h-4 text-primary" /> Hoạt động</CardTitle></CardHeader>
             <CardContent>
               <div class="grid grid-cols-2 gap-3">
                 <div v-for="s in statItems" :key="s.label" class="bg-muted rounded-lg p-3">
@@ -255,7 +278,7 @@ onMounted(load)
           </Card>
 
           <Card class="gap-3">
-            <CardHeader><CardTitle class="text-base">Thông báo</CardTitle></CardHeader>
+            <CardHeader><CardTitle class="text-base flex items-center gap-2"><BellRing class="w-4 h-4 text-primary" /> Thông báo</CardTitle></CardHeader>
             <CardContent>
               <ul class="text-sm space-y-1.5">
                 <li class="flex justify-between"><span class="text-muted-foreground">Buổi sáng</span><span>{{ user.notify.morning ? '✅' : '—' }}</span></li>
@@ -267,7 +290,7 @@ onMounted(load)
           </Card>
 
           <Card class="gap-3">
-            <CardHeader><CardTitle class="text-base">Thiết bị đăng nhập</CardTitle></CardHeader>
+            <CardHeader><CardTitle class="text-base flex items-center gap-2"><MonitorSmartphone class="w-4 h-4 text-primary" /> Thiết bị đăng nhập</CardTitle></CardHeader>
             <CardContent>
               <p v-if="!user.sessions.length" class="text-sm text-muted-foreground">Không có phiên đăng nhập nào.</p>
               <ul v-else class="space-y-2">
@@ -277,8 +300,8 @@ onMounted(load)
                     <div class="truncate">{{ s.device }}</div>
                     <div class="text-xs text-muted-foreground">Hoạt động: {{ fmtTime(s.last_used_at) }}</div>
                   </div>
-                  <Button variant="outline" size="sm" class="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0 h-7" @click="onRevokeSession(s.id)">
-                    Thu hồi
+                  <Button variant="outline" size="sm" class="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0 h-7" @click="revokeId = s.id">
+                    <LogOut class="w-3.5 h-3.5" /> Thu hồi
                   </Button>
                 </li>
               </ul>
@@ -286,16 +309,87 @@ onMounted(load)
           </Card>
 
           <Card class="border-destructive/30 gap-3">
-            <CardHeader><CardTitle class="text-base text-destructive">Vùng nguy hiểm</CardTitle></CardHeader>
+            <CardHeader><CardTitle class="text-base text-destructive flex items-center gap-2"><ShieldAlert class="w-4 h-4" /> Vùng nguy hiểm</CardTitle></CardHeader>
             <CardContent class="space-y-2">
-              <Button v-if="user.status === 'active'" variant="outline" class="w-full text-orange-600 border-orange-200 hover:bg-orange-50" :disabled="!!isSelf || user.role === 'admin'" @click="onSuspend">Khoá tài khoản</Button>
-              <Button v-else variant="outline" class="w-full text-green-600 border-green-200 hover:bg-green-50" @click="onRestore">Mở khoá tài khoản</Button>
-              <Button variant="outline" class="w-full" @click="onReset">Gửi reset mật khẩu</Button>
-              <Button variant="outline" class="w-full text-destructive border-destructive/30 hover:bg-destructive/10" :disabled="!!isSelf || user.role === 'admin'" @click="onDelete">Xoá tài khoản</Button>
+              <Button v-if="user.status === 'active'" variant="outline" class="w-full text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700" :disabled="!!isSelf || user.role === 'admin'" @click="suspendReason = ''; suspendOpen = true">
+                <Lock class="w-4 h-4" /> Khoá tài khoản
+              </Button>
+              <Button v-else variant="outline" class="w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700" @click="onRestore">
+                <LockOpen class="w-4 h-4" /> Mở khoá tài khoản
+              </Button>
+              <Button variant="outline" class="w-full" @click="resetOpen = true">
+                <KeyRound class="w-4 h-4" /> Gửi reset mật khẩu
+              </Button>
+              <Button variant="outline" class="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" :disabled="!!isSelf || user.role === 'admin'" @click="deleteOpen = true">
+                <Trash2 class="w-4 h-4" /> Xoá tài khoản
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
     </template>
+
+    <!-- Modal khoá tài khoản -->
+    <Dialog v-model:open="suspendOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2"><Lock class="w-4 h-4 text-amber-600" /> Khoá tài khoản</DialogTitle>
+          <DialogDescription>Người dùng sẽ không đăng nhập / gọi API được cho tới khi mở khoá.</DialogDescription>
+        </DialogHeader>
+        <div class="space-y-1.5">
+          <Label for="ud-suspend-reason">Lý do (tuỳ chọn)</Label>
+          <Input id="ud-suspend-reason" v-model="suspendReason" placeholder="Vd: spam, vi phạm điều khoản…" @keydown.enter="confirmSuspend" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" :disabled="suspendBusy" @click="suspendOpen = false">Huỷ</Button>
+          <Button class="bg-amber-600 hover:bg-amber-700 text-white" :disabled="suspendBusy" @click="confirmSuspend">
+            <Loader2 v-if="suspendBusy" class="w-4 h-4 animate-spin" />
+            Khoá tài khoản
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Confirm reset mật khẩu -->
+    <AlertDialog v-model:open="resetOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><KeyRound class="w-4 h-4 text-blue-600" /> Đặt lại mật khẩu?</AlertDialogTitle>
+          <AlertDialogDescription>Hệ thống sẽ gửi email đặt lại mật khẩu tới {{ user?.email }}.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction @click="confirmReset">Gửi email</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Confirm xoá tài khoản -->
+    <AlertDialog v-model:open="deleteOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><Trash2 class="w-4 h-4 text-destructive" /> Xoá tài khoản?</AlertDialogTitle>
+          <AlertDialogDescription>Tài khoản sẽ bị xoá mềm — người dùng mất truy cập ngay nhưng dữ liệu có thể khôi phục.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="confirmDelete">Xoá</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Confirm thu hồi phiên -->
+    <AlertDialog :open="revokeId !== null" @update:open="(v: boolean) => { if (!v) revokeId = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><LogOut class="w-4 h-4 text-destructive" /> Thu hồi phiên đăng nhập?</AlertDialogTitle>
+          <AlertDialogDescription>Thiết bị này sẽ bị đăng xuất ngay lập tức.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="confirmRevokeSession">Thu hồi</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

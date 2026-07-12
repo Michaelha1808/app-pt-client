@@ -15,7 +15,7 @@ const forwardedProps = useForwardProps(delegatedProps)
   <TabsContent
     data-slot="tabs-content"
     v-bind="forwardedProps"
-    :class="cn('flex-1 outline-none', props.class)"
+    :class="cn('flex-1 outline-none data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-bottom-1 data-[state=active]:duration-200', props.class)"
   >
     <slot />
   </TabsContent>

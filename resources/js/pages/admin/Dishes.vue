@@ -19,7 +19,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-vue-next'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import EmptyState from '@/components/admin/EmptyState.vue'
+import IconAction from '@/components/admin/IconAction.vue'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Search, Pencil, Trash2, UtensilsCrossed } from 'lucide-vue-next'
 
 const { fetchDishes, createDish, updateDish, deleteDish } = useAdmin()
 const { extractError } = useAuth()
@@ -92,8 +98,12 @@ async function save() {
   }
 }
 
-async function remove(d: DishRow) {
-  if (!confirm(`Xoá món "${d.name}" khỏi thư viện?`)) return
+const deleteTarget = ref<DishRow | null>(null)
+
+async function confirmRemove() {
+  const d = deleteTarget.value
+  if (!d) return
+  deleteTarget.value = null
   try {
     await deleteDish(d.id)
     toast.success('Đã xoá món')
@@ -114,7 +124,10 @@ onMounted(() => load())
         <p class="text-sm text-muted-foreground mt-0.5">Nutrition DB chuẩn để grounding kết quả AI.</p>
       </div>
       <div class="flex items-center gap-2">
-        <Input v-model="search" placeholder="Tìm món…" class="w-44" @keydown.enter="load(1)" />
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input v-model="search" placeholder="Tìm món…" class="w-52 pl-9" @keydown.enter="load(1)" />
+        </div>
         <Button @click="openCreate">
           <Plus class="w-4 h-4" /> Thêm món
         </Button>
@@ -125,16 +138,16 @@ onMounted(() => load())
       Calo/macro các món này được dùng làm chuẩn khi nhận diện (grounding). Tên + biệt danh càng đầy đủ thì AI càng dễ khớp.
     </p>
 
-    <Card class="py-0 gap-0 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow class="hover:bg-transparent">
               <TableHead>Món</TableHead>
               <TableHead>Đơn vị</TableHead>
               <TableHead class="text-right">Calo</TableHead>
               <TableHead class="text-right">P / C / F</TableHead>
-              <TableHead />
+              <TableHead class="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -143,8 +156,12 @@ onMounted(() => load())
                 <TableCell v-for="j in 5" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
-            <TableRow v-else-if="!rows.length">
-              <TableCell colspan="5" class="py-10 text-center text-muted-foreground">Chưa có món nào</TableCell>
+            <TableRow v-else-if="!rows.length" class="hover:bg-transparent">
+              <TableCell colspan="5" class="p-0">
+                <EmptyState :icon="UtensilsCrossed" title="Chưa có món nào" hint="Bấm 'Thêm món' để xây thư viện dinh dưỡng chuẩn cho AI grounding.">
+                  <Button size="sm" class="mt-1" @click="openCreate"><Plus class="w-4 h-4" /> Thêm món</Button>
+                </EmptyState>
+              </TableCell>
             </TableRow>
             <TableRow v-for="d in rows" v-else :key="d.id">
               <TableCell>
@@ -160,8 +177,10 @@ onMounted(() => load())
               <TableCell class="text-right font-semibold tabular-nums">{{ d.calories }}</TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ d.protein }} / {{ d.carbs }} / {{ d.fat }}</TableCell>
               <TableCell class="text-right whitespace-nowrap">
-                <Button variant="ghost" size="sm" class="h-7 text-calor-green hover:text-calor-dark" @click="openEdit(d)">Sửa</Button>
-                <Button variant="ghost" size="sm" class="h-7 text-destructive hover:text-destructive" @click="remove(d)">Xoá</Button>
+                <div class="inline-flex items-center gap-0.5">
+                  <IconAction label="Sửa món" tone="edit" @click="openEdit(d)"><Pencil /></IconAction>
+                  <IconAction label="Xoá món" tone="delete" @click="deleteTarget = d"><Trash2 /></IconAction>
+                </div>
               </TableCell>
             </TableRow>
           </TableBody>
@@ -170,11 +189,11 @@ onMounted(() => load())
       <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
         <span>Tổng {{ meta.total }} món</span>
         <div class="flex items-center gap-1">
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
             <ChevronLeft class="w-4 h-4" />
           </Button>
           <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
             <ChevronRight class="w-4 h-4" />
           </Button>
         </div>
@@ -225,7 +244,7 @@ onMounted(() => load())
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" @click="modalOpen = false">Huỷ</Button>
+          <Button variant="outline" @click="modalOpen = false">Huỷ</Button>
           <Button :disabled="saving" @click="save">
             <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             {{ saving ? 'Đang lưu…' : 'Lưu' }}
@@ -233,5 +252,19 @@ onMounted(() => load())
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Confirm xoá món -->
+    <AlertDialog :open="!!deleteTarget" @update:open="(v: boolean) => { if (!v) deleteTarget = null }">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2"><Trash2 class="w-4 h-4 text-destructive" /> Xoá món?</AlertDialogTitle>
+          <AlertDialogDescription>Món "{{ deleteTarget?.name }}" sẽ bị xoá khỏi thư viện — AI sẽ không grounding theo món này nữa.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" @click="confirmRemove">Xoá</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

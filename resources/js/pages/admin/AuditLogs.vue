@@ -14,7 +14,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import EmptyState from '@/components/admin/EmptyState.vue'
+import { ChevronLeft, ChevronRight, ScrollText } from 'lucide-vue-next'
 
 const { fetchAuditLogs } = useAdmin()
 const { extractError } = useAuth()
@@ -47,6 +48,13 @@ const ACTION_LABELS: Record<string, string> = {
 function fmtMeta(meta: Record<string, unknown> | null): string {
   if (!meta || !Object.keys(meta).length) return ''
   return JSON.stringify(meta)
+}
+
+/** Tông màu badge theo nhóm hành động: xoá/khoá = đỏ, sửa = xanh, còn lại = trung tính. */
+function actionTone(action: string): string {
+  if (/delete|suspend/.test(action)) return 'bg-red-500/10 text-red-600'
+  if (/update|restore|retry/.test(action)) return 'bg-blue-500/10 text-blue-600'
+  return ''
 }
 
 async function load(page = 1) {
@@ -85,11 +93,11 @@ onMounted(() => load())
       </Select>
     </div>
 
-    <Card class="py-0 gap-0 overflow-hidden">
+    <Card class="py-0 gap-0 overflow-hidden shadow-xs">
       <div class="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow class="hover:bg-transparent">
               <TableHead>Thời gian</TableHead>
               <TableHead>Admin</TableHead>
               <TableHead>Hành động</TableHead>
@@ -104,8 +112,10 @@ onMounted(() => load())
                 <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
               </TableRow>
             </template>
-            <TableRow v-else-if="!rows.length">
-              <TableCell colspan="6" class="py-10 text-center text-muted-foreground">Chưa có nhật ký</TableCell>
+            <TableRow v-else-if="!rows.length" class="hover:bg-transparent">
+              <TableCell colspan="6" class="p-0">
+                <EmptyState :icon="ScrollText" title="Chưa có nhật ký" hint="Các hành động ghi/sửa của admin sẽ được lưu vết tại đây." />
+              </TableCell>
             </TableRow>
             <TableRow v-for="l in rows" v-else :key="l.id">
               <TableCell class="text-muted-foreground whitespace-nowrap">{{ fmt(l.created_at) }}</TableCell>
@@ -114,7 +124,7 @@ onMounted(() => load())
                 <div class="text-xs text-muted-foreground">{{ l.admin?.email }}</div>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">{{ ACTION_LABELS[l.action] || l.action }}</Badge>
+                <Badge variant="secondary" :class="actionTone(l.action)">{{ ACTION_LABELS[l.action] || l.action }}</Badge>
               </TableCell>
               <TableCell class="text-muted-foreground">
                 <span v-if="l.target_type">{{ l.target_type }}<template v-if="l.target_id">#{{ l.target_id }}</template></span>
@@ -131,11 +141,11 @@ onMounted(() => load())
       <div class="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
         <span>Tổng {{ meta.total }} bản ghi</span>
         <div class="flex items-center gap-1">
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page <= 1" @click="load(meta.current_page - 1)">
             <ChevronLeft class="w-4 h-4" />
           </Button>
-          <span class="px-2">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
-          <Button variant="ghost" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
+          <span class="px-2 tabular-nums">Trang {{ meta.current_page }} / {{ meta.last_page }}</span>
+          <Button variant="outline" size="icon" class="h-8 w-8" :disabled="meta.current_page >= meta.last_page" @click="load(meta.current_page + 1)">
             <ChevronRight class="w-4 h-4" />
           </Button>
         </div>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import type { AdminUserRow, UsersQuery } from '@/types/admin'
 import EmptyState from '@/components/admin/EmptyState.vue'
@@ -34,7 +36,13 @@ import {
 const router = useRouter()
 const { fetchUsers, suspendUser, restoreUser, resetUserPassword, deleteUser } = useAdmin()
 const { extractError } = useAuth()
+const { user: me } = storeToRefs(useAuthStore())
 const toast = useToast()
+
+// Tài khoản admin đang đăng nhập — ẩn nút tự khoá/tự xoá chính mình (backend cũng chặn).
+function isSelf(u: AdminUserRow): boolean {
+  return !!me.value && String(me.value.id) === String(u.id)
+}
 
 const rows = ref<AdminUserRow[]>([])
 const loading = ref(true)
@@ -270,10 +278,13 @@ onMounted(load)
               <TableCell class="text-right" @click.stop>
                 <div class="inline-flex items-center gap-0.5">
                   <IconAction label="Xem chi tiết" tone="view" @click="router.push(`/admin/users/${u.id}`)"><Eye /></IconAction>
-                  <IconAction v-if="u.status === 'active'" label="Khoá tài khoản" tone="warn" @click="askSuspend(u)"><Lock /></IconAction>
+                  <!-- Không cho tự khoá/tự xoá tài khoản đang đăng nhập -->
+                  <template v-if="u.status === 'active'">
+                    <IconAction v-if="!isSelf(u)" label="Khoá tài khoản" tone="warn" @click="askSuspend(u)"><Lock /></IconAction>
+                  </template>
                   <IconAction v-else label="Mở khoá" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
                   <IconAction label="Gửi email đặt lại mật khẩu" tone="edit" @click="resetTarget = u"><KeyRound /></IconAction>
-                  <IconAction label="Xoá tài khoản" tone="delete" @click="deleteTarget = u"><Trash2 /></IconAction>
+                  <IconAction v-if="!isSelf(u)" label="Xoá tài khoản" tone="delete" @click="deleteTarget = u"><Trash2 /></IconAction>
                 </div>
               </TableCell>
             </TableRow>

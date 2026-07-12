@@ -125,13 +125,16 @@ onMounted(() => { runPreview(); loadHistory() })
 </script>
 
 <template>
-  <div class="max-w-4xl">
+  <div>
     <div class="mb-5">
       <h1 class="text-xl font-bold">Gửi thông báo</h1>
       <p class="text-sm text-muted-foreground mt-0.5">Soạn và gửi push notification theo phân khúc người dùng.</p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- Bố cục 2 cột full-width: khu soạn (trái, cố định) + lịch sử (phải, giãn hết) -->
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,440px)_1fr] gap-4 items-start">
+      <!-- Cột trái: soạn nội dung + chọn đối tượng -->
+      <div class="space-y-4">
       <!-- Compose -->
       <Card class="gap-4 shadow-xs">
         <CardHeader><CardTitle class="text-base flex items-center gap-2"><PenLine class="w-4 h-4 text-primary" /> Nội dung</CardTitle></CardHeader>
@@ -245,10 +248,10 @@ onMounted(() => { runPreview(); loadHistory() })
           </Button>
         </CardContent>
       </Card>
-    </div>
+      </div>
 
-    <!-- History -->
-    <Card class="mt-4 py-0 gap-0 overflow-hidden shadow-xs">
+      <!-- Cột phải: lịch sử chiến dịch (giãn hết chiều rộng còn lại) -->
+      <Card class="py-0 gap-0 overflow-hidden shadow-xs">
       <div class="flex items-center justify-between px-5 py-3 border-b">
         <h2 class="font-semibold text-sm flex items-center gap-2"><History class="w-4 h-4 text-primary" /> Lịch sử chiến dịch</h2>
         <Button variant="outline" size="sm" @click="loadHistory">
@@ -281,7 +284,7 @@ onMounted(() => { runPreview(); loadHistory() })
             <TableRow v-for="c in campaigns" v-else :key="c.id">
               <TableCell>
                 <div class="font-medium">{{ c.title }}</div>
-                <div class="text-xs text-muted-foreground truncate max-w-[260px]">{{ c.body }}</div>
+                <div class="text-xs text-muted-foreground truncate max-w-md">{{ c.body }}</div>
               </TableCell>
               <TableCell>
                 <Badge variant="outline" class="gap-1.5 font-medium">
@@ -297,7 +300,8 @@ onMounted(() => { runPreview(); loadHistory() })
           </TableBody>
         </Table>
       </div>
-    </Card>
+      </Card>
+    </div>
 
     <!-- Confirm gửi chiến dịch -->
     <AlertDialog v-model:open="confirmOpen">

@@ -108,8 +108,11 @@ onMounted(() => load())
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <h1 class="text-xl font-bold">Thư viện món ăn</h1>
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+      <div>
+        <h1 class="text-xl font-bold">Thư viện món ăn</h1>
+        <p class="text-sm text-muted-foreground mt-0.5">Nutrition DB chuẩn để grounding kết quả AI.</p>
+      </div>
       <div class="flex items-center gap-2">
         <Input v-model="search" placeholder="Tìm món…" class="w-44" @keydown.enter="load(1)" />
         <Button @click="openCreate">

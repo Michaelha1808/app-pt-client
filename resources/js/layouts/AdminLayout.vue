@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   LayoutDashboard, Users, Bell, UtensilsCrossed, Database,
-  Settings, ScrollText, LogOut, Menu, ChevronDown,
+  Settings, ScrollText, LogOut, Menu, ChevronDown, ChevronRight,
+  Smartphone,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -33,14 +34,30 @@ async function logout() {
   router.replace('/admin/login')
 }
 
-const nav = [
-  { to: '/admin',               label: 'Tổng quan',    icon: LayoutDashboard },
-  { to: '/admin/users',         label: 'Người dùng',   icon: Users },
-  { to: '/admin/notifications', label: 'Thông báo',    icon: Bell },
-  { to: '/admin/dishes',        label: 'Thư viện món', icon: UtensilsCrossed },
-  { to: '/admin/dataset',       label: 'Dataset AI',   icon: Database },
-  { to: '/admin/settings',      label: 'Cấu hình',     icon: Settings },
-  { to: '/admin/audit-logs',    label: 'Nhật ký',      icon: ScrollText },
+// Nav nhóm theo khu vực (kiểu Gentelella: section label + menu items)
+const navGroups = [
+  {
+    label: 'Quản lý',
+    items: [
+      { to: '/admin',               label: 'Tổng quan',  icon: LayoutDashboard },
+      { to: '/admin/users',         label: 'Người dùng', icon: Users },
+      { to: '/admin/notifications', label: 'Thông báo',  icon: Bell },
+    ],
+  },
+  {
+    label: 'Nội dung & AI',
+    items: [
+      { to: '/admin/dishes',  label: 'Thư viện món', icon: UtensilsCrossed },
+      { to: '/admin/dataset', label: 'Dataset AI',   icon: Database },
+    ],
+  },
+  {
+    label: 'Hệ thống',
+    items: [
+      { to: '/admin/settings',   label: 'Cấu hình', icon: Settings },
+      { to: '/admin/audit-logs', label: 'Nhật ký',  icon: ScrollText },
+    ],
+  },
 ]
 
 function isActive(to: string): boolean {
@@ -48,39 +65,88 @@ function isActive(to: string): boolean {
   return route.path.startsWith(to)
 }
 
+/** Tên màn hiện tại cho breadcrumb topbar. */
+const currentLabel = computed(() => {
+  for (const g of navGroups) {
+    const hit = g.items.find(i => isActive(i.to))
+    if (hit) return hit.label
+  }
+  return 'Quản trị'
+})
+
 onMounted(() => document.body.classList.add('admin-mode'))
 onUnmounted(() => document.body.classList.remove('admin-mode'))
 </script>
 
 <template>
-  <div class="min-h-dvh flex bg-muted/50 text-foreground">
-    <!-- Sidebar -->
+  <!-- App frame: sidebar cố định, content cuộn bên trong cột phải (footer luôn nằm cuối nội dung) -->
+  <div class="h-dvh flex bg-[#f3f4f6] text-foreground overflow-hidden">
+    <!-- ══ Sidebar ══ -->
     <aside
-      class="fixed lg:static inset-y-0 left-0 z-40 w-60 bg-[#0C4D3D] text-white flex flex-col transition-transform duration-200"
+      class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-[#0C4D3D] text-white flex flex-col transition-transform duration-200"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
-      <div class="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-        <span class="text-lg font-bold">CaloEye</span>
-        <span class="text-xs px-1.5 py-0.5 rounded bg-calor-green/30 text-calor-mint">Admin</span>
+      <!-- Brand -->
+      <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 flex-none">
+        <div class="w-8 h-8 rounded-lg bg-calor-green flex items-center justify-center font-bold text-white shadow-md shadow-black/20">C</div>
+        <div class="leading-tight">
+          <div class="text-[15px] font-bold tracking-tight">CaloEye</div>
+          <div class="text-[10px] uppercase tracking-widest text-calor-mint/80">Admin Panel</div>
+        </div>
       </div>
-      <nav class="flex-1 py-4 space-y-1 px-3">
-        <RouterLink
-          v-for="item in nav" :key="item.to" :to="item.to"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-          :class="isActive(item.to) ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'"
-          @click="sidebarOpen = false"
-        >
-          <component :is="item.icon" class="w-4.5 h-4.5 flex-none" />
-          {{ item.label }}
-        </RouterLink>
+
+      <!-- Profile block (kiểu Gentelella) -->
+      <div class="px-5 py-4 flex items-center gap-3 bg-black/15 border-b border-white/10 flex-none">
+        <img v-if="user?.avatar_url" :src="user.avatar_url" class="w-11 h-11 rounded-full object-cover ring-2 ring-calor-mint/40" alt="" />
+        <div v-else class="w-11 h-11 rounded-full bg-calor-green flex items-center justify-center text-base font-semibold ring-2 ring-calor-mint/40">
+          {{ (user?.name || 'A').charAt(0).toUpperCase() }}
+        </div>
+        <div class="min-w-0 leading-tight">
+          <div class="text-[11px] text-white/50">Xin chào,</div>
+          <div class="text-sm font-semibold truncate">{{ user?.name || 'Admin' }}</div>
+          <div class="flex items-center gap-1 mt-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-calor-mint inline-block" />
+            <span class="text-[10px] text-calor-mint/90">Quản trị viên</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 py-3 overflow-y-auto">
+        <div v-for="group in navGroups" :key="group.label" class="px-3 mb-2">
+          <div class="px-3 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+            {{ group.label }}
+          </div>
+          <RouterLink
+            v-for="item in group.items" :key="item.to" :to="item.to"
+            class="group flex items-center gap-3 pl-3 pr-2 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]"
+            :class="isActive(item.to)
+              ? 'bg-white/12 text-white border-calor-mint shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+              : 'text-white/65 border-transparent hover:bg-white/8 hover:text-white'"
+            @click="sidebarOpen = false"
+          >
+            <component :is="item.icon" class="w-4.5 h-4.5 flex-none" :class="isActive(item.to) ? 'text-calor-mint' : ''" />
+            <span class="flex-1">{{ item.label }}</span>
+            <ChevronRight class="w-3.5 h-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
+          </RouterLink>
+        </div>
       </nav>
-      <div class="p-3 border-t border-white/10">
+
+      <!-- Quick actions (hàng icon dưới cùng, kiểu Gentelella) -->
+      <div class="flex-none border-t border-white/10 grid grid-cols-2 divide-x divide-white/10">
         <button
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          class="flex items-center justify-center gap-2 py-3 text-[12px] text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+          title="Về app người dùng"
+          @click="router.push('/home')"
+        >
+          <Smartphone class="w-4 h-4" /> Về app
+        </button>
+        <button
+          class="flex items-center justify-center gap-2 py-3 text-[12px] text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+          title="Đăng xuất"
           @click="logout"
         >
-          <LogOut class="w-4.5 h-4.5" />
-          Đăng xuất
+          <LogOut class="w-4 h-4" /> Đăng xuất
         </button>
       </div>
     </aside>
@@ -88,13 +154,22 @@ onUnmounted(() => document.body.classList.remove('admin-mode'))
     <!-- Backdrop (mobile) -->
     <div v-if="sidebarOpen" class="fixed inset-0 z-30 bg-black/40 lg:hidden" @click="sidebarOpen = false" />
 
-    <!-- Main -->
-    <div class="flex-1 flex flex-col min-w-0">
-      <header class="h-16 flex items-center justify-between px-4 lg:px-6 bg-background border-b sticky top-0 z-20">
+    <!-- ══ Main ══ -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <header class="h-16 flex items-center gap-3 px-4 lg:px-6 bg-background border-b sticky top-0 z-20">
         <Button variant="ghost" size="icon" class="lg:hidden -ml-2" @click="sidebarOpen = true">
           <Menu class="w-5 h-5" />
         </Button>
+
+        <!-- Breadcrumb -->
+        <div class="flex items-center gap-1.5 text-sm min-w-0">
+          <span class="text-muted-foreground hidden sm:inline">Quản trị</span>
+          <ChevronRight class="w-3.5 h-3.5 text-muted-foreground/50 hidden sm:inline" />
+          <span class="font-semibold truncate">{{ currentLabel }}</span>
+        </div>
+
         <div class="flex-1" />
+
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <button class="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors">
@@ -120,9 +195,14 @@ onUnmounted(() => document.body.classList.remove('admin-mode'))
         </DropdownMenu>
       </header>
 
-      <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
+      <main class="flex-1 p-4 lg:p-6">
         <slot />
       </main>
+
+      <footer class="flex-none px-4 lg:px-6 py-3 text-[11px] text-muted-foreground/70 flex items-center justify-between border-t bg-background/60">
+        <span>CaloEye Admin</span>
+        <span>Laravel + Vue · {{ new Date().getFullYear() }}</span>
+      </footer>
     </div>
 
     <AppToast />

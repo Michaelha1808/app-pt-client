@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Component } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
-import type { AdminStats, SeriesPoint } from '@/types/admin'
+import type { AdminStats } from '@/types/admin'
+import TrendChart from '@/components/admin/TrendChart.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Users, Activity, UserX, UtensilsCrossed, ScanLine, MessageSquare,
+  BellRing, Flame, ArrowUp, TrendingUp, PieChart,
+} from 'lucide-vue-next'
 
 const { fetchStats } = useAdmin()
 const { extractError } = useAuth()
@@ -34,45 +39,59 @@ function setRange(r: '7d' | '30d' | '90d') {
 
 onMounted(load)
 
-const kpiCards = computed(() => {
-  const k = stats.value?.kpi
-  if (!k) return []
-  return [
-    { label: 'Tổng người dùng', value: k.total_users, sub: `+${k.new_users_today} hôm nay`, color: 'text-calor-green' },
-    { label: 'Active 7 ngày', value: k.active_users_7d, sub: `${k.suspended_users} bị khoá`, color: 'text-blue-600' },
-    { label: 'Meal logs', value: k.total_meal_logs, sub: `+${k.meal_logs_today} hôm nay`, color: 'text-orange-500' },
-    { label: 'AI phân tích món', value: k.ai_food_analyses_today, sub: 'hôm nay', color: 'text-purple-600' },
-    { label: 'AI chat', value: k.ai_chat_messages_today, sub: 'hôm nay', color: 'text-pink-600' },
-    { label: 'Push đã gửi', value: k.push_sent_today, sub: 'hôm nay', color: 'text-teal-600' },
-    { label: 'Streak đang chạy', value: k.active_streaks, sub: 'người dùng', color: 'text-amber-500' },
-  ]
-})
-
 function fmt(n: number): string {
   return new Intl.NumberFormat('vi-VN').format(n)
 }
 
-// ── SVG line chart helpers ──
-function buildPath(points: SeriesPoint[], w = 600, h = 120, pad = 4): string {
-  if (!points.length) return ''
-  const max = Math.max(1, ...points.map(p => p.count))
-  const stepX = (w - pad * 2) / Math.max(1, points.length - 1)
-  return points.map((p, i) => {
-    const x = pad + i * stepX
-    const y = h - pad - (p.count / max) * (h - pad * 2)
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
+// ── KPI tiles (kiểu Gentelella tile_stats_count) ──
+interface KpiTile {
+  label: string
+  icon: Component
+  value: number
+  delta?: number       // biến động hôm nay (mũi tên xanh khi > 0)
+  sub?: string
+  warn?: boolean       // tô đỏ giá trị (vd tài khoản bị khoá)
 }
 
+const kpiTiles = computed<KpiTile[]>(() => {
+  const k = stats.value?.kpi
+  if (!k) return []
+  return [
+    { label: 'Tổng người dùng', icon: Users,           value: k.total_users,            delta: k.new_users_today },
+    { label: 'Active 7 ngày',   icon: Activity,        value: k.active_users_7d,        sub: 'người dùng' },
+    { label: 'Meal logs',       icon: UtensilsCrossed, value: k.total_meal_logs,        delta: k.meal_logs_today },
+    { label: 'Streak đang chạy', icon: Flame,          value: k.active_streaks,         sub: 'người dùng' },
+    { label: 'AI phân tích món', icon: ScanLine,       value: k.ai_food_analyses_today, sub: 'hôm nay' },
+    { label: 'AI chat',         icon: MessageSquare,   value: k.ai_chat_messages_today, sub: 'hôm nay' },
+    { label: 'Push đã gửi',     icon: BellRing,        value: k.push_sent_today,        sub: 'hôm nay' },
+    { label: 'Bị khoá',         icon: UserX,           value: k.suspended_users,        sub: 'tài khoản', warn: true },
+  ]
+})
+
+// ── Charts (small multiples, 1 series/panel — màu đã validate CVD) ──
 const charts = computed(() => {
   const s = stats.value?.series
   if (!s) return []
   return [
-    { title: 'Người dùng mới', data: s.new_users, stroke: '#18A874' },
-    { title: 'Meal logs', data: s.meal_logs, stroke: '#FF9500' },
-    { title: 'Lượt gọi AI', data: s.ai_calls, stroke: '#AF52DE' },
-  ]
+    { title: 'Người dùng mới', data: s.new_users, color: '#18A874' },
+    { title: 'Meal logs',      data: s.meal_logs, color: '#eb6834' },
+    { title: 'Lượt gọi AI',    data: s.ai_calls,  color: '#4a3aa7' },
+  ].map(c => ({ ...c, total: c.data.reduce((a, p) => a + p.count, 0) }))
 })
+
+// ── Breakdown (màu theo entity: brand provider; bộ giới tính đã validate) ──
+const providerMeta: Record<string, { label: string; color: string }> = {
+  email:    { label: 'Email',    color: '#18A874' },
+  google:   { label: 'Google',   color: '#EA4335' },
+  facebook: { label: 'Facebook', color: '#1877F2' },
+  apple:    { label: 'Apple',    color: '#111827' },
+}
+const genderMeta: Record<string, { label: string; color: string }> = {
+  male:    { label: 'Nam',     color: '#2a78d6' },
+  female:  { label: 'Nữ',      color: '#e87ba4' },
+  other:   { label: 'Khác',    color: '#4a3aa7' },
+  unknown: { label: 'Chưa rõ', color: '#8E8E93' },
+}
 
 const providerBreakdown = computed(() => Object.entries(stats.value?.breakdown.by_provider ?? {}))
 const genderBreakdown = computed(() => Object.entries(stats.value?.breakdown.by_gender ?? {}))
@@ -81,24 +100,24 @@ function sumValues(entries: [string, number][]): number {
   return entries.reduce((a, [, v]) => a + v, 0) || 1
 }
 
-const providerColors: Record<string, string> = {
-  email: '#18A874', google: '#EA4335', facebook: '#1877F2', apple: '#111',
-}
-const genderColors: Record<string, string> = {
-  male: '#32ADE6', female: '#FF2D55', other: '#AF52DE', unknown: '#8E8E93',
-}
+const RANGE_LABELS = { '7d': '7 ngày', '30d': '30 ngày', '90d': '90 ngày' } as const
 </script>
 
 <template>
   <div>
+    <!-- Page header -->
     <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-      <h1 class="text-xl font-bold">Tổng quan</h1>
+      <div>
+        <h1 class="text-xl font-bold">Tổng quan</h1>
+        <p class="text-sm text-muted-foreground mt-0.5">Sức khoẻ hệ thống trong {{ RANGE_LABELS[range] }} gần nhất.</p>
+      </div>
+      <!-- Bộ lọc thời gian: 1 hàng, scope toàn bộ chart bên dưới -->
       <div class="inline-flex bg-background rounded-lg border p-0.5 gap-0.5">
         <Button
           v-for="r in (['7d','30d','90d'] as const)" :key="r"
           :variant="range === r ? 'default' : 'ghost'" size="sm"
           @click="setRange(r)"
-        >{{ r === '7d' ? '7 ngày' : r === '30d' ? '30 ngày' : '90 ngày' }}</Button>
+        >{{ RANGE_LABELS[r] }}</Button>
       </div>
     </div>
 
@@ -109,75 +128,101 @@ const genderColors: Record<string, string> = {
     </div>
 
     <!-- Loading skeleton -->
-    <div v-if="loading" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <Skeleton v-for="i in 8" :key="i" class="h-24 rounded-xl" />
+    <div v-if="loading" class="space-y-4">
+      <Skeleton class="h-28 rounded-xl" />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Skeleton v-for="i in 3" :key="i" class="h-56 rounded-xl" />
+      </div>
     </div>
 
     <template v-else-if="stats">
-      <!-- KPI cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card v-for="c in kpiCards" :key="c.label" class="py-4 gap-1">
-          <CardContent class="px-4">
-            <div class="text-xs text-muted-foreground font-medium">{{ c.label }}</div>
-            <div class="mt-1 text-2xl font-bold" :class="c.color">{{ fmt(c.value) }}</div>
-            <div class="text-xs text-muted-foreground/70 mt-0.5">{{ c.sub }}</div>
-          </CardContent>
-        </Card>
+      <!-- ══ KPI tile row (ô ngăn bằng hairline, kiểu Gentelella) ══ -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-xl border overflow-hidden shadow-xs mb-5">
+        <div v-for="t in kpiTiles" :key="t.label" class="bg-card px-4 py-3.5">
+          <div class="flex items-center gap-1.5 text-muted-foreground">
+            <component :is="t.icon" class="w-3.5 h-3.5" />
+            <span class="text-xs font-medium truncate">{{ t.label }}</span>
+          </div>
+          <div class="mt-1.5 text-[26px] leading-8 font-semibold" :class="t.warn && t.value > 0 ? 'text-destructive' : 'text-foreground'">
+            {{ fmt(t.value) }}
+          </div>
+          <div class="mt-0.5 text-xs flex items-center gap-1">
+            <template v-if="t.delta !== undefined">
+              <ArrowUp v-if="t.delta > 0" class="w-3 h-3 text-emerald-700" />
+              <span :class="t.delta > 0 ? 'text-emerald-700 font-medium' : 'text-muted-foreground/80'">
+                {{ t.delta > 0 ? `+${fmt(t.delta)}` : '0' }} hôm nay
+              </span>
+            </template>
+            <span v-else class="text-muted-foreground/80">{{ t.sub }}</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Charts -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <Card v-for="ch in charts" :key="ch.title" class="py-4 gap-2">
-          <CardHeader class="px-4">
-            <CardTitle class="text-sm">{{ ch.title }}</CardTitle>
+      <!-- ══ Trend charts (small multiples) ══ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <Card v-for="ch in charts" :key="ch.title" class="py-0 gap-0">
+          <CardHeader class="px-4 py-3 border-b flex-row items-center justify-between space-y-0">
+            <CardTitle class="text-sm flex items-center gap-2">
+              <TrendingUp class="w-4 h-4" :style="{ color: ch.color }" />
+              {{ ch.title }}
+            </CardTitle>
+            <span class="text-xs text-muted-foreground tabular-nums">Tổng: {{ fmt(ch.total) }}</span>
           </CardHeader>
-          <CardContent class="px-4">
-            <svg viewBox="0 0 600 120" class="w-full h-28" preserveAspectRatio="none">
-              <path :d="buildPath(ch.data)" fill="none" :stroke="ch.stroke" stroke-width="3"
-                    stroke-linejoin="round" stroke-linecap="round" />
-            </svg>
-            <div class="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>{{ ch.data[0]?.date.slice(5) }}</span>
-              <span>{{ ch.data[ch.data.length - 1]?.date.slice(5) }}</span>
-            </div>
+          <CardContent class="px-4 pt-4 pb-3">
+            <TrendChart :data="ch.data" :color="ch.color" />
           </CardContent>
         </Card>
       </div>
 
-      <!-- Breakdown -->
+      <!-- ══ Breakdown ══ -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card class="py-4 gap-2">
-          <CardHeader class="px-4">
-            <CardTitle class="text-sm">Theo nguồn đăng nhập</CardTitle>
+        <Card class="py-0 gap-0">
+          <CardHeader class="px-4 py-3 border-b flex-row items-center justify-between space-y-0">
+            <CardTitle class="text-sm flex items-center gap-2"><PieChart class="w-4 h-4 text-muted-foreground" /> Theo nguồn đăng nhập</CardTitle>
+            <span class="text-xs text-muted-foreground tabular-nums">{{ fmt(sumValues(providerBreakdown)) }} tài khoản</span>
           </CardHeader>
-          <CardContent class="px-4 space-y-2">
+          <CardContent class="px-4 py-4 space-y-3">
             <div v-for="[name, val] in providerBreakdown" :key="name">
-              <div class="flex justify-between text-xs mb-1">
-                <span class="capitalize text-muted-foreground">{{ name }}</span>
-                <span class="text-muted-foreground/70">{{ fmt(val) }}</span>
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="flex items-center gap-1.5 text-foreground/80 font-medium">
+                  <span class="w-2 h-2 rounded-full inline-block" :style="{ background: providerMeta[name]?.color || '#8E8E93' }" />
+                  {{ providerMeta[name]?.label || name }}
+                </span>
+                <span class="text-muted-foreground tabular-nums">
+                  {{ fmt(val) }} · {{ Math.round(val / sumValues(providerBreakdown) * 100) }}%
+                </span>
               </div>
               <div class="h-2 bg-muted rounded-full overflow-hidden">
                 <div class="h-full rounded-full"
-                     :style="{ width: (val / sumValues(providerBreakdown) * 100) + '%', background: providerColors[name] || '#8E8E93' }" />
+                     :style="{ width: (val / sumValues(providerBreakdown) * 100) + '%', background: providerMeta[name]?.color || '#8E8E93' }" />
               </div>
             </div>
+            <p v-if="!providerBreakdown.length" class="text-sm text-muted-foreground text-center py-4">Chưa có dữ liệu</p>
           </CardContent>
         </Card>
-        <Card class="py-4 gap-2">
-          <CardHeader class="px-4">
-            <CardTitle class="text-sm">Theo giới tính</CardTitle>
+
+        <Card class="py-0 gap-0">
+          <CardHeader class="px-4 py-3 border-b flex-row items-center justify-between space-y-0">
+            <CardTitle class="text-sm flex items-center gap-2"><PieChart class="w-4 h-4 text-muted-foreground" /> Theo giới tính</CardTitle>
+            <span class="text-xs text-muted-foreground tabular-nums">{{ fmt(sumValues(genderBreakdown)) }} tài khoản</span>
           </CardHeader>
-          <CardContent class="px-4 space-y-2">
+          <CardContent class="px-4 py-4 space-y-3">
             <div v-for="[name, val] in genderBreakdown" :key="name">
-              <div class="flex justify-between text-xs mb-1">
-                <span class="capitalize text-muted-foreground">{{ name === 'male' ? 'Nam' : name === 'female' ? 'Nữ' : name === 'other' ? 'Khác' : 'Chưa rõ' }}</span>
-                <span class="text-muted-foreground/70">{{ fmt(val) }}</span>
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="flex items-center gap-1.5 text-foreground/80 font-medium">
+                  <span class="w-2 h-2 rounded-full inline-block" :style="{ background: genderMeta[name]?.color || '#8E8E93' }" />
+                  {{ genderMeta[name]?.label || name }}
+                </span>
+                <span class="text-muted-foreground tabular-nums">
+                  {{ fmt(val) }} · {{ Math.round(val / sumValues(genderBreakdown) * 100) }}%
+                </span>
               </div>
               <div class="h-2 bg-muted rounded-full overflow-hidden">
                 <div class="h-full rounded-full"
-                     :style="{ width: (val / sumValues(genderBreakdown) * 100) + '%', background: genderColors[name] || '#8E8E93' }" />
+                     :style="{ width: (val / sumValues(genderBreakdown) * 100) + '%', background: genderMeta[name]?.color || '#8E8E93' }" />
               </div>
             </div>
+            <p v-if="!genderBreakdown.length" class="text-sm text-muted-foreground text-center py-4">Chưa có dữ liệu</p>
           </CardContent>
         </Card>
       </div>

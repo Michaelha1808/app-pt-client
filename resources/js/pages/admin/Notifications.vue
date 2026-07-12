@@ -115,7 +115,10 @@ onMounted(() => { runPreview(); loadHistory() })
 
 <template>
   <div class="max-w-4xl">
-    <h1 class="text-xl font-bold mb-4">Gửi thông báo</h1>
+    <div class="mb-5">
+      <h1 class="text-xl font-bold">Gửi thông báo</h1>
+      <p class="text-sm text-muted-foreground mt-0.5">Soạn và gửi push notification theo phân khúc người dùng.</p>
+    </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <!-- Compose -->

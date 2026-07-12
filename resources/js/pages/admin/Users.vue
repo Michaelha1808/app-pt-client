@@ -124,7 +124,10 @@ onMounted(load)
 
 <template>
   <div>
-    <h1 class="text-xl font-bold mb-4">Người dùng</h1>
+    <div class="mb-5">
+      <h1 class="text-xl font-bold">Người dùng</h1>
+      <p class="text-sm text-muted-foreground mt-0.5">Tìm kiếm, phân quyền và quản lý trạng thái tài khoản.</p>
+    </div>
 
     <!-- Filters -->
     <Card class="p-3 mb-4 flex-row flex-wrap gap-2 items-center">

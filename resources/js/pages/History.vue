@@ -5,6 +5,9 @@ import { useQuickLog } from '@/composables/useQuickLog'
 import { useToast } from '@/composables/useToast'
 import { activityMeta } from '@/types/health'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
+import ShareMealSheet from '@/components/share/ShareMealSheet.vue'
+import type { MealLogEntry } from '@/types/meal'
+import type { ShareMealData } from '@/types/share'
 import { useAuthStore } from '@/stores/auth'
 
 const store = useAuthStore()
@@ -117,6 +120,26 @@ async function toggleFavorite(meal: { id: number; food_name: string; serving: st
     const ok = await addFavorite({ meal_log_id: meal.id })
     toast[ok ? 'success' : 'error'](ok ? `Đã thêm "${meal.food_name}" vào yêu thích` : 'Không thể thêm vào yêu thích')
   }
+}
+
+// ── Chia sẻ bữa ăn ─────────────────────────────────────────────────
+const shareOpen = ref(false)
+const shareMeal = ref<ShareMealData | null>(null)
+
+function shareLog(meal: MealLogEntry) {
+  const dateLabel = new Date(selectedDate.value + 'T12:00:00').toLocaleDateString('vi-VN')
+  shareMeal.value = {
+    food_name: meal.food_name,
+    serving:   meal.serving,
+    calories:  meal.calories,
+    protein:   meal.protein,
+    carbs:     meal.carbs,
+    fat:       meal.fat,
+    image:     meal.image_url ?? null,
+    logged_at: `Bữa ${mealTag(meal.logged_at).toLowerCase()} · ${meal.logged_at}, ${dateLabel}`,
+    goal_percent: goal.value > 0 ? pctGoal.value : null,
+  }
+  shareOpen.value = true
 }
 
 onMounted(async () => {
@@ -308,6 +331,12 @@ onMounted(async () => {
                 >
                   <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                 </button>
+                <button
+                  class="ios-press p-1 flex-shrink-0 text-calor-green"
+                  @click.stop="shareLog(meal)"
+                >
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 10-3-3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 003 12a3 3 0 005.04 2.19l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 102.92-2.92z"/></svg>
+                </button>
                 <div class="text-right flex-shrink-0">
                   <p class="text-[15px] font-semibold text-black">{{ meal.calories }}</p>
                   <p class="text-[11px] text-ios-gray">kcal</p>
@@ -317,7 +346,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <p v-if="meals.length" class="text-[12px] text-ios-gray text-center mt-3">Nhấn vào bữa ăn để hiện nút ăn lại / xóa · nhấn ⭐ để thêm yêu thích</p>
+          <p v-if="meals.length" class="text-[12px] text-ios-gray text-center mt-3">Nhấn vào bữa ăn để hiện nút ăn lại / xóa · nhấn ⭐ để thêm yêu thích · nhấn 📤 để chia sẻ</p>
         </div>
       </template>
     </template>
@@ -400,4 +429,6 @@ onMounted(async () => {
       </div>
     </template>
   </div>
+
+  <ShareMealSheet v-model:open="shareOpen" :meal="shareMeal" />
 </template>

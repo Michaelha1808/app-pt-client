@@ -9,9 +9,11 @@ declare global {
   const ALL_MILESTONES: typeof import('./composables/useStreak').ALL_MILESTONES
   const EffectScope: typeof import('vue').EffectScope
   const MILESTONE_META: typeof import('./composables/useStreak').MILESTONE_META
+  const SHARE_NETWORKS: typeof import('./composables/useShareMeal').SHARE_NETWORKS
   const WATER_GOAL_ML: typeof import('./composables/useWater').WATER_GOAL_ML
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiFetch: typeof import('./utils/api').apiFetch
+  const buildDefaultCaption: typeof import('./composables/useShareMeal').buildDefaultCaption
   const clearAppBadge: typeof import('./utils/badge').clearAppBadge
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
@@ -47,6 +49,7 @@ declare global {
   const minFor: typeof import('./utils/nutrition').minFor
   const navigateTo: typeof import('./utils/navigate').navigateTo
   const nextTick: typeof import('vue').nextTick
+  const nutritionScore: typeof import('./composables/useShareMeal').nutritionScore
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
   const onBeforeRouteLeave: typeof import('vue-router').onBeforeRouteLeave
@@ -68,6 +71,7 @@ declare global {
   const reactive: typeof import('vue').reactive
   const readonly: typeof import('vue').readonly
   const ref: typeof import('vue').ref
+  const renderShareImage: typeof import('./utils/shareImage').renderShareImage
   const resizeImage: typeof import('./utils/image').resizeImage
   const resolveComponent: typeof import('vue').resolveComponent
   const restoreSession: typeof import('./utils/session').restoreSession
@@ -117,6 +121,7 @@ declare global {
   const useRegisterSW: typeof import('virtual:pwa-register/vue').useRegisterSW
   const useRoute: typeof import('vue-router').useRoute
   const useRouter: typeof import('vue-router').useRouter
+  const useShareMeal: typeof import('./composables/useShareMeal').useShareMeal
   const useSlots: typeof import('vue').useSlots
   const useStreak: typeof import('./composables/useStreak').useStreak
   const useTemplateRef: typeof import('vue').useTemplateRef
@@ -152,6 +157,9 @@ declare global {
   export type { FrequentMealItem, FavoriteMeal, MealSlot } from './composables/useQuickLog'
   import('./composables/useQuickLog')
   // @ts-ignore
+  export type { ShareNetwork } from './composables/useShareMeal'
+  import('./composables/useShareMeal')
+  // @ts-ignore
   export type { StreakData, MealStreakResult } from './composables/useStreak'
   import('./composables/useStreak')
   // @ts-ignore
@@ -170,9 +178,11 @@ declare module 'vue' {
     readonly ALL_MILESTONES: UnwrapRef<typeof import('./composables/useStreak')['ALL_MILESTONES']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly MILESTONE_META: UnwrapRef<typeof import('./composables/useStreak')['MILESTONE_META']>
+    readonly SHARE_NETWORKS: UnwrapRef<typeof import('./composables/useShareMeal')['SHARE_NETWORKS']>
     readonly WATER_GOAL_ML: UnwrapRef<typeof import('./composables/useWater')['WATER_GOAL_ML']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly apiFetch: UnwrapRef<typeof import('./utils/api')['apiFetch']>
+    readonly buildDefaultCaption: UnwrapRef<typeof import('./composables/useShareMeal')['buildDefaultCaption']>
     readonly clearAppBadge: UnwrapRef<typeof import('./utils/badge')['clearAppBadge']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -208,6 +218,7 @@ declare module 'vue' {
     readonly minFor: UnwrapRef<typeof import('./utils/nutrition')['minFor']>
     readonly navigateTo: UnwrapRef<typeof import('./utils/navigate')['navigateTo']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly nutritionScore: UnwrapRef<typeof import('./composables/useShareMeal')['nutritionScore']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
@@ -229,6 +240,7 @@ declare module 'vue' {
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
+    readonly renderShareImage: UnwrapRef<typeof import('./utils/shareImage')['renderShareImage']>
     readonly resizeImage: UnwrapRef<typeof import('./utils/image')['resizeImage']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly restoreSession: UnwrapRef<typeof import('./utils/session')['restoreSession']>
@@ -278,6 +290,7 @@ declare module 'vue' {
     readonly useRegisterSW: UnwrapRef<typeof import('virtual:pwa-register/vue')['useRegisterSW']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
+    readonly useShareMeal: UnwrapRef<typeof import('./composables/useShareMeal')['useShareMeal']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useStreak: UnwrapRef<typeof import('./composables/useStreak')['useStreak']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>

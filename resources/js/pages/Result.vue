@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
+import ShareMealSheet from '@/components/share/ShareMealSheet.vue'
+import type { ShareMealData } from '@/types/share'
 import { useFoodAnalysis } from '@/composables/useFoodAnalysis'
 import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useMealLog } from '@/composables/useMealLog'
@@ -116,10 +118,31 @@ async function confirmMeal() {
     food_name: editName.value || result.value.food_name,
     calories:  editCalories.value || result.value.calories,
   }
-  await logMeal(mealToLog, savedImage.value)
-  await new Promise(r => setTimeout(r, 500))
-  navigateTo('/home')
+  const ok = await logMeal(mealToLog, savedImage.value)
+  if (!ok) {
+    confirmed.value = false
+    toast.error('Không lưu được bữa ăn, hãy thử lại')
+    return
+  }
+  // Đã lưu xong → ở lại trang, hiện nút Chia sẻ / Về trang chủ
+  toast.success('Đã lưu bữa ăn! 🎉')
 }
+
+// ── Chia sẻ bữa ăn ─────────────────────────────────────────────────
+const toast     = useToast()
+const shareOpen = ref(false)
+
+const shareMeal = computed<ShareMealData | null>(() => result.value ? {
+  food_name: editName.value || result.value.food_name,
+  serving:   result.value.serving,
+  calories:  displayCalories.value,
+  protein:   result.value.protein,
+  carbs:     result.value.carbs,
+  fat:       result.value.fat,
+  image:     savedImage.value,
+  logged_at: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+  goal_percent: todayGoal.value > 0 ? Math.round((afterEating.value / todayGoal.value) * 100) : null,
+} : null)
 
 async function retry() {
   editName.value     = ''
@@ -384,24 +407,37 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
 
     <!-- Action buttons — sticky bottom (sits above tab bar) -->
     <div class="sticky bottom-0 z-10 px-5 py-4 bg-[#F2F2F7]/95 backdrop-blur-sm border-t-hairline border-ios-gray5">
-      <div class="flex gap-3">
+      <!-- Đã lưu xong → mời chia sẻ -->
+      <div v-if="confirmed" class="flex gap-3 animate-fadeInUp">
+        <button
+          class="flex-1 h-[52px] rounded-[14px] bg-ios-gray5 text-black font-semibold text-[15px] ios-press"
+          @click="navigateTo('/home')"
+        >Về trang chủ</button>
+        <button
+          class="flex-[2] h-[52px] rounded-[14px] bg-calor-green text-white font-semibold text-[17px] ios-press flex items-center justify-center gap-2"
+          @click="shareOpen = true"
+        >
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="white">
+            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 10-3-3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 003 12a3 3 0 005.04 2.19l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 102.92-2.92z"/>
+          </svg>
+          <span>Chia sẻ bữa ăn</span>
+        </button>
+      </div>
+
+      <div v-else class="flex gap-3">
         <button
           class="flex-1 h-[52px] rounded-[14px] bg-ios-gray5 text-black font-semibold text-[15px] ios-press"
           @click="navigateTo('/scan')"
         >Hủy</button>
         <button
-          class="flex-[2] h-[52px] rounded-[14px] text-white font-semibold text-[17px] ios-press flex items-center justify-center gap-2 disabled:opacity-40"
-          :class="confirmed ? 'bg-ios-green' : 'bg-calor-green'"
+          class="flex-[2] h-[52px] rounded-[14px] bg-calor-green text-white font-semibold text-[17px] ios-press flex items-center justify-center gap-2 disabled:opacity-40"
           :disabled="!result || !!error || confirmed"
           @click="confirmMeal"
         >
-          <svg v-if="confirmed" viewBox="0 0 24 24" class="w-5 h-5 animate-scaleIn" fill="white">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" class="w-5 h-5" fill="white">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="white">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          <span>{{ confirmed ? 'Đã lưu!' : 'Xác nhận & Lưu' }}</span>
+          <span>Xác nhận & Lưu</span>
         </button>
       </div>
     </div>
@@ -412,4 +448,6 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
     feature="nhận diện món ăn"
     @dismiss="navigateTo('/home')"
   />
+
+  <ShareMealSheet v-model:open="shareOpen" :meal="shareMeal" />
 </template>

@@ -11,9 +11,9 @@ const FONT_KEY  = 'ui_font_scale'
 const FLOAT_KEY = 'ui_floating_char'
 
 const ZOOM: Record<FontScale, number> = {
-  small:  0.92,
+  small:  0.85,
   medium: 1,      // mặc định — giữ nguyên layout gốc
-  large:  1.12,
+  large:  1.25,
 }
 
 function readFontScale(): FontScale {

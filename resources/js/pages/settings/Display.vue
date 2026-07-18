@@ -6,9 +6,9 @@ const router = useRouter()
 const { fontScale, floatingChar } = useUiSettings()
 
 const fontOptions: { value: FontScale; label: string }[] = [
-  { value: 'normal', label: 'Vừa' },
+  { value: 'small',  label: 'Nhỏ' },
+  { value: 'medium', label: 'Trung bình' },
   { value: 'large',  label: 'Lớn' },
-  { value: 'xlarge', label: 'Rất lớn' },
 ]
 </script>
 

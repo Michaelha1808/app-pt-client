@@ -5,20 +5,20 @@ import { ref, computed, watch } from 'vue'
  *  - fontScale: cỡ chữ toàn app (áp bằng `zoom` ở AppLayout)
  *  - floatingChar: bật/tắt nhân vật AVO bay
  */
-export type FontScale = 'normal' | 'large' | 'xlarge'
+export type FontScale = 'small' | 'medium' | 'large'
 
 const FONT_KEY  = 'ui_font_scale'
 const FLOAT_KEY = 'ui_floating_char'
 
 const ZOOM: Record<FontScale, number> = {
-  normal: 1,
-  large:  1.1,
-  xlarge: 1.2,
+  small:  0.92,
+  medium: 1,      // mặc định — giữ nguyên layout gốc
+  large:  1.12,
 }
 
 function readFontScale(): FontScale {
   const v = (typeof localStorage !== 'undefined' && localStorage.getItem(FONT_KEY)) as FontScale | null
-  return v === 'normal' || v === 'large' || v === 'xlarge' ? v : 'large'   // mặc định to hơn chút
+  return v === 'small' || v === 'medium' || v === 'large' ? v : 'medium'   // mặc định cỡ vừa (layout gốc)
 }
 
 function readFloating(): boolean {

@@ -11,7 +11,7 @@ class MealLog extends Model
     protected $fillable = [
         'user_id', 'food_name', 'serving', 'image_path',
         'calories', 'protein', 'carbs', 'fat', 'sodium',
-        'logged_at',
+        'ai_advice', 'logged_at',
     ];
 
     /** URL công khai của ảnh món ăn (null nếu nhập tay). */

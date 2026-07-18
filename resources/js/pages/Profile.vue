@@ -266,6 +266,14 @@ async function handleLogout() {
             <span class="flex-1 text-left text-[15px] text-black">Cài đặt thông báo</span>
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
+          <div class="ios-separator mx-4"/>
+          <NuxtLink to="/settings/display" class="flex items-center gap-3 px-4 py-3.5 ios-press">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-blue/10 flex items-center justify-center">
+              <span class="text-base">🔠</span>
+            </div>
+            <span class="flex-1 text-left text-[15px] text-black">Hiển thị (cỡ chữ, icon bay)</span>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+          </NuxtLink>
         </div>
       </div>
 

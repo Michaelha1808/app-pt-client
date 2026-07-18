@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/food/log/{log}', [FoodController::class, 'deleteLog']);
     Route::get('/food/today', [FoodController::class, 'todayStats']);
     Route::get('/food/history', [FoodController::class, 'history']);
+    Route::get('/food/timeline', [FoodController::class, 'timeline']);   // gộp ăn + tập theo khoảng ngày
 
     // Log nhanh: ăn lại món cũ (không gọi AI) + món thường ăn 30 ngày theo khung giờ
     Route::post('/food/relog/{log}', [FoodController::class, 'relog']);

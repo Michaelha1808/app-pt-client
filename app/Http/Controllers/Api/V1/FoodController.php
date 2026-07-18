@@ -233,6 +233,7 @@ class FoodController extends Controller
             'carbs'     => 'required|integer|min:0',
             'fat'       => 'required|integer|min:0',
             'sodium'    => 'required|integer|min:0',
+            'ai_advice' => 'nullable|string|max:5000',       // lời khuyên AI để xem lại trong lịch sử
             'image'     => 'nullable|string|max:8000000',   // data URL base64 ảnh đã chụp
         ]);
 
@@ -313,6 +314,7 @@ class FoodController extends Controller
             'carbs'      => $log->carbs,
             'fat'        => $log->fat,
             'sodium'     => $log->sodium,
+            'ai_advice'  => $log->ai_advice,
             'image_path' => $log->image_path,
         ]);
 
@@ -353,7 +355,7 @@ class FoodController extends Controller
             ->mealLogs()
             ->whereDate('logged_at', today())
             ->orderBy('logged_at')
-            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
+            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'ai_advice', 'logged_at']);
 
         // Calo đốt hôm nay (mọi nguồn: manual + provider) → FE tính net calories.
         $caloriesBurned = (int) $request->user()
@@ -377,6 +379,7 @@ class FoodController extends Controller
                 'carbs'     => $log->carbs,
                 'fat'       => $log->fat,
                 'sodium'    => $log->sodium,
+                'ai_advice' => $log->ai_advice,
                 'logged_at' => $log->logged_at->format('H:i'),
             ]),
         ]);
@@ -391,7 +394,7 @@ class FoodController extends Controller
         $meals = $user->mealLogs()
             ->whereDate('logged_at', $targetDate)
             ->orderBy('logged_at')
-            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'logged_at']);
+            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'ai_advice', 'logged_at']);
 
         $week = collect(range(6, 0))->map(function ($daysAgo) use ($user) {
             $day  = today()->subDays($daysAgo);
@@ -419,9 +422,107 @@ class FoodController extends Controller
                 'carbs'     => $log->carbs,
                 'fat'       => $log->fat,
                 'sodium'    => $log->sodium,
+                'ai_advice' => $log->ai_advice,
                 'logged_at' => $log->logged_at->format('H:i'),
             ]),
             'week' => $week,
+        ]);
+    }
+
+    /**
+     * Lịch sử GỘP ăn uống + tập luyện theo khoảng ngày (from..to).
+     * Trả timeline sắp xếp mới→cũ + tổng hợp calo nạp/đốt từng ngày (cho biểu đồ).
+     * Mặc định: 7 ngày gần nhất.
+     */
+    public function timeline(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => 'nullable|date',
+            'to'   => 'nullable|date',
+        ]);
+
+        $user = $request->user();
+        $to   = $request->filled('to')   ? Carbon::parse($request->query('to'))->endOfDay()     : today()->endOfDay();
+        $from = $request->filled('from') ? Carbon::parse($request->query('from'))->startOfDay()  : today()->subDays(6)->startOfDay();
+
+        // An toàn: from ≤ to, tối đa 92 ngày để tránh truy vấn quá lớn.
+        if ($from->gt($to)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        if ($from->diffInDays($to) > 92) $from = $to->copy()->subDays(92)->startOfDay();
+
+        $meals = $user->mealLogs()
+            ->whereBetween('logged_at', [$from, $to])
+            ->orderBy('logged_at')
+            ->get(['id', 'food_name', 'serving', 'image_path', 'calories', 'protein', 'carbs', 'fat', 'sodium', 'ai_advice', 'logged_at']);
+
+        $activities = $user->healthActivities()
+            ->whereBetween('started_at', [$from, $to])
+            ->orderBy('started_at')
+            ->get(['id', 'provider', 'source', 'type', 'name', 'started_at', 'duration_seconds', 'distance_meters', 'calories']);
+
+        // Timeline gộp, mới → cũ.
+        $entries = collect();
+        foreach ($meals as $m) {
+            $entries->push([
+                'kind'      => 'meal',
+                'id'        => $m->id,
+                'food_name' => $m->food_name,
+                'serving'   => $m->serving,
+                'image_url' => $m->image_url,
+                'calories'  => $m->calories,
+                'protein'   => $m->protein,
+                'carbs'     => $m->carbs,
+                'fat'       => $m->fat,
+                'sodium'    => $m->sodium,
+                'ai_advice' => $m->ai_advice,
+                'at'        => $m->logged_at->toIso8601String(),
+                'date'      => $m->logged_at->toDateString(),
+                'time'      => $m->logged_at->format('H:i'),
+            ]);
+        }
+        foreach ($activities as $a) {
+            $entries->push([
+                'kind'             => 'activity',
+                'id'               => $a->id,
+                'provider'         => $a->provider,
+                'source'           => $a->source,
+                'type'             => $a->type,
+                'name'             => $a->name,
+                'duration_seconds' => $a->duration_seconds,
+                'distance_meters'  => $a->distance_meters,
+                'calories'         => $a->calories,
+                'at'               => $a->started_at->toIso8601String(),
+                'date'             => $a->started_at->toDateString(),
+                'time'             => $a->started_at->format('H:i'),
+            ]);
+        }
+        $entries = $entries->sortByDesc('at')->values();
+
+        // Tổng hợp theo từng ngày trong khoảng (cho biểu đồ + strip ngày).
+        $dayCount = $from->diffInDays($to) + 1;
+        $days = collect(range(0, $dayCount - 1))->map(function ($i) use ($from, $meals, $activities) {
+            $day  = $from->copy()->addDays($i);
+            $dstr = $day->toDateString();
+            return [
+                'date'       => $dstr,
+                'day_label'  => ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][$day->dayOfWeek],
+                'day_num'    => $day->day,
+                'intake'     => (int) $meals->filter(fn ($m) => $m->logged_at->toDateString() === $dstr)->sum('calories'),
+                'burned'     => (int) $activities->filter(fn ($a) => $a->started_at->toDateString() === $dstr)->sum('calories'),
+            ];
+        })->values();
+
+        return response()->json([
+            'from'           => $from->toDateString(),
+            'to'             => $to->toDateString(),
+            'total_intake'   => (int) $meals->sum('calories'),
+            'total_burned'   => (int) $activities->sum('calories'),
+            'total_protein'  => (int) $meals->sum('protein'),
+            'total_carbs'    => (int) $meals->sum('carbs'),
+            'total_fat'      => (int) $meals->sum('fat'),
+            'meal_count'     => $meals->count(),
+            'activity_count' => $activities->count(),
+            'days'           => $days,
+            'entries'        => $entries,
         ]);
     }
 

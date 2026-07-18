@@ -27,6 +27,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/profile/preferences', component: () => import('@/pages/profile/Preferences.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile/verify-email', component: () => import('@/pages/profile/VerifyEmail.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/settings/notifications', component: () => import('@/pages/settings/Notifications.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+  { path: '/settings/display', component: () => import('@/pages/settings/Display.vue'), meta: { layout: 'app', middleware: 'auth' } },
 
   // ── Admin ──
   { path: '/admin/login', component: () => import('@/pages/admin/Login.vue'), meta: { layout: false } },

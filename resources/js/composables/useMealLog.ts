@@ -1,10 +1,11 @@
 import type { FoodAnalysisResult } from '@/types/food'
-import type { HistoryStats, TodayStats } from '@/types/meal'
+import type { HistoryStats, TimelineResult, TodayStats } from '@/types/meal'
 import { type MealStreakResult, useStreak } from '@/composables/useStreak'
 
 export function useMealLog() {
   const todayStats   = ref<TodayStats | null>(null)
   const historyStats = ref<HistoryStats | null>(null)
+  const timeline     = ref<TimelineResult | null>(null)
   const loading      = ref(false)
   const { onMealLogged } = useStreak()
 
@@ -31,7 +32,22 @@ export function useMealLog() {
     }
   }
 
-  async function logMeal(result: FoodAnalysisResult, image?: string | null): Promise<boolean> {
+  async function fetchTimeline(from?: string, to?: string): Promise<void> {
+    loading.value = true
+    try {
+      const params = new URLSearchParams()
+      if (from) params.set('from', from)
+      if (to)   params.set('to', to)
+      const qs = params.toString()
+      timeline.value = await apiFetch<TimelineResult>(`/food/timeline${qs ? `?${qs}` : ''}`)
+    } catch {
+      timeline.value = null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function logMeal(result: FoodAnalysisResult, image?: string | null, aiAdvice?: string | null): Promise<boolean> {
     try {
       const res = await apiFetch<{ id: number; streak: MealStreakResult }>('/food/log', {
         method: 'POST',
@@ -43,6 +59,7 @@ export function useMealLog() {
           carbs:     result.carbs,
           fat:       result.fat,
           sodium:    result.sodium,
+          ai_advice: aiAdvice ?? null,
           image:     image ?? null,
         },
       })
@@ -102,5 +119,5 @@ export function useMealLog() {
     }
   }
 
-  return { todayStats, historyStats, loading, fetchTodayStats, fetchHistory, logMeal, logMeals, deleteLog, relogMeal }
+  return { todayStats, historyStats, timeline, loading, fetchTodayStats, fetchHistory, fetchTimeline, logMeal, logMeals, deleteLog, relogMeal }
 }

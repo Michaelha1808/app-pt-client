@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { usePublicConfig } from '@/composables/usePublicConfig'
+import { useUiSettings } from '@/composables/useUiSettings'
 
 const route = useRoute()
 const router = useRouter()
+
+// Người dùng có thể tắt icon bay trong Cài đặt hiển thị
+const { floatingChar } = useUiSettings()
 
 // Flag admin: tắt chat AI → bỏ các action dẫn tới /chat trong menu AVO
 const { loadPublicConfig, flag } = usePublicConfig()
@@ -197,7 +201,7 @@ function goTo(to: string) {
   <!-- Floating button -->
   <Transition name="float-in">
     <div
-      v-if="isIn && !isOpen && route.path !== '/scan'"
+      v-if="isIn && !isOpen && floatingChar && route.path !== '/scan'"
       ref="charEl"
       class="fixed z-40 select-none"
       :style="dragged

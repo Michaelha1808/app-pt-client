@@ -126,6 +126,7 @@ declare global {
   const useStreak: typeof import('./composables/useStreak').useStreak
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('./composables/useToast').useToast
+  const useUiSettings: typeof import('./composables/useUiSettings').useUiSettings
   const useWater: typeof import('./composables/useWater').useWater
   const useWeight: typeof import('./composables/useWeight').useWeight
   const watch: typeof import('vue').watch
@@ -162,6 +163,9 @@ declare global {
   // @ts-ignore
   export type { StreakData, MealStreakResult } from './composables/useStreak'
   import('./composables/useStreak')
+  // @ts-ignore
+  export type { FontScale } from './composables/useUiSettings'
+  import('./composables/useUiSettings')
   // @ts-ignore
   export type { WaterLogEntry, WaterToday } from './composables/useWater'
   import('./composables/useWater')
@@ -295,6 +299,7 @@ declare module 'vue' {
     readonly useStreak: UnwrapRef<typeof import('./composables/useStreak')['useStreak']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useToast: UnwrapRef<typeof import('./composables/useToast')['useToast']>
+    readonly useUiSettings: UnwrapRef<typeof import('./composables/useUiSettings')['useUiSettings']>
     readonly useWater: UnwrapRef<typeof import('./composables/useWater')['useWater']>
     readonly useWeight: UnwrapRef<typeof import('./composables/useWeight')['useWeight']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>

@@ -118,7 +118,9 @@ async function confirmMeal() {
     food_name: editName.value || result.value.food_name,
     calories:  editCalories.value || result.value.calories,
   }
-  const ok = await logMeal(mealToLog, savedImage.value)
+  // Lưu kèm lời khuyên AI (bản đầy đủ đã stream) để xem lại phần phân tích trong Lịch sử
+  const advice = (streamingText.value || displayedText.value || '').trim() || null
+  const ok = await logMeal(mealToLog, savedImage.value, advice)
   if (!ok) {
     confirmed.value = false
     toast.error('Không lưu được bữa ăn, hãy thử lại')

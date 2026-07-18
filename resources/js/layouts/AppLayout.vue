@@ -7,12 +7,11 @@ import { useUiSettings } from '@/composables/useUiSettings'
 
 const { fontZoom } = useUiSettings()
 
-// Cỡ chữ: chỉ áp zoom khi khác 1 (Nhỏ/Lớn). Ở mức Trung bình → không style gì, layout y như gốc.
-// width bù lại để nội dung vẫn vừa khung 430px (zoom phóng cả chiều rộng).
+// Cỡ chữ: chỉ áp `zoom` khi khác 1 (Nhỏ/Lớn). Ở mức Trung bình → không style gì, layout y như gốc.
+// KHÔNG override width: zoom vẫn giữ nội dung vừa đúng khung 430px và không tràn ngang
+// (nội dung reflow theo bề rộng container). Đặt width sẽ làm khối bị co lại → thu hẹp layout.
 const zoomStyle = computed(() =>
-  fontZoom.value === 1
-    ? undefined
-    : { zoom: fontZoom.value, width: `calc(100% / ${fontZoom.value})` },
+  fontZoom.value === 1 ? undefined : { zoom: fontZoom.value },
 )
 </script>
 

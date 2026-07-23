@@ -46,6 +46,11 @@ const form = reactive({
 
 const burnedToday = computed(() => todayStats.value?.calories_burned ?? 0)
 
+// Bộ môn đang chọn: quyết định hiện ô quãng đường / ô nhập tên riêng
+const selectedType  = computed(() => activityMeta(form.type))
+const tracksDistance = computed(() => selectedType.value.tracksDistance)
+const isOther        = computed(() => form.type === 'other')
+
 function resetForm() {
   form.type = 'walk'
   form.minutes = 30
@@ -59,15 +64,21 @@ function openForm() {
   showForm.value = true
 }
 
+// Đổi bộ môn → dọn field không còn phù hợp
+watch(() => form.type, () => {
+  if (!tracksDistance.value) form.distance_km = ''
+  if (!isOther.value) form.name = ''
+})
+
 async function submit() {
   if (form.minutes <= 0) { toast.error('Thời lượng phải lớn hơn 0'); return }
   saving.value = true
   const created = await logManual({
     type: form.type,
     duration_seconds: Math.round(form.minutes * 60),
-    distance_meters: form.distance_km ? Math.round(parseFloat(form.distance_km) * 1000) : null,
+    distance_meters: tracksDistance.value && form.distance_km ? Math.round(parseFloat(form.distance_km) * 1000) : null,
     calories: form.calories ? parseInt(form.calories) : null,
-    name: form.name || null,
+    name: form.name.trim() || null,
   })
   saving.value = false
   if (created) {
@@ -260,9 +271,16 @@ onMounted(() => {
             />
           </div>
 
-          <!-- Tuỳ chọn: quãng đường + calo -->
+          <!-- Tên buổi tập khi chọn "Khác" -->
+          <div v-if="isOther" class="mb-4">
+            <p class="text-[13px] font-medium text-ios-gray mb-1.5">Tên buổi tập</p>
+            <input v-model="form.name" type="text" maxlength="60" placeholder="VD: Cầu lông, Nhảy dây, Đá bóng..."
+              class="w-full py-2.5 px-3 rounded-[10px] bg-ios-gray6 text-[14px] focus:outline-none focus:ring-1 focus:ring-ios-blue"/>
+          </div>
+
+          <!-- Tuỳ chọn: quãng đường (chỉ bộ môn có tính km) + calo -->
           <div class="flex gap-3 mb-2">
-            <div class="flex-1">
+            <div v-if="tracksDistance" class="flex-1">
               <p class="text-[13px] font-medium text-ios-gray mb-1.5">Quãng đường (km)</p>
               <input v-model="form.distance_km" type="number" min="0" step="0.1" placeholder="—"
                 class="w-full py-2.5 px-3 rounded-[10px] bg-ios-gray6 text-[14px] focus:outline-none focus:ring-1 focus:ring-ios-blue"/>

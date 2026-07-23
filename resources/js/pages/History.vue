@@ -75,8 +75,42 @@ const showChart   = computed(() => mode.value !== 'day' && days.value.length > 1
 
 const maxCal = computed(() => Math.max(...days.value.map(d => d.intake), goal.value, 1))
 
-// Nhóm timeline theo ngày (entries đã sắp mới→cũ ở backend)
-const grouped = computed<{ date: string; items: TimelineEntry[] }[]>(() => {
+// Cụm nhiều món chụp cùng 1 ảnh (log-batch): gom lại 1 dòng với danh sách món.
+interface MealCluster {
+  kind: 'cluster'
+  id: string
+  date: string
+  time: string
+  image_url: string | null
+  meals: TimelineMeal[]
+  calories: number
+}
+type DayItem = TimelineEntry | MealCluster
+
+// Gom các bữa ăn cùng ảnh + cùng thời điểm thành 1 cụm; cụm chỉ 1 món → giữ nguyên dòng lẻ.
+function clusterDay(items: TimelineEntry[]): DayItem[] {
+  const out: DayItem[] = []
+  const map = new Map<string, MealCluster>()
+  for (const e of items) {
+    if (e.kind === 'meal' && e.image_url) {
+      const key = `${e.time}|${e.image_url}`
+      let c = map.get(key)
+      if (!c) {
+        c = { kind: 'cluster', id: `${e.date}|${key}`, date: e.date, time: e.time, image_url: e.image_url, meals: [], calories: 0 }
+        map.set(key, c)
+        out.push(c)
+      }
+      c.meals.push(e)
+      c.calories += e.calories
+    } else {
+      out.push(e)
+    }
+  }
+  return out.map(it => (it.kind === 'cluster' && it.meals.length === 1) ? it.meals[0] : it)
+}
+
+// Nhóm timeline theo ngày (entries đã sắp mới→cũ ở backend), rồi gom cụm nhiều món.
+const grouped = computed<{ date: string; items: DayItem[] }[]>(() => {
   const out: { date: string; items: TimelineEntry[] }[] = []
   const idx = new Map<string, TimelineEntry[]>()
   for (const e of entries.value) {
@@ -84,7 +118,7 @@ const grouped = computed<{ date: string; items: TimelineEntry[] }[]>(() => {
     if (!arr) { arr = []; idx.set(e.date, arr); out.push({ date: e.date, items: arr }) }
     arr.push(e)
   }
-  return out
+  return out.map(g => ({ date: g.date, items: clusterDay(g.items) }))
 })
 
 function dayHeader(dateStr: string): string {
@@ -132,8 +166,29 @@ function favoriteOf(meal: TimelineMeal) {
 
 // ── Sheet xem lại phân tích món ăn ────────────────────────────────
 const detail = ref<TimelineMeal | null>(null)
-function openDetail(e: TimelineEntry) {
+const cluster = ref<MealCluster | null>(null)
+function openDetail(e: DayItem) {
   if (e.kind === 'meal') detail.value = e
+  else if (e.kind === 'cluster') cluster.value = e
+}
+// Mở 1 món trong cụm → đóng sheet cụm, mở sheet chi tiết món (tái dùng mọi hành động sẵn có).
+function openMealFromCluster(m: TimelineMeal) {
+  cluster.value = null
+  detail.value = m
+}
+// Xoá cả bữa (mọi món trong cụm).
+async function removeCluster(c: MealCluster) {
+  if (!confirm(`Xoá cả bữa ${c.meals.length} món này?`)) return
+  const results = await Promise.all(c.meals.map(m => deleteLog(m.id)))
+  if (results.some(Boolean)) { cluster.value = null; toast.success('Đã xóa bữa ăn'); await reload() }
+  else toast.error('Không thể xóa')
+}
+// Ăn lại cả bữa.
+async function eatAgainCluster(c: MealCluster) {
+  const results = await Promise.all(c.meals.map(m => relogMeal(m.id)))
+  const ok = results.some(Boolean)
+  toast[ok ? 'success' : 'error'](ok ? 'Đã thêm bữa vào hôm nay' : 'Không thể ăn lại bữa này')
+  if (ok) { cluster.value = null; await reload() }
 }
 const detailMacros = computed(() => detail.value ? [
   { label: 'Protein',  value: detail.value.protein, unit: 'g',  color: '#007AFF' },
@@ -346,6 +401,31 @@ onMounted(async () => {
                     <p class="text-[11px] text-ios-gray">kcal</p>
                   </div>
                 </div>
+                <!-- Cụm nhiều món cùng 1 ảnh (mâm/bàn tiệc) -->
+                <div
+                  v-else-if="e.kind === 'cluster'"
+                  class="flex items-start gap-3 px-4 py-3.5 ios-press"
+                  @click="openDetail(e)"
+                >
+                  <img v-if="e.image_url" :src="e.image_url" class="w-10 h-10 rounded-[10px] object-cover flex-shrink-0 mt-0.5" alt=""/>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                      <p class="text-[15px] font-medium text-black">Bữa {{ e.meals.length }} món</p>
+                      <span class="text-[10px] font-semibold text-ios-orange bg-ios-orange/10 rounded-full px-1.5 py-0.5 flex-shrink-0">{{ mealTag(e.time) }}</span>
+                    </div>
+                    <ul class="mt-1 space-y-0.5">
+                      <li v-for="m in e.meals" :key="m.id" class="text-[12px] text-ios-gray flex justify-between gap-2">
+                        <span class="truncate">• {{ m.food_name }}</span>
+                        <span class="flex-shrink-0">{{ m.calories }} kcal</span>
+                      </li>
+                    </ul>
+                    <p class="text-[11px] text-ios-gray mt-1">{{ e.time }}</p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-[15px] font-semibold text-ios-green">+{{ e.calories }}</p>
+                    <p class="text-[11px] text-ios-gray">kcal</p>
+                  </div>
+                </div>
                 <!-- Buổi tập -->
                 <div v-else class="flex items-center gap-3 px-4 py-3.5">
                   <div class="w-10 h-10 rounded-[10px] bg-ios-orange/10 flex items-center justify-center text-xl flex-shrink-0">{{ activityMeta(e.type).emoji }}</div>
@@ -441,6 +521,60 @@ onMounted(async () => {
               <button class="flex-1 py-3 rounded-[12px] bg-calor-green text-white text-[14px] font-semibold ios-press" @click="shareLog(detail)">Chia sẻ</button>
             </div>
             <button class="w-full mt-2 py-3 rounded-[12px] text-ios-red text-[14px] font-semibold ios-press" @click="removeMeal(detail)">Xóa bữa ăn</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ── Sheet cụm nhiều món (mâm/bàn tiệc cùng 1 ảnh) ── -->
+    <Teleport to="body">
+      <div v-if="cluster" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="cluster = null">
+        <div class="absolute inset-0 bg-black/40" @click="cluster = null"/>
+        <div class="relative w-full max-w-[430px] bg-[#F2F2F7] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
+          <div class="sticky top-0 bg-[#F2F2F7] pt-3 px-5 pb-2 z-10">
+            <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-2"/>
+            <div class="flex items-center justify-between">
+              <p class="text-[13px] text-ios-gray">{{ dayHeader(cluster.date) }} · {{ cluster.time }} · {{ cluster.meals.length }} món</p>
+              <button class="w-8 h-8 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="cluster = null">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="px-5 pb-8">
+            <!-- Ảnh chung -->
+            <div class="w-full h-40 rounded-[18px] overflow-hidden mb-4 bg-ios-gray6 flex items-center justify-center">
+              <img v-if="cluster.image_url" :src="cluster.image_url" class="w-full h-full object-cover" alt=""/>
+              <span v-else class="text-6xl">🍽</span>
+            </div>
+
+            <!-- Danh sách món trong bữa (nhấn để xem chi tiết từng món) -->
+            <div class="bg-white rounded-[18px] overflow-hidden shadow-sm mb-3">
+              <template v-for="(m, i) in cluster.meals" :key="m.id">
+                <button class="w-full flex items-center gap-3 px-4 py-3 ios-press text-left" @click="openMealFromCluster(m)">
+                  <div class="w-8 h-8 rounded-[8px] bg-ios-gray6 flex items-center justify-center text-lg flex-shrink-0">{{ mealEmoji(m.food_name) }}</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[14px] font-medium text-black truncate">{{ m.food_name }}</p>
+                    <p v-if="m.serving" class="text-[12px] text-ios-gray truncate">{{ m.serving }}</p>
+                  </div>
+                  <p class="text-[14px] font-semibold text-ios-green flex-shrink-0">+{{ m.calories }}</p>
+                  <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="#C7C7CC"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                </button>
+                <div v-if="i < cluster.meals.length - 1" class="ios-separator mx-4"/>
+              </template>
+            </div>
+
+            <!-- Tổng calo cả bữa -->
+            <div class="bg-white rounded-[14px] px-4 py-3 mb-4 flex items-center justify-between shadow-sm">
+              <span class="text-[13px] font-semibold text-ios-gray">Tổng cả bữa</span>
+              <span class="text-[17px] font-bold text-ios-green">{{ cluster.calories.toLocaleString('vi') }} kcal</span>
+            </div>
+
+            <!-- Hành động cả bữa -->
+            <div class="flex gap-2">
+              <button class="flex-1 py-3 rounded-[12px] bg-ios-blue text-white text-[14px] font-semibold ios-press" @click="eatAgainCluster(cluster)">Ăn lại cả bữa</button>
+            </div>
+            <button class="w-full mt-2 py-3 rounded-[12px] text-ios-red text-[14px] font-semibold ios-press" @click="removeCluster(cluster)">Xóa cả bữa</button>
           </div>
         </div>
       </div>

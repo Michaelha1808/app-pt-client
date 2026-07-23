@@ -20,7 +20,9 @@ const zoomStyle = computed(() =>
     <!-- Safe area spacer (real device status bar) -->
     <div class="flex-none bg-[#F2F8F5]" style="height: env(safe-area-inset-top)" />
     <div class="flex-1 overflow-y-auto overscroll-contain">
-      <div :style="zoomStyle">
+      <!-- h-full để trang con dùng `h-full`/`min-h-full` (vd màn Chat) phân giải đúng chiều cao
+           → cột chat lấp đầy viewport, ô nhập ghim đáy thay vì trôi lên giữa/trên. -->
+      <div class="h-full" :style="zoomStyle">
         <slot />
       </div>
     </div>

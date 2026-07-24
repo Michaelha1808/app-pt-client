@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ProfileAvatarPicker from '@/components/profile/AvatarPicker.vue'
+
 const { user } = useAuth()
 const { loading, bmi, bmr, bmiLabel, age, fetchProfile, uploadAvatar, deleteAvatar } = useProfile()
 const { streakCount, fetchStreak } = useStreak()
@@ -117,10 +119,10 @@ async function handleLogout() {
           <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10"/>
           <div class="absolute -bottom-14 -left-8 w-40 h-40 rounded-full bg-white/5"/>
 
-          <div class="relative flex items-center gap-4">
+          <div class="relative flex flex-col items-center text-center">
             <!-- Avatar -->
-            <div class="relative flex-shrink-0">
-              <div class="w-[72px] h-[72px] rounded-full bg-white/25 ring-4 ring-white/20 overflow-hidden flex items-center justify-center">
+            <div class="relative">
+              <div class="w-[84px] h-[84px] rounded-full bg-white/25 ring-4 ring-white/20 overflow-hidden flex items-center justify-center">
                 <img
                   v-if="user?.avatar_url"
                   :src="user.avatar_url"
@@ -128,31 +130,31 @@ async function handleLogout() {
                   alt="avatar"
                   @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
                 />
-                <span v-if="!user?.avatar_url" class="text-white font-bold text-[26px]">{{ displayAvatar }}</span>
+                <span v-if="!user?.avatar_url" class="text-white font-bold text-[30px]">{{ displayAvatar }}</span>
               </div>
               <!-- Edit / uploading indicator -->
               <button
-                class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md ios-press"
+                class="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md ios-press"
                 :disabled="avatarUploading"
                 @click="triggerAvatarPicker"
               >
-                <svg v-if="avatarUploading" class="w-3.5 h-3.5 animate-spin text-calor-green" viewBox="0 0 24 24" fill="none">
+                <svg v-if="avatarUploading" class="w-4 h-4 animate-spin text-calor-green" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
                   <path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
                 </svg>
-                <svg v-else viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="#18A874">
+                <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#18A874">
                   <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
               </button>
             </div>
 
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
+            <div class="mt-3 w-full">
+              <div class="flex items-center justify-center gap-2">
                 <h2 class="text-[19px] font-bold truncate">{{ displayName }}</h2>
                 <span v-if="isAdmin" class="text-[10px] font-bold bg-white/25 rounded-full px-2 py-0.5 flex-shrink-0">ADMIN</span>
               </div>
               <p class="text-white/75 text-[13px] truncate">{{ displayEmail }}</p>
-              <div class="flex items-center gap-2 mt-2 flex-wrap">
+              <div class="flex items-center justify-center gap-2 mt-2 flex-wrap">
                 <span v-if="age" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ age }} tuổi</span>
                 <span v-if="user?.height_cm" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ user.height_cm }} cm</span>
                 <span v-if="user?.weight_kg" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ user.weight_kg }} kg</span>

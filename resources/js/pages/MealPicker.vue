@@ -138,14 +138,25 @@ async function confirmMeal() {
 
     <div class="flex-1 pb-28">
       <!-- Loading -->
-      <div v-if="loading" class="mx-5 mt-4 bg-white rounded-[18px] divide-y divide-ios-gray6">
-        <div v-for="i in 4" :key="i" class="flex items-center gap-3 px-4 py-4">
-          <div class="w-6 h-6 rounded-full bg-ios-gray6 animate-pulse"/>
+      <div v-if="loading" class="mx-5 mt-4">
+        <!-- Nhân vật chờ (AVO-04-cho-chut) -->
+        <div class="bg-white rounded-[18px] px-5 py-5 mb-3 shadow-sm flex items-center gap-4">
+          <CaloeyeCharacter mood="waiting" :size="68" message="Bạn chờ chút nhé..." bubble-dir="right" />
           <div class="flex-1">
-            <div class="h-3.5 bg-ios-gray6 rounded w-1/2 animate-pulse"/>
-            <div class="h-2.5 bg-ios-gray6 rounded w-1/3 mt-2 animate-pulse"/>
+            <p class="text-[15px] font-semibold text-black mb-1">Đang phân tích món ăn</p>
+            <p class="text-[13px] text-ios-gray leading-snug">AI đang nhận diện các món trong ảnh của bạn</p>
           </div>
-          <div class="w-20 h-8 bg-ios-gray6 rounded-full animate-pulse"/>
+        </div>
+        <!-- Skeleton danh sách món -->
+        <div class="bg-white rounded-[18px] divide-y divide-ios-gray6">
+          <div v-for="i in 4" :key="i" class="flex items-center gap-3 px-4 py-4">
+            <div class="w-6 h-6 rounded-full bg-ios-gray6 animate-pulse"/>
+            <div class="flex-1">
+              <div class="h-3.5 bg-ios-gray6 rounded w-1/2 animate-pulse"/>
+              <div class="h-2.5 bg-ios-gray6 rounded w-1/3 mt-2 animate-pulse"/>
+            </div>
+            <div class="w-20 h-8 bg-ios-gray6 rounded-full animate-pulse"/>
+          </div>
         </div>
       </div>
 

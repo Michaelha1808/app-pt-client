@@ -503,31 +503,36 @@ certbot renew --webroot -w /var/www/app/certbot/www --quiet \
 
 ---
 
-## 12. Thông báo bản cập nhật tự động tới toàn bộ user
+## 12. Thông báo bản cập nhật tới toàn bộ user
 
-Sau mỗi lần deploy `main`, hệ thống tự gửi push "đã có bản cập nhật {version}" tới **toàn bộ user** (tái dùng hạ tầng broadcast `NotificationCampaign` + job `SendBroadcastNotification`).
+Gửi push "đã có bản cập nhật {version}" tới **toàn bộ user** (tái dùng hạ tầng broadcast `NotificationCampaign` + job `SendBroadcastNotification`).
 
-**Nguồn version:** git tag mới nhất (`git describe --tags --abbrev=0`).
-→ Muốn phát hành + thông báo bản mới, tạo tag trước khi/khi merge lên `main`, ví dụ:
+**Kích hoạt = push 1 git tag `vX.Y.Z`** (coi như "phát hành 1 phiên bản"). Việc merge/push `main` bình thường **không** gửi thông báo — vì tag push không kích hoạt workflow `Deploy` (chỉ chạy khi push nhánh `main`), nên thông báo tách sang workflow riêng.
+
+### Luồng phát hành
 
 ```bash
+# 1) Ship code như thường (workflow Deploy build + deploy, KHÔNG gửi thông báo)
+git checkout main && git merge develop && git push origin main
+
+# 2) Phát hành phiên bản → gửi thông báo cho toàn bộ user
 git tag v1.2.3 && git push origin v1.2.3
 ```
 
-**Luồng (trong `.github/workflows/deploy.yml` — file là nguồn chuẩn):**
-1. Job `build` checkout với `fetch-depth: 0` (để có tags) → resolve `version` từ git tag, đưa ra `outputs.version`.
-2. Job `deploy` nhận `APP_VERSION` qua `envs`, sau khi `pm2 restart` + chờ backend sẵn sàng thì chạy trong container:
-   ```bash
-   docker compose -f docker-compose.prod.yml exec -T backend php artisan notify:announce-update "$APP_VERSION"
-   ```
+Push tag → workflow **`.github/workflows/announce.yml`** chạy: SSH vào VPS, gọi trong container prod đang chạy (KHÔNG build/deploy lại):
+```bash
+docker compose -f docker-compose.prod.yml exec -T backend php artisan notify:announce-update "$APP_VERSION"
+```
+với `APP_VERSION = ${{ github.ref_name }}` (tên tag, vd `v1.2.3`).
 
-**Command `notify:announce-update {version?}`** (`app/Console/Commands/Notifications/AnnounceUpdate.php`):
-- Không truyền `version` → tự lấy git tag mới nhất.
+### Command `notify:announce-update {version?}`
+File: `app/Console/Commands/Notifications/AnnounceUpdate.php`
+- Không truyền `version` → tự lấy git tag mới nhất (`git describe`).
 - **Chống gửi trùng:** lưu `app.announced_version` qua `SettingsService`; cùng version thì bỏ qua (`--force` để gửi lại).
-- Chạy được thủ công trên VPS nếu cần: `... exec -T backend php artisan notify:announce-update v1.2.3`.
-- Best-effort trong deploy (`|| echo`): lỗi giữa chừng không chặn deploy; vì version chỉ được ghi nhận sau khi tạo campaign thành công nên lần deploy sau (cùng tag) sẽ tự thử lại.
+- Tạo campaign segment `all` + đẩy job `SendBroadcastNotification` (giống admin gửi broadcast tay).
+- Chạy thủ công trên VPS nếu cần: `... exec -T backend php artisan notify:announce-update v1.2.3`.
 
-> Không có git tag → bước này bị bỏ qua (deploy vẫn thành công, chỉ không gửi thông báo).
+> Muốn gửi lại thông báo cho cùng 1 version (vd đã bị lỗi): `... notify:announce-update v1.2.3 --force`.
 
 ---
 

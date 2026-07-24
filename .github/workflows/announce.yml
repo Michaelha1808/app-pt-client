@@ -1,0 +1,50 @@
+name: Announce Update
+
+# Gửi thông báo "đã có bản cập nhật {version}" tới TOÀN BỘ user.
+# Kích hoạt khi push 1 tag dạng vX.Y.Z (đây là "phát hành 1 phiên bản").
+# Không build/deploy lại — chỉ gọi artisan trên prod đang chạy để đẩy thông báo.
+#
+# Luồng phát hành khuyến nghị:
+#   1) merge code lên main (workflow Deploy chạy, KHÔNG gửi thông báo)
+#   2) tag đúng commit đó rồi push tag:
+#        git tag v1.2.3 && git push origin v1.2.3
+#      → workflow này chạy, gửi thông báo version v1.2.3.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  announce:
+    name: Notify all users of new version
+    runs-on: ubuntu-latest
+
+    env:
+      APP_VERSION: ${{ github.ref_name }}   # tên tag, vd "v1.2.3"
+
+    steps:
+      - name: SSH & announce
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 120s
+          envs: APP_VERSION
+          script: |
+            set -e
+            cd /var/www/app
+            COMPOSE="docker compose -f docker-compose.prod.yml"
+
+            # Đợi backend sẵn sàng (phòng khi tag push chạy song song lúc đang deploy).
+            echo "→ Waiting for backend to be ready..."
+            for i in $(seq 1 12); do
+              if $COMPOSE exec -T backend php artisan --version >/dev/null 2>&1; then break; fi
+              sleep 5
+            done
+
+            echo "→ Announcing update $APP_VERSION to all users..."
+            $COMPOSE exec -T backend php artisan notify:announce-update "$APP_VERSION"
+
+            echo "✓ Announced $APP_VERSION — $(date)"

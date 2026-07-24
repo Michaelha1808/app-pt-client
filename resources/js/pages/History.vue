@@ -167,6 +167,8 @@ function favoriteOf(meal: TimelineMeal) {
 // ── Sheet xem lại phân tích món ăn ────────────────────────────────
 const detail = ref<TimelineMeal | null>(null)
 const cluster = ref<MealCluster | null>(null)
+// Phân tích AI chung cho cả bữa (log-batch lưu cùng advice cho mọi món → lấy cái đầu tiên có).
+const clusterAdvice = computed(() => cluster.value?.meals.find(m => m.ai_advice)?.ai_advice ?? null)
 function openDetail(e: DayItem) {
   if (e.kind === 'meal') detail.value = e
   else if (e.kind === 'cluster') cluster.value = e
@@ -568,6 +570,17 @@ onMounted(async () => {
             <div class="bg-white rounded-[14px] px-4 py-3 mb-4 flex items-center justify-between shadow-sm">
               <span class="text-[13px] font-semibold text-ios-gray">Tổng cả bữa</span>
               <span class="text-[17px] font-bold text-ios-green">{{ cluster.calories.toLocaleString('vi') }} kcal</span>
+            </div>
+
+            <!-- Phân tích AI của cả bữa (lưu 1 lần khi ghi nhận) -->
+            <div v-if="clusterAdvice" class="bg-white rounded-[18px] px-5 py-4 mb-4 shadow-sm">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-full bg-calor-green flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="white"><path d="M12 2a5 5 0 110 10A5 5 0 0112 2zm0 12c5.33 0 8 2.67 8 4v2H4v-2c0-1.33 2.67-4 8-4z"/></svg>
+                </div>
+                <p class="text-[13px] font-semibold text-black">Phân tích bữa ăn từ AI</p>
+              </div>
+              <p class="text-[14px] text-black/80 leading-relaxed whitespace-pre-wrap">{{ clusterAdvice }}</p>
             </div>
 
             <!-- Hành động cả bữa -->

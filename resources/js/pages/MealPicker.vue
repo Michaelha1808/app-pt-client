@@ -116,7 +116,8 @@ async function confirmMeal() {
       }
     })
 
-  await logMeals(results, savedImage.value)
+  // Lưu kèm phân tích AI của cả bữa (1 lần cho mọi món) để xem lại trong Lịch sử.
+  await logMeals(results, savedImage.value, (advice.value || '').trim() || null)
   await sendDetectFeedback(true)
   await new Promise(r => setTimeout(r, 400))
   navigateTo('/home')

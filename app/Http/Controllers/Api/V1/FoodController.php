@@ -268,6 +268,7 @@ class FoodController extends Controller
             'meals.*.carbs'     => 'required|integer|min:0',
             'meals.*.fat'       => 'required|integer|min:0',
             'meals.*.sodium'    => 'required|integer|min:0',
+            'ai_advice'         => 'nullable|string|max:5000',      // 1 phân tích chung cho cả bữa
             'image'             => 'nullable|string|max:8000000',   // 1 ảnh chung cho cả mâm
         ]);
 
@@ -275,10 +276,15 @@ class FoodController extends Controller
 
         // Cả mâm dùng chung 1 ảnh chụp → lưu 1 lần, gán cho mọi món.
         $imagePath = $this->storeMealImage($request->input('image'));
+        $aiAdvice  = $data['ai_advice'] ?? null;   // lưu cùng phân tích cho mọi món → xem lại theo cả bữa
 
-        $ids = DB::transaction(function () use ($user, $data, $imagePath) {
+        $ids = DB::transaction(function () use ($user, $data, $imagePath, $aiAdvice) {
             return collect($data['meals'])
-                ->map(fn ($m) => $user->mealLogs()->create([...$m, 'image_path' => $imagePath])->id)
+                ->map(fn ($m) => $user->mealLogs()->create([
+                    ...$m,
+                    'image_path' => $imagePath,
+                    'ai_advice'  => $aiAdvice,
+                ])->id)
                 ->all();
         });
 

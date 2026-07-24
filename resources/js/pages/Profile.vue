@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import ProfileAvatarPicker from '@/components/profile/AvatarPicker.vue'
 
+// Version lấy từ nguồn duy nhất (package.json → Vite define). Xem vite.config.js.
+const appVersion = __APP_VERSION__
+
 const { user } = useAuth()
 const { loading, bmi, bmr, bmiLabel, age, fetchProfile, uploadAvatar, deleteAvatar } = useProfile()
 const { streakCount, fetchStreak } = useStreak()
@@ -394,7 +397,7 @@ async function handleLogout() {
         </button>
       </div>
 
-      <p class="text-center text-[11px] text-ios-gray mt-4">CaloEye v1.0.0 · Phiên bản thử nghiệm</p>
+      <p class="text-center text-[11px] text-ios-gray mt-4">CaloEye v{{ appVersion }} · Phiên bản thử nghiệm</p>
     </template>
   </div>
 </template>

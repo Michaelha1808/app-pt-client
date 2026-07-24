@@ -71,7 +71,7 @@ export function useMealLog() {
   }
 
   /** Log nhiều món (mâm/bàn tiệc) trong 1 request — streak cập nhật 1 lần. Trả số bản ghi đã lưu. */
-  async function logMeals(results: FoodAnalysisResult[], image?: string | null): Promise<number> {
+  async function logMeals(results: FoodAnalysisResult[], image?: string | null, aiAdvice?: string | null): Promise<number> {
     if (results.length === 0) return 0
     try {
       const res = await apiFetch<{ ids: number[]; streak: MealStreakResult }>('/food/log-batch', {
@@ -86,7 +86,8 @@ export function useMealLog() {
             fat:       r.fat,
             sodium:    r.sodium,
           })),
-          image: image ?? null,
+          ai_advice: aiAdvice ?? null,   // 1 phân tích chung cho cả bữa
+          image:     image ?? null,
         },
       })
       if (res.streak) onMealLogged(res.streak)

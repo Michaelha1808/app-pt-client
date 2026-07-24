@@ -176,9 +176,11 @@ onMounted(() => {
     <!-- Page header -->
     <div class="px-5 pt-2 pb-3">
       <div class="flex items-center justify-between animate-fadeInUp" style="opacity:0">
-        <div>
-          <p class="text-[14px] text-ios-gray">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
-          <h1 class="text-[22px] font-bold text-black leading-tight mt-0.5">Xin chào, <span class="text-calor-green">{{ userName }}!</span></h1>
+        <div class="min-w-0">
+          <p class="text-[13px] text-ios-gray font-medium capitalize">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
+          <h1 class="text-[26px] font-extrabold text-black leading-tight mt-0.5 truncate">
+            Hi <span class="bg-gradient-to-r from-calor-green to-[#06B6D4] bg-clip-text text-transparent">{{ userName }}</span> 👋
+          </h1>
         </div>
         <div class="flex items-center gap-2">
           <!-- Streak badge -->
@@ -222,21 +224,23 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Character greeting card -->
-    <div class="mx-5 mb-4 bg-gradient-to-r from-calor-light to-[#C8F0E2] rounded-[20px] px-4 py-4 flex items-center gap-4 animate-fadeInUp delay-1 shadow-sm shadow-calor-green/10" style="opacity:0">
+    <!-- Character greeting card — hero rực rỡ -->
+    <div class="mx-5 mb-4 relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-4 animate-fadeInUp delay-1 shadow-lg shadow-ios-purple/25 bg-gradient-to-br from-[#7C3AED] via-[#DB2777] to-[#F59E0B]" style="opacity:0">
+      <div class="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none"/>
+      <div class="absolute -bottom-10 -left-6 w-28 h-28 rounded-full bg-white/10 blur-2xl pointer-events-none"/>
       <CaloeyeCharacter
         :mood="consumed >= goal ? 'warning' : consumed >= goal * 0.8 ? 'motivate' : 'happy'"
         :size="76"
       />
-      <div class="flex-1 min-w-0">
-        <p class="text-[15px] font-semibold text-calor-deep leading-snug">
-          <template v-if="consumed >= goal">Bạn đã đạt mục tiêu calo!</template>
-          <template v-else-if="consumed >= goal * 0.8">Sắp đạt mục tiêu rồi!</template>
-          <template v-else>Hãy duy trì chế độ ăn lành mạnh nhé!</template>
+      <div class="relative flex-1 min-w-0">
+        <p class="text-[16px] font-extrabold text-white leading-snug">
+          <template v-if="consumed >= goal">Đủ chỉ tiêu rồi, đỉnh! 🎉</template>
+          <template v-else-if="consumed >= goal * 0.8">Sắp cán mốc rồi! 💪</template>
+          <template v-else>Nạp năng lượng healthy nào 🥑</template>
         </p>
-        <p class="text-[13px] text-calor-dark mt-1 leading-relaxed">
-          <template v-if="consumed >= goal">Hãy vận động nhẹ để tiêu hao năng lượng 🏃</template>
-          <template v-else>Còn <strong>{{ (goal - consumed).toLocaleString('vi') }} kcal</strong> cho hôm nay 🌿</template>
+        <p class="text-[13px] text-white/90 mt-1 leading-relaxed">
+          <template v-if="consumed >= goal">Vận động nhẹ cho tiêu bớt năng lượng nha 🏃</template>
+          <template v-else>Còn <strong class="font-bold">{{ (goal - consumed).toLocaleString('vi') }} kcal</strong> để flex hôm nay ✨</template>
         </p>
       </div>
     </div>
@@ -278,8 +282,8 @@ onMounted(() => {
     />
 
     <!-- Calorie ring card -->
-    <div class="mx-5 mb-4 bg-white rounded-[20px] px-5 py-6 shadow-sm animate-fadeInUp delay-1" style="opacity:0">
-      <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-4">Calo hôm nay</h2>
+    <div class="mx-5 mb-4 bg-white rounded-[24px] px-5 py-6 shadow-sm animate-fadeInUp delay-1" style="opacity:0">
+      <h2 class="text-[17px] font-extrabold text-black mb-4">Calo hôm nay 🔥</h2>
       <div class="flex justify-center">
         <HomeCalorieRing :consumed="consumed" :goal="goal" :burned="burned" />
       </div>
@@ -305,8 +309,8 @@ onMounted(() => {
     </div>
 
     <!-- Macros card -->
-    <div class="mx-5 mb-4 bg-white rounded-[20px] px-5 py-4 shadow-sm animate-fadeInUp delay-2" style="opacity:0">
-      <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-4">Dưỡng chất</h2>
+    <div class="mx-5 mb-4 bg-white rounded-[24px] px-5 py-4 shadow-sm animate-fadeInUp delay-2" style="opacity:0">
+      <h2 class="text-[17px] font-extrabold text-black mb-4">Dưỡng chất 🥗</h2>
       <div class="flex flex-col gap-3">
         <div v-for="m in macros" :key="m.label" class="flex items-center gap-3">
           <span class="text-[13px] text-black font-medium w-16">{{ m.label }}</span>
@@ -323,44 +327,47 @@ onMounted(() => {
 
     <!-- Quick actions -->
     <div class="px-5 mb-4 animate-fadeInUp delay-3" style="opacity:0">
-      <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-3">Thêm nhanh</h2>
+      <h2 class="text-[17px] font-extrabold text-black mb-3">Thêm nhanh ⚡</h2>
       <div class="grid grid-cols-3 gap-3">
         <NuxtLink
           to="/scan"
-          class="bg-gradient-to-br from-ios-blue to-[#5AC8FA] rounded-[16px] p-4 flex flex-col items-center gap-2 ios-press shadow-md shadow-ios-blue/25"
+          class="relative overflow-hidden bg-gradient-to-br from-ios-blue to-[#5AC8FA] rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-blue/30"
         >
-          <svg viewBox="0 0 24 24" class="w-7 h-7" fill="white">
+          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
+          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
             <path d="M4 4h3V2H2v5h2V4zm13-2v2h3v3h2V2h-5zm3 16h-3v2h5v-5h-2v3zM4 17H2v5h5v-2H4v-3zM15 9H9v6h6V9zm-2 4h-2v-2h2v2zm-7 0V9l1-1h6l1 1v4l-1 1H7l-1-1z"/>
           </svg>
-          <span class="text-white text-[12px] font-semibold text-center">Chụp ảnh</span>
+          <span class="relative text-white text-[13px] font-bold text-center">Snap món 📸</span>
         </NuxtLink>
 
         <NuxtLink
           to="/scan?manual=true"
-          class="bg-gradient-to-br from-ios-orange to-ios-yellow rounded-[16px] p-4 flex flex-col items-center gap-2 ios-press shadow-md shadow-ios-orange/25"
+          class="relative overflow-hidden bg-gradient-to-br from-ios-orange to-ios-yellow rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-orange/30"
         >
-          <svg viewBox="0 0 24 24" class="w-7 h-7" fill="white">
+          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
+          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
-          <span class="text-white text-[12px] font-semibold text-center">Nhập tay</span>
+          <span class="relative text-white text-[13px] font-bold text-center">Gõ tay ✍️</span>
         </NuxtLink>
 
         <NuxtLink
           v-if="chatEnabled"
           to="/chat"
-          class="bg-gradient-to-br from-ios-purple to-ios-pink rounded-[16px] p-4 flex flex-col items-center gap-2 ios-press shadow-md shadow-ios-purple/25"
+          class="relative overflow-hidden bg-gradient-to-br from-ios-purple to-ios-pink rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-purple/30"
         >
-          <svg viewBox="0 0 24 24" class="w-7 h-7" fill="white">
+          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
+          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
           </svg>
-          <span class="text-white text-[12px] font-semibold text-center">Tư vấn AI</span>
+          <span class="relative text-white text-[13px] font-bold text-center">Chat AI 🤖</span>
         </NuxtLink>
       </div>
     </div>
 
     <!-- Quick-add: món hay ăn theo khung giờ hiện tại -->
     <div v-if="frequentItems.length" class="mb-4 animate-fadeInUp delay-3" style="opacity:0">
-      <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2 px-5">Bạn hay ăn giờ này</p>
+      <p class="text-[17px] font-extrabold text-black mb-2 px-5">Hay ăn giờ này 😋</p>
       <div class="flex gap-2 overflow-x-auto px-5 pb-1">
         <button
           v-for="item in frequentItems" :key="item.food_name + (item.serving ?? '')"
@@ -376,14 +383,15 @@ onMounted(() => {
     <!-- Today's meals -->
     <div class="px-5 animate-fadeInUp delay-4" style="opacity:0">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-[18px] font-semibold text-black">Bữa ăn hôm nay</h2>
-        <NuxtLink to="/history" class="text-[14px] text-ios-blue font-medium">Xem tất cả</NuxtLink>
+        <h2 class="text-[18px] font-extrabold text-black">Đã nạp hôm nay 🍜</h2>
+        <NuxtLink to="/history" class="text-[13px] text-calor-green font-bold bg-calor-light rounded-full px-3 py-1 ios-press">Xem tất cả</NuxtLink>
       </div>
 
-      <div class="bg-white rounded-[18px] overflow-hidden shadow-sm">
+      <div class="bg-white rounded-[20px] overflow-hidden shadow-sm">
         <div v-if="meals.length === 0 && !loading" class="px-4 py-6 flex flex-col items-center gap-2 text-center">
           <CaloeyeCharacter mood="reminder" :size="64" />
-          <p class="text-[14px] text-ios-gray">Chưa có bữa ăn nào hôm nay</p>
+          <p class="text-[14px] font-semibold text-black">Chưa nạp gì hôm nay 👀</p>
+          <p class="text-[12px] text-ios-gray">Snap món đầu tiên để bắt đầu nào!</p>
         </div>
         <div
           v-for="(row, idx) in mealRows"
@@ -454,21 +462,22 @@ onMounted(() => {
     <!-- AI plan suggestion → mở trang kế hoạch ngày mai -->
     <NuxtLink
       to="/plan"
-      class="mx-5 mt-4 bg-gradient-to-r from-ios-blue/5 to-ios-purple/5 border border-ios-blue/15 rounded-[18px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5"
+      class="mx-5 mt-4 relative overflow-hidden bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#06B6D4] rounded-[22px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5 shadow-lg shadow-ios-purple/25"
       style="opacity:0"
     >
-      <div class="w-8 h-8 rounded-full bg-ios-blue flex items-center justify-center flex-shrink-0 mt-0.5">
+      <div class="absolute -bottom-8 -right-6 w-28 h-28 rounded-full bg-white/10 blur-xl pointer-events-none"/>
+      <div class="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0 mt-0.5">
         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="white">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
         </svg>
       </div>
-      <div class="flex-1 min-w-0">
-        <p class="text-[13px] font-semibold text-black">Tư vấn kế hoạch ngày mai</p>
-        <p class="text-[13px] text-ios-gray mt-0.5 leading-relaxed">
-          Bạn còn <span class="text-black font-semibold">{{ (goal - consumed).toLocaleString('vi') }} kcal</span> hôm nay. Để AI gợi ý kế hoạch ăn uống &amp; tập luyện cho ngày mai dựa trên dữ liệu của bạn.
+      <div class="relative flex-1 min-w-0">
+        <p class="text-[14px] font-extrabold text-white">Kế hoạch ngày mai ✨</p>
+        <p class="text-[13px] text-white/85 mt-0.5 leading-relaxed">
+          Còn <span class="font-bold text-white">{{ (goal - consumed).toLocaleString('vi') }} kcal</span> hôm nay. Để AI lên menu &amp; lịch tập cho ngày mai dựa trên data của bạn.
         </p>
-        <span class="inline-flex items-center gap-1 text-[13px] text-ios-blue font-medium mt-1.5">
-          Xem kế hoạch
+        <span class="inline-flex items-center gap-1 text-[13px] text-white font-bold mt-1.5">
+          Xem ngay
           <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
         </span>
       </div>

@@ -10,6 +10,7 @@ import { useToast } from '@/composables/useToast'
 import { usePublicConfig } from '@/composables/usePublicConfig'
 import { apiFetch } from '@/utils/api'
 import { setAppBadge } from '@/utils/badge'
+import type { MealLogEntry } from '@/types/meal'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import HomeCalorieRing from '@/components/home/CalorieRing.vue'
 import NotificationsPermissionBanner from '@/components/notifications/PermissionBanner.vue'
@@ -125,6 +126,33 @@ const macros = computed(() => {
 })
 
 const meals = computed(() => todayStats.value?.meals ?? [])
+
+// Gộp nhiều món chụp cùng 1 ảnh + cùng thời điểm thành 1 cụm — như màn Lịch sử.
+type MealRow =
+  | ({ kind: 'single' } & MealLogEntry)
+  | { kind: 'group'; id: string; image_url: string | null; logged_at: string; items: MealLogEntry[]; calories: number }
+
+const mealRows = computed<MealRow[]>(() => {
+  const out: MealRow[] = []
+  const map = new Map<string, Extract<MealRow, { kind: 'group' }>>()
+  for (const m of meals.value) {
+    if (m.image_url) {
+      const key = `${m.logged_at}|${m.image_url}`
+      let g = map.get(key)
+      if (!g) {
+        g = { kind: 'group', id: key, image_url: m.image_url ?? null, logged_at: m.logged_at, items: [], calories: 0 }
+        map.set(key, g)
+        out.push(g)
+      }
+      g.items.push(m)
+      g.calories += m.calories
+    } else {
+      out.push({ kind: 'single', ...m })
+    }
+  }
+  // Cụm chỉ 1 món → hạ về dòng lẻ.
+  return out.map(r => (r.kind === 'group' && r.items.length === 1) ? { kind: 'single', ...r.items[0] } : r)
+})
 
 const userName = computed(() => store.user?.name?.split(' ').at(-1) ?? 'bạn')
 const userInitial = computed(() => store.user?.name?.[0]?.toUpperCase() ?? '?')
@@ -358,14 +386,38 @@ onMounted(() => {
           <p class="text-[14px] text-ios-gray">Chưa có bữa ăn nào hôm nay</p>
         </div>
         <div
-          v-for="(meal, idx) in meals"
-          :key="meal.id"
+          v-for="(row, idx) in mealRows"
+          :key="row.kind === 'group' ? 'g' + row.id : 'm' + row.id"
         >
-          <div class="flex items-center gap-3 px-4 py-3.5">
+          <!-- Cụm nhiều món cùng 1 ảnh -->
+          <div v-if="row.kind === 'group'" class="flex items-start gap-3 px-4 py-3.5">
+            <img
+              v-if="row.image_url"
+              :src="row.image_url"
+              class="w-10 h-10 rounded-[10px] object-cover flex-shrink-0 mt-0.5"
+              alt=""
+            />
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] font-medium text-black">Bữa {{ row.items.length }} món</p>
+              <ul class="mt-1 space-y-0.5">
+                <li v-for="m in row.items" :key="m.id" class="text-[12px] text-ios-gray flex justify-between gap-2">
+                  <span class="truncate">• {{ m.food_name }}</span>
+                  <span class="flex-shrink-0">{{ m.calories }} kcal</span>
+                </li>
+              </ul>
+              <p class="text-[11px] text-ios-gray mt-1">{{ row.logged_at }}</p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <p class="text-[15px] font-semibold text-black">{{ row.calories }}</p>
+              <p class="text-[11px] text-ios-gray">kcal</p>
+            </div>
+          </div>
+          <!-- Món lẻ -->
+          <div v-else class="flex items-center gap-3 px-4 py-3.5">
             <!-- Ảnh đã chụp / icon nếu nhập tay -->
             <img
-              v-if="meal.image_url"
-              :src="meal.image_url"
+              v-if="row.image_url"
+              :src="row.image_url"
               class="w-10 h-10 rounded-[10px] object-cover flex-shrink-0"
               alt=""
             />
@@ -374,16 +426,16 @@ onMounted(() => {
             </div>
             <!-- Info -->
             <div class="flex-1 min-w-0">
-              <p class="text-[15px] font-medium text-black truncate">{{ meal.food_name }}</p>
-              <p class="text-[12px] text-ios-gray mt-0.5">{{ meal.logged_at }}{{ meal.serving ? ` · ${meal.serving}` : '' }}</p>
+              <p class="text-[15px] font-medium text-black truncate">{{ row.food_name }}</p>
+              <p class="text-[12px] text-ios-gray mt-0.5">{{ row.logged_at }}{{ row.serving ? ` · ${row.serving}` : '' }}</p>
             </div>
             <!-- Calories -->
             <div class="text-right">
-              <p class="text-[15px] font-semibold text-black">{{ meal.calories }}</p>
+              <p class="text-[15px] font-semibold text-black">{{ row.calories }}</p>
               <p class="text-[11px] text-ios-gray">kcal</p>
             </div>
           </div>
-          <div v-if="idx < meals.length - 1" class="ios-separator mx-4"/>
+          <div v-if="idx < mealRows.length - 1" class="ios-separator mx-4"/>
         </div>
 
         <!-- Add meal row -->

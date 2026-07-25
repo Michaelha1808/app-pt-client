@@ -119,9 +119,9 @@ const macros = computed(() => {
   const carbGoal    = Math.round(goal.value * 0.45 / 4)
   const fatGoal     = Math.round(goal.value * 0.25 / 9)
   return [
-    { label: 'Protein',   value: s?.total_protein ?? 0, max: proteinGoal, unit: 'g', color: '#007AFF' },
-    { label: 'Carbs',     value: s?.total_carbs   ?? 0, max: carbGoal,    unit: 'g', color: '#FF9500' },
-    { label: 'Chất béo',  value: s?.total_fat     ?? 0, max: fatGoal,     unit: 'g', color: '#FF2D55' },
+    { label: 'Protein',   value: s?.total_protein ?? 0, max: proteinGoal, unit: 'g', color: '#7c9a70' },
+    { label: 'Carbs',     value: s?.total_carbs   ?? 0, max: carbGoal,    unit: 'g', color: '#e0a86a' },
+    { label: 'Chất béo',  value: s?.total_fat     ?? 0, max: fatGoal,     unit: 'g', color: '#c98b8b' },
   ]
 })
 
@@ -172,78 +172,94 @@ onMounted(() => {
 
 <template>
   <div class="pb-4">
-    <NotificationsPermissionBanner class="pt-3"/>
-    <!-- Page header -->
-    <div class="px-5 pt-2 pb-3">
-      <div class="flex items-center justify-between animate-fadeInUp" style="opacity:0">
+    <!-- ══ Curved gradient header ══ -->
+    <div class="relative overflow-hidden text-white rounded-b-[34px] px-5 pt-9 pb-[72px] bg-gradient-to-b from-[#8bab77] to-[#5e7a54] animate-fadeInUp" style="opacity:0">
+      <div class="absolute -right-5 -top-3 text-[120px] leading-none opacity-[0.14] pointer-events-none select-none">🥑</div>
+      <div class="relative flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p class="text-[13px] text-ios-gray font-medium capitalize">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
-          <h1 class="text-[26px] font-extrabold text-black leading-tight mt-0.5 truncate">
-            Hi <span class="bg-gradient-to-r from-calor-green to-[#06B6D4] bg-clip-text text-transparent">{{ userName }}</span> 👋
-          </h1>
+          <p class="text-[12px] text-white/80 capitalize">{{ new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' }) }}</p>
+          <h1 class="font-display text-[22px] font-bold leading-tight mt-0.5 truncate">Hi {{ userName }} 👋</h1>
         </div>
-        <div class="flex items-center gap-2">
-          <!-- Streak badge -->
-          <StreakBadge
-            :count="streakCount"
-            :at-risk="showRiskBanner"
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Streak pill -->
+          <button
+            class="inline-flex items-center gap-1 h-9 px-3 rounded-full bg-white/22 text-white text-[12px] font-semibold ios-press"
+            :class="showRiskBanner ? 'ring-1 ring-white/60' : ''"
             @click="streakOpen = true"
-          />
+          >🔥 {{ streakCount }}</button>
 
           <!-- Bell icon -->
           <button
-            class="relative w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm ios-press"
+            class="relative w-9 h-9 flex items-center justify-center rounded-full bg-white/22 ios-press"
             @click="openPanel"
           >
-            <svg viewBox="0 0 24 24" class="w-5 h-5" :class="permission === 'denied' ? 'text-ios-gray3' : 'text-black'" fill="currentColor">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" :class="permission === 'denied' ? 'text-white/50' : 'text-white'" fill="currentColor">
               <path v-if="permission !== 'denied'" d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
               <path v-else d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6.27V11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.43.12L18 10.73v5z"/>
             </svg>
-            <!-- Badge số unread -->
             <span
               v-if="unreadCount > 0"
               class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-ios-red rounded-full border border-white flex items-center justify-center"
             >
               <span class="text-[10px] font-bold text-white px-0.5 leading-none">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
             </span>
-            <!-- Badge chấm khi chưa cấp quyền -->
             <span
               v-else-if="permission === 'default'"
-              class="absolute top-1.5 right-1.5 w-2 h-2 bg-ios-red rounded-full border border-white"
+              class="absolute top-1 right-1 w-2 h-2 bg-ios-red rounded-full border border-white"
             />
           </button>
-
-          <!-- Avatar -->
-          <NuxtLink to="/profile">
-            <div class="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-br from-calor-green to-calor-dark flex items-center justify-center">
-              <img v-if="store.user?.avatar_url" :src="store.user.avatar_url" class="w-full h-full object-cover" />
-              <span v-else class="text-white font-bold text-[15px]">{{ userInitial }}</span>
-            </div>
-          </NuxtLink>
         </div>
       </div>
-    </div>
-
-    <!-- Character greeting card — hero rực rỡ -->
-    <div class="mx-5 mb-4 relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-4 animate-fadeInUp delay-1 shadow-lg shadow-ios-purple/25 bg-gradient-to-br from-[#7C3AED] via-[#DB2777] to-[#F59E0B]" style="opacity:0">
-      <div class="absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/15 blur-2xl pointer-events-none"/>
-      <div class="absolute -bottom-10 -left-6 w-28 h-28 rounded-full bg-white/10 blur-2xl pointer-events-none"/>
-      <CaloeyeCharacter
-        :mood="consumed >= goal ? 'warning' : consumed >= goal * 0.8 ? 'motivate' : 'happy'"
-        :size="76"
-      />
-      <div class="relative flex-1 min-w-0">
-        <p class="text-[16px] font-extrabold text-white leading-snug">
-          <template v-if="consumed >= goal">Đủ chỉ tiêu rồi, đỉnh! 🎉</template>
-          <template v-else-if="consumed >= goal * 0.8">Sắp cán mốc rồi! 💪</template>
-          <template v-else>Nạp năng lượng healthy nào 🥑</template>
-        </p>
-        <p class="text-[13px] text-white/90 mt-1 leading-relaxed">
-          <template v-if="consumed >= goal">Vận động nhẹ cho tiêu bớt năng lượng nha 🏃</template>
-          <template v-else>Còn <strong class="font-bold">{{ (goal - consumed).toLocaleString('vi') }} kcal</strong> để flex hôm nay ✨</template>
+      <div class="relative mt-3 flex items-center gap-2.5">
+        <CaloeyeCharacter
+          :mood="consumed >= goal ? 'happy' : consumed >= goal * 0.8 ? 'motivate' : 'wave'"
+          :size="46"
+          class="flex-shrink-0 drop-shadow-sm"
+        />
+        <p class="text-[13px] text-white/90 leading-relaxed">
+          <template v-if="consumed >= goal">Đủ chỉ tiêu hôm nay rồi, đỉnh 🎉 Vận động nhẹ cho nhẹ người nha</template>
+          <template v-else>Còn <b class="font-semibold">{{ (goal - consumed).toLocaleString('vi') }} kcal</b> để đạt mục tiêu — nạp healthy nào ✨</template>
         </p>
       </div>
     </div>
+
+    <!-- ══ Floating ring card (đè lên header) ══ -->
+    <div class="relative -mt-[58px] mx-[18px] bg-white rounded-[26px] p-[18px] shadow-[0_14px_30px_rgba(60,74,52,0.12)] animate-fadeInUp delay-1" style="opacity:0">
+      <HomeCalorieRing :consumed="consumed" :goal="goal" :burned="burned" horizontal />
+      <div v-if="loading" class="mt-2 flex justify-center">
+        <div class="w-4 h-4 rounded-full border-2 border-calor-green border-t-transparent animate-spin"/>
+      </div>
+    </div>
+
+    <!-- ══ Macro tiles + scan CTA ══ -->
+    <div class="px-[18px] pt-4">
+      <div class="flex gap-2.5">
+        <div
+          v-for="m in macros" :key="m.label"
+          class="flex-1 bg-white rounded-[18px] px-3 py-3 shadow-[0_6px_16px_rgba(60,74,52,0.05)]"
+        >
+          <p class="text-[11px] text-ios-gray">{{ m.label }}</p>
+          <p class="font-display text-[17px] font-bold text-calor-deep leading-tight tabular-nums">{{ m.value }}<span class="text-[11px] text-ios-gray2 font-medium">/{{ m.max }}</span></p>
+          <div class="h-[5px] rounded-full bg-[#eef1e8] mt-1.5 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-1000" :style="`width:${Math.min((m.value / m.max) * 100, 100)}%;background:${m.color}`"/>
+          </div>
+        </div>
+      </div>
+
+      <NuxtLink
+        to="/scan"
+        class="mt-3.5 bg-matcha rounded-[22px] px-[18px] py-4 flex items-center gap-3.5 text-white shadow-lg shadow-matcha/30 ios-press"
+      >
+        <div class="w-[46px] h-[46px] rounded-2xl bg-white/22 flex items-center justify-center text-2xl flex-shrink-0">📷</div>
+        <div class="flex-1 min-w-0">
+          <p class="font-display text-[15px] font-bold">Ghi bữa ăn ngay</p>
+          <p class="text-[11.5px] text-white/85">Chụp ảnh · Nhập tay · Tư vấn AI</p>
+        </div>
+        <span class="text-xl leading-none">›</span>
+      </NuxtLink>
+    </div>
+
+    <NotificationsPermissionBanner class="pt-3"/>
 
     <!-- Nhắc xác thực email -->
     <div
@@ -281,89 +297,21 @@ onMounted(() => {
       :streak-at-risk="showRiskBanner"
     />
 
-    <!-- Calorie ring card -->
-    <div class="mx-5 mb-4 bg-white rounded-[24px] px-5 py-6 shadow-sm animate-fadeInUp delay-1" style="opacity:0">
-      <h2 class="text-[17px] font-extrabold text-black mb-4">Calo hôm nay 🔥</h2>
-      <div class="flex justify-center">
-        <HomeCalorieRing :consumed="consumed" :goal="goal" :burned="burned" />
+    <!-- Hoạt động hôm nay -->
+    <NuxtLink
+      to="/activities"
+      class="mx-[18px] mt-3 flex items-center gap-3 bg-white rounded-[20px] px-4 py-3.5 shadow-[0_6px_16px_rgba(60,74,52,0.05)] ios-press animate-fadeInUp delay-2" style="opacity:0"
+    >
+      <div class="w-10 h-10 rounded-[13px] bg-ios-orange/12 flex items-center justify-center text-lg flex-shrink-0">🏃</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-[14px] font-semibold text-calor-deep">Hoạt động hôm nay</p>
+        <p class="text-[12px] text-ios-gray mt-0.5">
+          <template v-if="burned > 0">Đã đốt {{ burned.toLocaleString('vi') }} kcal · Thêm buổi tập</template>
+          <template v-else>Thêm buổi tập để cộng calo đốt</template>
+        </p>
       </div>
-      <div v-if="loading" class="mt-3 flex justify-center">
-        <div class="w-4 h-4 rounded-full border-2 border-calor-green border-t-transparent animate-spin"/>
-      </div>
-
-      <!-- Entry: hoạt động / log buổi tập (đường chính cho user không có Strava) -->
-      <NuxtLink
-        to="/activities"
-        class="mt-4 flex items-center gap-3 bg-ios-orange/8 rounded-[14px] px-4 py-3 ios-press"
-      >
-        <div class="w-9 h-9 rounded-full bg-ios-orange/15 flex items-center justify-center text-lg">🏃</div>
-        <div class="flex-1 min-w-0">
-          <p class="text-[14px] font-semibold text-black">Hoạt động hôm nay</p>
-          <p class="text-[12px] text-ios-gray mt-0.5">
-            <template v-if="burned > 0">Đã đốt {{ burned.toLocaleString('vi') }} kcal · Thêm buổi tập</template>
-            <template v-else>Thêm buổi tập để cộng calo đốt</template>
-          </p>
-        </div>
-        <svg viewBox="0 0 24 24" class="w-4 h-4 text-ios-gray3" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-      </NuxtLink>
-    </div>
-
-    <!-- Macros card -->
-    <div class="mx-5 mb-4 bg-white rounded-[24px] px-5 py-4 shadow-sm animate-fadeInUp delay-2" style="opacity:0">
-      <h2 class="text-[17px] font-extrabold text-black mb-4">Dưỡng chất 🥗</h2>
-      <div class="flex flex-col gap-3">
-        <div v-for="m in macros" :key="m.label" class="flex items-center gap-3">
-          <span class="text-[13px] text-black font-medium w-16">{{ m.label }}</span>
-          <div class="flex-1 h-2 bg-ios-gray6 rounded-full overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-1000"
-              :style="`width: ${(m.value / m.max) * 100}%; background: ${m.color}`"
-            />
-          </div>
-          <span class="text-[12px] text-ios-gray w-14 text-right">{{ m.value }}/{{ m.max }}{{ m.unit }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick actions -->
-    <div class="px-5 mb-4 animate-fadeInUp delay-3" style="opacity:0">
-      <h2 class="text-[17px] font-extrabold text-black mb-3">Thêm nhanh ⚡</h2>
-      <div class="grid grid-cols-3 gap-3">
-        <NuxtLink
-          to="/scan"
-          class="relative overflow-hidden bg-gradient-to-br from-ios-blue to-[#5AC8FA] rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-blue/30"
-        >
-          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
-          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
-            <path d="M4 4h3V2H2v5h2V4zm13-2v2h3v3h2V2h-5zm3 16h-3v2h5v-5h-2v3zM4 17H2v5h5v-2H4v-3zM15 9H9v6h6V9zm-2 4h-2v-2h2v2zm-7 0V9l1-1h6l1 1v4l-1 1H7l-1-1z"/>
-          </svg>
-          <span class="relative text-white text-[13px] font-bold text-center">Snap món 📸</span>
-        </NuxtLink>
-
-        <NuxtLink
-          to="/scan?manual=true"
-          class="relative overflow-hidden bg-gradient-to-br from-ios-orange to-ios-yellow rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-orange/30"
-        >
-          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
-          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-          </svg>
-          <span class="relative text-white text-[13px] font-bold text-center">Gõ tay ✍️</span>
-        </NuxtLink>
-
-        <NuxtLink
-          v-if="chatEnabled"
-          to="/chat"
-          class="relative overflow-hidden bg-gradient-to-br from-ios-purple to-ios-pink rounded-[20px] p-4 flex flex-col items-center gap-2 ios-press shadow-lg shadow-ios-purple/30"
-        >
-          <div class="absolute -top-4 -right-3 w-14 h-14 rounded-full bg-white/15 pointer-events-none"/>
-          <svg viewBox="0 0 24 24" class="relative w-8 h-8" fill="white">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-          </svg>
-          <span class="relative text-white text-[13px] font-bold text-center">Chat AI 🤖</span>
-        </NuxtLink>
-      </div>
-    </div>
+      <svg viewBox="0 0 24 24" class="w-4 h-4 text-ios-gray3" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+    </NuxtLink>
 
     <!-- Quick-add: món hay ăn theo khung giờ hiện tại -->
     <div v-if="frequentItems.length" class="mb-4 animate-fadeInUp delay-3" style="opacity:0">
@@ -383,7 +331,7 @@ onMounted(() => {
     <!-- Today's meals -->
     <div class="px-5 animate-fadeInUp delay-4" style="opacity:0">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-[18px] font-extrabold text-black">Đã nạp hôm nay 🍜</h2>
+        <h2 class="font-display text-[18px] font-extrabold text-black">Đã nạp hôm nay 🍜</h2>
         <NuxtLink to="/history" class="text-[13px] text-calor-green font-bold bg-calor-light rounded-full px-3 py-1 ios-press">Xem tất cả</NuxtLink>
       </div>
 
@@ -450,7 +398,7 @@ onMounted(() => {
         <div class="ios-separator mx-4"/>
         <NuxtLink to="/scan" class="flex items-center gap-3 px-4 py-3.5 ios-press">
           <div class="w-10 h-10 rounded-[10px] bg-ios-blue/10 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#007AFF">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
           </div>
@@ -462,7 +410,7 @@ onMounted(() => {
     <!-- AI plan suggestion → mở trang kế hoạch ngày mai -->
     <NuxtLink
       to="/plan"
-      class="mx-5 mt-4 relative overflow-hidden bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#06B6D4] rounded-[22px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5 shadow-lg shadow-ios-purple/25"
+      class="mx-5 mt-4 relative overflow-hidden bg-gradient-to-br from-[#8bab77] via-[#7c9a70] to-[#5e7a54] rounded-[22px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5 shadow-lg shadow-ios-purple/25"
       style="opacity:0"
     >
       <div class="absolute -bottom-8 -right-6 w-28 h-28 rounded-full bg-white/10 blur-xl pointer-events-none"/>

@@ -125,11 +125,11 @@ async function confirmMeal() {
 </script>
 
 <template>
-  <div class="flex flex-col bg-[#F2F2F7] min-h-full">
+  <div class="flex flex-col bg-[#eef2e6] min-h-full">
     <!-- Nav bar -->
-    <div class="sticky top-0 z-10 flex items-center px-5 py-3 bg-[#F2F2F7]/95 backdrop-blur-sm border-b-hairline border-ios-gray5">
+    <div class="sticky top-0 z-10 flex items-center px-5 py-3 bg-[#eef2e6]/95 backdrop-blur-sm border-b-hairline border-ios-gray5">
       <button class="w-9 h-9 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="navigateTo('/scan')">
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#18A874">
+        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -141,12 +141,10 @@ async function confirmMeal() {
       <!-- Loading -->
       <div v-if="loading" class="mx-5 mt-4">
         <!-- Nhân vật chờ (AVO-04-cho-chut) -->
-        <div class="bg-white rounded-[18px] px-5 py-5 mb-3 shadow-sm flex items-center gap-4">
-          <CaloeyeCharacter mood="waiting" :size="68" message="Bạn chờ chút nhé..." bubble-dir="right" />
-          <div class="flex-1">
-            <p class="text-[15px] font-semibold text-black mb-1">Đang phân tích món ăn</p>
-            <p class="text-[13px] text-ios-gray leading-snug">AI đang nhận diện các món trong ảnh của bạn</p>
-          </div>
+        <div class="bg-white rounded-[18px] px-5 pt-8 pb-6 mb-3 shadow-sm flex flex-col items-center text-center">
+          <CaloeyeCharacter mood="waiting" :size="84" message="Bạn chờ chút nhé..." bubble-dir="top" />
+          <p class="text-[15px] font-semibold text-black mt-3">Đang phân tích món ăn</p>
+          <p class="text-[13px] text-ios-gray leading-snug mt-1 max-w-[260px]">AI đang nhận diện các món trong ảnh của bạn</p>
         </div>
         <!-- Skeleton danh sách món -->
         <div class="bg-white rounded-[18px] divide-y divide-ios-gray6">

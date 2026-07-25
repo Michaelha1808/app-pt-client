@@ -38,10 +38,10 @@ const displayCalories = computed(() => editCalories.value || (result.value?.calo
 const afterEating     = computed(() => todayConsumed.value + displayCalories.value)
 
 const macros = computed(() => result.value ? [
-  { label: 'Protein',  value: result.value.protein, unit: 'g',  color: '#007AFF' },
+  { label: 'Protein',  value: result.value.protein, unit: 'g',  color: '#7c9a70' },
   { label: 'Carbs',    value: result.value.carbs,   unit: 'g',  color: '#FF9500' },
   { label: 'Chất béo', value: result.value.fat,     unit: 'g',  color: '#FF2D55' },
-  { label: 'Natri',    value: result.value.sodium,  unit: 'mg', color: '#8E8E93' },
+  { label: 'Natri',    value: result.value.sodium,  unit: 'mg', color: '#8a9a7d' },
 ] : [])
 
 const lowConfidence = computed(() => result.value && result.value.confidence < 0.5)
@@ -165,7 +165,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
     <!-- Nav bar — sticky top -->
     <div class="sticky top-0 z-10 flex items-center px-5 py-3 bg-[#F2F2F7]/95 backdrop-blur-sm border-b-hairline border-ios-gray5">
       <button class="w-9 h-9 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="navigateTo('/scan')">
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#18A874">
+        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -337,7 +337,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
             />
             <div
               class="absolute top-0 left-0 h-full rounded-l-full opacity-40 transition-all duration-700"
-              :style="`width: ${Math.min((afterEating / todayGoal) * 100, 100)}%; background: ${afterEating > todayGoal ? '#FF3B30' : '#007AFF'}`"
+              :style="`width: ${Math.min((afterEating / todayGoal) * 100, 100)}%; background: ${afterEating > todayGoal ? '#c96a6a' : '#7c9a70'}`"
             />
           </div>
         </div>

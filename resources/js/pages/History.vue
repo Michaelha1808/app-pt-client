@@ -193,10 +193,10 @@ async function eatAgainCluster(c: MealCluster) {
   if (ok) { cluster.value = null; await reload() }
 }
 const detailMacros = computed(() => detail.value ? [
-  { label: 'Protein',  value: detail.value.protein, unit: 'g',  color: '#007AFF' },
-  { label: 'Carbs',    value: detail.value.carbs,   unit: 'g',  color: '#FF9500' },
-  { label: 'Chất béo', value: detail.value.fat,     unit: 'g',  color: '#FF2D55' },
-  { label: 'Natri',    value: detail.value.sodium,  unit: 'mg', color: '#8E8E93' },
+  { label: 'Protein',  value: detail.value.protein, unit: 'g',  color: '#7c9a70' },
+  { label: 'Carbs',    value: detail.value.carbs,   unit: 'g',  color: '#e0a86a' },
+  { label: 'Chất béo', value: detail.value.fat,     unit: 'g',  color: '#c98b8b' },
+  { label: 'Natri',    value: detail.value.sodium,  unit: 'mg', color: '#8a9a7d' },
 ] : [])
 
 async function removeMeal(m: TimelineMeal) {
@@ -257,7 +257,7 @@ onMounted(async () => {
   <div class="pb-4">
     <!-- Header -->
     <div class="px-5 pt-2 pb-3">
-      <h1 class="text-[28px] font-bold text-black animate-fadeInUp" style="opacity:0">Lịch sử</h1>
+      <h1 class="font-display text-[28px] font-bold text-black animate-fadeInUp" style="opacity:0">Lịch sử</h1>
 
       <!-- Bộ chọn chế độ -->
       <div class="mt-3 bg-ios-gray5 rounded-[10px] p-1 flex animate-fadeInUp delay-1" style="opacity:0">
@@ -288,7 +288,7 @@ onMounted(async () => {
           <!-- Tuần: mũi tên qua lại -->
           <template v-if="mode === 'week'">
             <button class="w-8 h-8 rounded-full bg-ios-gray6 flex items-center justify-center ios-press" @click="weekOffset++">
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
             <p class="flex-1 text-center text-[15px] font-semibold text-black capitalize">{{ rangeLabel }}</p>
             <button
@@ -297,7 +297,7 @@ onMounted(async () => {
               :disabled="weekOffset === 0"
               @click="weekOffset--"
             >
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
             </button>
           </template>
           <!-- Tháng: chọn tháng -->
@@ -313,26 +313,29 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Summary -->
-      <div class="mx-5 mb-4 bg-white rounded-[18px] px-5 py-4 shadow-sm animate-fadeInUp delay-2" style="opacity:0">
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p class="text-[22px] font-bold text-ios-green leading-tight">{{ totalIntake.toLocaleString('vi') }}</p>
-            <p class="text-[11px] text-ios-gray">Nạp (kcal)</p>
+      <!-- Net focal card -->
+      <div class="mx-5 mb-4 rounded-[24px] px-5 py-5 text-center shadow-[0_8px_22px_rgba(60,74,52,0.06)] animate-fadeInUp delay-2 bg-gradient-to-br from-white to-[#f3f7ee]" style="opacity:0">
+        <p class="text-[11px] uppercase tracking-[0.06em] text-ios-gray capitalize">Nạp ròng · {{ rangeLabel }}</p>
+        <p class="font-display text-[44px] font-bold text-calor-deep leading-none mt-1 tabular-nums">{{ netCal.toLocaleString('vi') }}</p>
+        <p v-if="mode === 'day'" class="text-[12px] mt-1 font-medium" :class="netCal <= goal ? 'text-calor-dark' : 'text-[#d98c5f]'">
+          <template v-if="netCal <= goal">▼ dưới mục tiêu {{ (goal - netCal).toLocaleString('vi') }} kcal · tốt lắm 🌿</template>
+          <template v-else>▲ vượt mục tiêu {{ (netCal - goal).toLocaleString('vi') }} kcal</template>
+        </p>
+        <p v-else class="text-[12px] mt-1 text-ios-gray">Mục tiêu {{ goal.toLocaleString('vi') }} kcal/ngày</p>
+        <div class="flex gap-2.5 mt-4">
+          <div class="flex-1 rounded-[14px] py-2.5 bg-[#eef5e9]">
+            <p class="font-display text-[16px] font-bold text-calor-dark tabular-nums">{{ totalIntake.toLocaleString('vi') }}</p>
+            <p class="text-[10px] text-ios-gray">Nạp</p>
           </div>
-          <div>
-            <p class="text-[22px] font-bold text-ios-orange leading-tight">{{ totalBurned.toLocaleString('vi') }}</p>
-            <p class="text-[11px] text-ios-gray">Đốt (kcal)</p>
-          </div>
-          <div>
-            <p class="text-[22px] font-bold text-black leading-tight">{{ netCal.toLocaleString('vi') }}</p>
-            <p class="text-[11px] text-ios-gray">Nạp ròng</p>
+          <div class="flex-1 rounded-[14px] py-2.5 bg-[#fbeede]">
+            <p class="font-display text-[16px] font-bold text-[#d98c5f] tabular-nums">{{ totalBurned.toLocaleString('vi') }}</p>
+            <p class="text-[10px] text-ios-gray">Đốt</p>
           </div>
         </div>
-        <div v-if="timeline && (timeline.total_protein || timeline.total_carbs || timeline.total_fat)" class="flex justify-center gap-5 mt-3 pt-3 border-t-hairline border-ios-gray5">
-          <div class="text-center"><p class="text-[13px] font-semibold text-ios-blue">{{ timeline.total_protein }}g</p><p class="text-[10px] text-ios-gray">Protein</p></div>
-          <div class="text-center"><p class="text-[13px] font-semibold text-ios-orange">{{ timeline.total_carbs }}g</p><p class="text-[10px] text-ios-gray">Carbs</p></div>
-          <div class="text-center"><p class="text-[13px] font-semibold text-ios-red">{{ timeline.total_fat }}g</p><p class="text-[10px] text-ios-gray">Chất béo</p></div>
+        <div v-if="timeline && (timeline.total_protein || timeline.total_carbs || timeline.total_fat)" class="flex justify-center gap-6 mt-4 pt-3 border-t-hairline border-ios-gray5">
+          <div><p class="font-display text-[13px] font-bold text-calor-green">{{ timeline.total_protein }}g</p><p class="text-[10px] text-ios-gray">Protein</p></div>
+          <div><p class="font-display text-[13px] font-bold text-ios-yellow">{{ timeline.total_carbs }}g</p><p class="text-[10px] text-ios-gray">Carbs</p></div>
+          <div><p class="font-display text-[13px] font-bold text-ios-pink">{{ timeline.total_fat }}g</p><p class="text-[10px] text-ios-gray">Chất béo</p></div>
         </div>
       </div>
 
@@ -344,7 +347,7 @@ onMounted(async () => {
             <div class="w-full flex-1 flex items-end">
               <div
                 class="w-full rounded-t-[4px] transition-all duration-700"
-                :style="`height: ${d.intake > 0 ? Math.max(6, Math.round((d.intake / maxCal) * 100)) : 0}%; background: ${d.intake > goal ? '#FF3B30' : '#18A874'}`"
+                :style="`height: ${d.intake > 0 ? Math.max(6, Math.round((d.intake / maxCal) * 100)) : 0}%; background: ${d.intake > goal ? '#c96a6a' : '#7c9a70'}`"
               />
             </div>
             <span class="text-[9px] text-ios-gray whitespace-nowrap">{{ days.length > 10 ? d.day_num : d.day_label }}</span>
@@ -459,13 +462,13 @@ onMounted(async () => {
     <Teleport to="body">
       <div v-if="detail" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="detail = null">
         <div class="absolute inset-0 bg-black/40" @click="detail = null"/>
-        <div class="relative w-full max-w-[430px] bg-[#F2F2F7] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
-          <div class="sticky top-0 bg-[#F2F2F7] pt-3 px-5 pb-2 z-10">
+        <div class="relative w-full max-w-[430px] bg-[#eef2e6] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
+          <div class="sticky top-0 bg-[#eef2e6] pt-3 px-5 pb-2 z-10">
             <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-2"/>
             <div class="flex items-center justify-between">
               <p class="text-[13px] text-ios-gray">{{ dayHeader(detail.date) }} · {{ detail.time }}</p>
               <button class="w-8 h-8 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="detail = null">
-                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
               </button>
             </div>
           </div>
@@ -532,13 +535,13 @@ onMounted(async () => {
     <Teleport to="body">
       <div v-if="cluster" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="cluster = null">
         <div class="absolute inset-0 bg-black/40" @click="cluster = null"/>
-        <div class="relative w-full max-w-[430px] bg-[#F2F2F7] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
-          <div class="sticky top-0 bg-[#F2F2F7] pt-3 px-5 pb-2 z-10">
+        <div class="relative w-full max-w-[430px] bg-[#eef2e6] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
+          <div class="sticky top-0 bg-[#eef2e6] pt-3 px-5 pb-2 z-10">
             <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-2"/>
             <div class="flex items-center justify-between">
               <p class="text-[13px] text-ios-gray">{{ dayHeader(cluster.date) }} · {{ cluster.time }} · {{ cluster.meals.length }} món</p>
               <button class="w-8 h-8 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="cluster = null">
-                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
               </button>
             </div>
           </div>
@@ -560,7 +563,7 @@ onMounted(async () => {
                     <p v-if="m.serving" class="text-[12px] text-ios-gray truncate">{{ m.serving }}</p>
                   </div>
                   <p class="text-[14px] font-semibold text-ios-green flex-shrink-0">+{{ m.calories }}</p>
-                  <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="#C7C7CC"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+                  <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="#b8c0ac"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
                 </button>
                 <div v-if="i < cluster.meals.length - 1" class="ios-separator mx-4"/>
               </template>

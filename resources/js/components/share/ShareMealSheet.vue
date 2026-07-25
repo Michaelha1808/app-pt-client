@@ -149,7 +149,7 @@ async function onDownload() {
             <div class="flex items-center justify-between">
               <h2 class="text-[18px] font-bold text-black">📤 Chia sẻ bữa ăn</h2>
               <button class="w-8 h-8 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="close">
-                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
               </button>
@@ -305,7 +305,7 @@ async function onDownload() {
                 @click="prefs.sticker = s"
               >
                 <span v-if="s">{{ s }}</span>
-                <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 118-8 8 8 0 01-8 8zM7 11h10v2H7z"/></svg>
+                <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 118-8 8 8 0 01-8 8zM7 11h10v2H7z"/></svg>
               </button>
             </div>
 

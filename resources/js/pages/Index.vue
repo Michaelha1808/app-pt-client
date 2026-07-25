@@ -10,7 +10,7 @@ onMounted(() => {
 <template>
   <div
     class="h-dvh flex flex-col items-center justify-center select-none overflow-hidden"
-    style="background: linear-gradient(160deg, #0F6E56 0%, #18A874 50%, #9FE1CB 100%)"
+    style="background: linear-gradient(160deg, #5e7a54 0%, #7c9a70 50%, #c3d3b3 100%)"
   >
     <!-- Background leaf decoration -->
     <div class="absolute inset-0 pointer-events-none overflow-hidden">
@@ -31,7 +31,7 @@ onMounted(() => {
     <div class="animate-fadeInUp delay-2 flex flex-col items-center gap-1" style="opacity:0">
       <div class="flex items-baseline gap-1">
         <span class="text-[36px] font-bold text-white tracking-tight">Calor</span>
-        <span class="text-[36px] font-bold text-[#C8F0E2] tracking-tight">Eye</span>
+        <span class="text-[36px] font-bold text-[#dfeacf] tracking-tight">Eye</span>
       </div>
       <p class="text-[14px] text-white/70 text-center px-8 leading-snug">
         Nhận diện tức thì, sống khỏe mỗi ngày

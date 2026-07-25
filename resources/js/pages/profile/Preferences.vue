@@ -103,7 +103,7 @@ onMounted(() => fetchAll(true))
     <!-- Header -->
     <div class="px-4 pt-2 pb-3 flex items-center gap-2">
       <button class="w-9 h-9 -ml-1 flex items-center justify-center ios-press" aria-label="Quay lại" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="#18A874" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="#7c9a70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </button>
@@ -111,7 +111,7 @@ onMounted(() => fetchAll(true))
     </div>
 
     <!-- Intro card với mascot chính -->
-    <div class="mx-5 mb-4 bg-gradient-to-br from-calor-light to-[#D6F2E6] rounded-[20px] px-4 py-3.5 flex items-center gap-3">
+    <div class="mx-5 mb-4 bg-gradient-to-br from-[#dfeacf] to-[#c6ddc0] rounded-[20px] px-4 py-3.5 flex items-center gap-3">
       <img :src="heroSvg" alt="AVO" class="w-14 h-14 flex-shrink-0 object-contain -my-1" draggable="false" />
       <p class="text-[13px] text-calor-deep leading-snug">
         Cho AVO biết khẩu vị của bạn nhé! Mình sẽ gợi ý món hợp gu và tránh những gì bạn không ăn được.

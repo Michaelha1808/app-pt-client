@@ -97,11 +97,6 @@ async function handleLogout() {
 
 <template>
   <div class="pb-8">
-    <!-- Header -->
-    <div class="px-5 pt-2 pb-3 animate-fadeInUp" style="opacity:0">
-      <h1 class="text-[28px] font-bold text-black">Hồ sơ</h1>
-    </div>
-
     <!-- Loading skeleton -->
     <template v-if="loading">
       <div class="mx-5 mb-4 rounded-[24px] bg-gray-200 animate-pulse h-52"/>
@@ -115,81 +110,58 @@ async function handleLogout() {
     </template>
 
     <template v-else>
-      <!-- ══ Hero card ══ -->
-      <div class="mx-5 mb-4 animate-fadeInUp delay-1" style="opacity:0">
-        <div class="relative overflow-hidden bg-gradient-to-br from-calor-green to-calor-deep rounded-[24px] p-5 text-white shadow-lg shadow-calor-green/25">
-          <!-- Vòng trang trí -->
-          <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10"/>
-          <div class="absolute -bottom-14 -left-8 w-40 h-40 rounded-full bg-white/5"/>
-
-          <div class="relative flex flex-col items-center text-center">
-            <!-- Avatar -->
-            <div class="relative">
-              <div class="w-[84px] h-[84px] rounded-full bg-white/25 ring-4 ring-white/20 overflow-hidden flex items-center justify-center">
-                <img
-                  v-if="user?.avatar_url"
-                  :src="user.avatar_url"
-                  class="w-full h-full object-cover"
-                  alt="avatar"
-                  @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
-                />
-                <span v-if="!user?.avatar_url" class="text-white font-bold text-[30px]">{{ displayAvatar }}</span>
-              </div>
-              <!-- Edit / uploading indicator -->
-              <button
-                class="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md ios-press"
-                :disabled="avatarUploading"
-                @click="triggerAvatarPicker"
-              >
-                <svg v-if="avatarUploading" class="w-4 h-4 animate-spin text-calor-green" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
-                  <path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-                </svg>
-                <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#18A874">
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
-              </button>
-            </div>
-
-            <div class="mt-3 w-full">
-              <div class="flex items-center justify-center gap-2">
-                <h2 class="text-[19px] font-bold truncate">{{ displayName }}</h2>
-                <span v-if="isAdmin" class="text-[10px] font-bold bg-white/25 rounded-full px-2 py-0.5 flex-shrink-0">ADMIN</span>
-              </div>
-              <p class="text-white/75 text-[13px] truncate">{{ displayEmail }}</p>
-              <div class="flex items-center justify-center gap-2 mt-2 flex-wrap">
-                <span v-if="age" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ age }} tuổi</span>
-                <span v-if="user?.height_cm" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ user.height_cm }} cm</span>
-                <span v-if="user?.weight_kg" class="text-[11px] font-medium bg-white/15 rounded-full px-2 py-0.5">{{ user.weight_kg }} kg</span>
-              </div>
-            </div>
+      <!-- ══ Curved gradient header ══ -->
+      <div class="relative overflow-hidden text-white text-center rounded-b-[34px] px-5 pt-10 pb-[92px] bg-gradient-to-b from-[#8bab77] to-[#5e7a54] animate-fadeInUp" style="opacity:0">
+        <div class="absolute -left-4 -top-2 text-[110px] leading-none opacity-[0.12] pointer-events-none select-none">🥑</div>
+        <div class="relative inline-block">
+          <div class="w-[84px] h-[84px] rounded-full bg-white/25 ring-[3px] ring-white/40 overflow-hidden flex items-center justify-center">
+            <img
+              v-if="user?.avatar_url"
+              :src="user.avatar_url"
+              class="w-full h-full object-cover"
+              alt="avatar"
+              @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
+            />
+            <span v-if="!user?.avatar_url" class="font-display text-white font-bold text-[30px]">{{ displayAvatar }}</span>
           </div>
+          <button
+            class="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md ios-press"
+            :disabled="avatarUploading"
+            @click="triggerAvatarPicker"
+          >
+            <svg v-if="avatarUploading" class="w-4 h-4 animate-spin text-calor-green" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
+              <path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="relative mt-2.5 flex items-center justify-center gap-2">
+          <h2 class="font-display text-[19px] font-bold truncate">{{ displayName }}</h2>
+          <span v-if="isAdmin" class="text-[10px] font-bold bg-white/25 rounded-full px-2 py-0.5 flex-shrink-0">ADMIN</span>
+        </div>
+        <p class="relative text-white/80 text-[12px] truncate">{{ displayEmail }}<template v-if="age"> · {{ age }} tuổi</template></p>
+      </div>
 
-          <!-- Stats strip -->
-          <div class="relative flex gap-2 mt-4 pt-4 border-t border-white/20">
-            <div class="flex-1 text-center">
-              <p class="text-[22px] font-bold leading-none">{{ bmi ?? '—' }}</p>
-              <p class="text-[10px] text-white/70 mt-1">BMI</p>
-              <p
-                v-if="bmiLabel"
-                class="text-[10px] font-semibold mt-0.5 bg-white/90 rounded-full px-2 py-0.5 inline-block"
-                :style="`color: ${bmiLabel.color}`"
-              >{{ bmiLabel.text }}</p>
-              <p v-else class="text-[10px] text-white/50 mt-0.5">Chưa có</p>
-            </div>
-            <div class="w-px bg-white/20"/>
-            <div class="flex-1 text-center">
-              <p class="text-[22px] font-bold leading-none">{{ bmr ? bmr.toLocaleString('vi') : '—' }}</p>
-              <p class="text-[10px] text-white/70 mt-1">BMR</p>
-              <p class="text-[10px] text-white/60 mt-0.5">Calo cơ bản</p>
-            </div>
-            <div class="w-px bg-white/20"/>
-            <div class="flex-1 text-center">
-              <p class="text-[22px] font-bold leading-none">{{ streakCount }}</p>
-              <p class="text-[10px] text-white/70 mt-1">Ngày liền</p>
-              <p class="text-[10px] text-white/60 mt-0.5">🔥 Streak</p>
-            </div>
-          </div>
+      <!-- Floating stat tiles -->
+      <div class="relative -mt-[54px] mx-5 flex gap-2.5 animate-fadeInUp delay-1" style="opacity:0">
+        <div class="flex-1 bg-white rounded-[18px] py-3.5 text-center shadow-[0_10px_22px_rgba(60,74,52,0.1)]">
+          <p class="font-display text-[19px] font-bold text-calor-deep leading-none">{{ bmi ?? '—' }}</p>
+          <p class="text-[10px] text-ios-gray mt-1">BMI</p>
+          <p v-if="bmiLabel" class="text-[9px] font-semibold" :style="`color:${bmiLabel.color}`">{{ bmiLabel.text }}</p>
+          <p v-else class="text-[9px] text-ios-gray2">Chưa có</p>
+        </div>
+        <div class="flex-1 bg-white rounded-[18px] py-3.5 text-center shadow-[0_10px_22px_rgba(60,74,52,0.1)]">
+          <p class="font-display text-[19px] font-bold text-calor-deep leading-none">{{ bmr ? bmr.toLocaleString('vi') : '—' }}</p>
+          <p class="text-[10px] text-ios-gray mt-1">BMR</p>
+          <p class="text-[9px] text-ios-gray2">Calo cơ bản</p>
+        </div>
+        <div class="flex-1 bg-white rounded-[18px] py-3.5 text-center shadow-[0_10px_22px_rgba(60,74,52,0.1)]">
+          <p class="font-display text-[19px] font-bold text-calor-deep leading-none">{{ streakCount }}</p>
+          <p class="text-[10px] text-ios-gray mt-1">Streak</p>
+          <p class="text-[9px] text-[#d98c5f]">🔥 ngày</p>
         </div>
       </div>
 
@@ -203,7 +175,7 @@ async function handleLogout() {
       />
 
       <!-- ══ Mục tiêu calo (card nổi bật, giữ stepper) ══ -->
-      <div class="mx-5 mb-3 animate-fadeInUp delay-2" style="opacity:0">
+      <div class="mx-5 mt-4 mb-3 animate-fadeInUp delay-2" style="opacity:0">
         <div class="bg-white rounded-[18px] px-4 py-3.5 shadow-sm flex items-center gap-3">
           <div class="w-11 h-11 rounded-[13px] bg-gradient-to-br from-ios-orange/20 to-ios-yellow/20 flex items-center justify-center text-xl flex-shrink-0">🎯</div>
           <div class="flex-1 min-w-0">
@@ -215,7 +187,7 @@ async function handleLogout() {
               class="w-8 h-8 rounded-full bg-ios-gray6 flex items-center justify-center ios-press"
               @click="calorieGoal = Math.max(1200, calorieGoal - 100)"
             >
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8E8E93"><path d="M19 13H5v-2h14v2z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 13H5v-2h14v2z"/></svg>
             </button>
             <button
               class="w-8 h-8 rounded-full bg-calor-green flex items-center justify-center ios-press"
@@ -343,7 +315,7 @@ async function handleLogout() {
               <span class="text-base">🛠️</span>
             </div>
             <span class="flex-1 text-left text-[15px] text-black">Trang quản trị</span>
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
         </div>
       </div>
@@ -360,23 +332,23 @@ async function handleLogout() {
               <p class="text-[15px] text-black">Xác thực email</p>
               <p class="text-[12px] text-ios-orange">Chưa xác thực — bấm để xác thực ngay</p>
             </div>
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
           <div v-if="!user?.email_verified" class="ios-separator mx-4"/>
           <NuxtLink to="/profile/edit" class="flex items-center gap-3 px-4 py-3.5 ios-press">
             <div class="w-8 h-8 rounded-[8px] bg-ios-blue/10 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#007AFF"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             </div>
             <span class="flex-1 text-left text-[15px] text-black">Chỉnh sửa hồ sơ</span>
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
           <div class="ios-separator mx-4"/>
           <NuxtLink to="/profile/change-password" class="flex items-center gap-3 px-4 py-3.5 ios-press">
             <div class="w-8 h-8 rounded-[8px] bg-ios-purple/10 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#AF52DE"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#a58fb0"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
             </div>
             <span class="flex-1 text-left text-[15px] text-black">Đổi mật khẩu</span>
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#C7C7CC"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
           </NuxtLink>
         </div>
       </div>

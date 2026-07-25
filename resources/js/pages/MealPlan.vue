@@ -38,10 +38,10 @@ onMounted(() => fetchPlan('daily'))
 </script>
 
 <template>
-  <div class="flex flex-col bg-[#F2F2F7] min-h-full pb-6">
+  <div class="flex flex-col bg-[#eef2e6] min-h-full pb-6">
     <!-- Header -->
     <div class="px-5 pt-3 pb-2">
-      <h1 class="text-[22px] font-bold text-black">Kế hoạch của bạn</h1>
+      <h1 class="font-display text-[22px] font-bold text-black">Kế hoạch của bạn</h1>
       <p class="text-[13px] text-ios-gray mt-0.5">AI gợi ý dựa trên dữ liệu ăn uống của bạn</p>
     </div>
 
@@ -112,62 +112,60 @@ onMounted(() => fetchPlan('daily'))
 
       <!-- ── DAILY ── -->
       <template v-if="dailyPlan">
-        <div class="bg-gradient-to-br from-calor-light to-[#C8F0E2] rounded-[18px] px-5 py-4">
-          <p class="text-[14px] text-calor-deep font-medium leading-snug">{{ dailyPlan.summary }}</p>
-          <div class="flex items-end gap-1 mt-3">
-            <span class="text-[28px] font-bold text-calor-deep leading-none">{{ dailyPlan.target_calories.toLocaleString('vi') }}</span>
-            <span class="text-[13px] text-calor-dark mb-0.5">kcal mục tiêu</span>
+        <!-- Target card (gradient matcha) -->
+        <div class="relative overflow-hidden rounded-[22px] px-5 py-4 text-white bg-gradient-to-br from-[#8bab77] to-[#5e7a54] shadow-lg shadow-matcha/25">
+          <div class="absolute -right-4 -top-3 text-[92px] leading-none opacity-[0.14] pointer-events-none select-none">🥑</div>
+          <p class="relative text-[13px] text-white/90 leading-snug">{{ dailyPlan.summary }}</p>
+          <div class="relative flex items-baseline gap-2 mt-2">
+            <span class="font-display text-[34px] font-bold leading-none">{{ dailyPlan.target_calories.toLocaleString('vi') }}</span>
+            <span class="text-[12px] text-white/85">kcal mục tiêu</span>
           </div>
-          <div class="flex gap-4 mt-2 text-[12px] text-calor-dark">
+          <div class="relative flex gap-3.5 mt-2 text-[12px] text-white/85">
             <span>P {{ dailyPlan.target_macros.protein }}g</span>
             <span>C {{ dailyPlan.target_macros.carbs }}g</span>
             <span>F {{ dailyPlan.target_macros.fat }}g</span>
-            <span>💧 {{ dailyPlan.water_target_ml }}ml</span>
+            <span>💧 {{ (dailyPlan.water_target_ml / 1000).toFixed(1) }}L</span>
           </div>
         </div>
 
-        <!-- Meals -->
-        <div>
-          <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2">Bữa ăn</h2>
-          <div class="bg-white rounded-[18px] divide-y divide-ios-gray6 overflow-hidden">
-            <div v-for="(m, i) in dailyPlan.meals" :key="i" class="px-4 py-3">
+        <!-- Vertical timeline: bữa ăn + tập luyện -->
+        <div class="relative pl-[26px]">
+          <div class="absolute left-[9px] top-3 bottom-3 w-0.5 bg-[#eef1e8]"/>
+          <div v-for="(m, i) in dailyPlan.meals" :key="'m' + i" class="relative mb-3">
+            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-calor-light border-[3px] border-[#eef2e6] grid place-items-center text-[10px]">{{ SLOT_ICON[m.slot] }}</div>
+            <div class="bg-white rounded-[18px] px-4 py-3.5 shadow-[0_8px_22px_rgba(60,74,52,0.06)]">
               <div class="flex items-center justify-between">
-                <span class="text-[14px] font-semibold text-black">{{ SLOT_ICON[m.slot] }} {{ SLOT_LABEL[m.slot] ?? m.name }}</span>
-                <span class="text-[13px] text-ios-gray">{{ m.calories }} kcal</span>
+                <b class="text-[13px] font-semibold text-calor-deep">{{ SLOT_LABEL[m.slot] ?? m.name }}</b>
+                <span class="text-[12px] font-semibold text-calor-dark">{{ m.calories }} kcal</span>
               </div>
-              <p class="text-[13px] text-black mt-1">{{ m.name }}</p>
-              <p v-if="m.items?.length" class="text-[12px] text-ios-gray mt-0.5">{{ m.items.join(' · ') }}</p>
+              <p class="text-[12px] text-[#4a5545] mt-0.5">{{ m.name }}</p>
+              <p v-if="m.items?.length" class="text-[11px] text-ios-gray mt-0.5">{{ m.items.join(' · ') }}</p>
+            </div>
+          </div>
+          <div v-for="(w, i) in (dailyPlan.workouts ?? [])" :key="'w' + i" class="relative mb-3">
+            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-[#f6e2cd] border-[3px] border-[#eef2e6] grid place-items-center text-[10px]">{{ WORKOUT_ICON[w.type] }}</div>
+            <div class="bg-white rounded-[18px] px-4 py-3.5 shadow-[0_8px_22px_rgba(60,74,52,0.06)]">
+              <div class="flex items-center justify-between">
+                <b class="text-[13px] font-semibold text-calor-deep">{{ w.name }}</b>
+                <span class="text-[12px] font-semibold text-[#d98c5f]">-{{ w.est_calories_burned }} kcal</span>
+              </div>
+              <p class="text-[12px] text-[#4a5545] mt-0.5">{{ w.duration_min }} phút · cường độ {{ w.intensity }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Workouts -->
-        <div v-if="dailyPlan.workouts?.length">
-          <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2">Tập luyện</h2>
-          <div class="bg-white rounded-[18px] divide-y divide-ios-gray6 overflow-hidden">
-            <div v-for="(w, i) in dailyPlan.workouts" :key="i" class="px-4 py-3 flex items-center justify-between">
-              <div>
-                <p class="text-[14px] font-medium text-black">{{ WORKOUT_ICON[w.type] }} {{ w.name }}</p>
-                <p class="text-[12px] text-ios-gray mt-0.5">{{ w.duration_min }} phút · cường độ {{ w.intensity }}</p>
-              </div>
-              <span class="text-[13px] text-ios-orange font-medium">-{{ w.est_calories_burned }} kcal</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="dailyPlan.tips?.length" class="bg-white rounded-[18px] px-4 py-3">
-          <h2 class="text-[13px] font-semibold text-ios-gray uppercase tracking-wider mb-2">Lời khuyên</h2>
-          <ul class="space-y-1.5">
-            <li v-for="(t, i) in dailyPlan.tips" :key="i" class="text-[13px] text-black flex gap-2">
-              <span class="text-calor-green">•</span><span>{{ t }}</span>
-            </li>
+        <!-- AI tips -->
+        <div v-if="dailyPlan.tips?.length" class="rounded-[16px] bg-[#f7faf3] border border-[#e0e6d6] px-4 py-3.5 flex gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-matcha grid place-items-center text-white text-xs flex-shrink-0">🤖</div>
+          <ul class="space-y-1 min-w-0">
+            <li v-for="(t, i) in dailyPlan.tips" :key="i" class="text-[12px] text-[#4a5545] leading-relaxed">{{ t }}</li>
           </ul>
         </div>
       </template>
 
       <!-- ── WEEKLY ── -->
       <template v-else-if="weeklyPlan">
-        <div class="bg-gradient-to-br from-calor-light to-[#C8F0E2] rounded-[18px] px-5 py-4">
+        <div class="bg-gradient-to-br from-[#dfeacf] to-[#c6ddc0] rounded-[18px] px-5 py-4">
           <p class="text-[14px] text-calor-deep font-medium leading-snug">{{ weeklyPlan.summary }}</p>
           <p class="text-[12px] text-calor-dark mt-2">Kế hoạch 7 ngày · nhiệm vụ hằng ngày sẽ đổi theo từng ngày</p>
         </div>
@@ -223,7 +221,7 @@ onMounted(() => fetchPlan('daily'))
 
       <!-- ── MONTHLY ── -->
       <template v-else-if="monthlyPlan">
-        <div class="bg-gradient-to-br from-ios-blue/10 to-ios-purple/10 rounded-[18px] px-5 py-4">
+        <div class="bg-gradient-to-br from-[#7c9a70]/12 to-[#5e7a54]/10 rounded-[18px] px-5 py-4">
           <p class="text-[14px] text-black font-medium leading-snug">{{ monthlyPlan.summary }}</p>
           <div class="flex gap-4 mt-3 text-[13px] text-ios-gray">
             <span><strong class="text-black">{{ monthlyPlan.avg_daily_calories.toLocaleString('vi') }}</strong> kcal TB/ngày</span>

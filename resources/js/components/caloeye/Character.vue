@@ -102,7 +102,7 @@ const avatarSrc = computed(() => moodSvg[props.mood])
 .speech-bubble {
   position: relative;
   background: white;
-  border: 1.5px solid #C8F0E2;
+  border: 1.5px solid #c6ddc0;
   border-radius: 16px;
   padding: 10px 14px;
   max-width: 200px;
@@ -118,7 +118,7 @@ const avatarSrc = computed(() => moodSvg[props.mood])
   border-top: 8px solid transparent;
   border-bottom: 4px solid transparent;
   border-left: 9px solid white;
-  filter: drop-shadow(1px 0 0 #C8F0E2);
+  filter: drop-shadow(1px 0 0 #c6ddc0);
 }
 .speech-bubble::before {
   content: '';
@@ -127,10 +127,10 @@ const avatarSrc = computed(() => moodSvg[props.mood])
   width: 0; height: 0;
   border-top: 9px solid transparent;
   border-bottom: 5px solid transparent;
-  border-left: 10px solid #C8F0E2;
+  border-left: 10px solid #c6ddc0;
 }
 .bubble-right::after { right: auto; left: -9px; border-left: none; border-right: 9px solid white; }
-.bubble-right::before { right: auto; left: -11px; border-left: none; border-right: 10px solid #C8F0E2; }
+.bubble-right::before { right: auto; left: -11px; border-left: none; border-right: 10px solid #c6ddc0; }
 .bubble-bottom::after {
   right: auto; bottom: auto;
   left: 50%; top: 100%;
@@ -143,7 +143,7 @@ const avatarSrc = computed(() => moodSvg[props.mood])
   left: 50%; top: 100%;
   transform: translateX(-50%) translateY(-1px);
   border-left: 8px solid transparent; border-right: 8px solid transparent;
-  border-top: 10px solid #C8F0E2; border-bottom: none;
+  border-top: 10px solid #c6ddc0; border-bottom: none;
 }
 .bubble-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .bubble-leave-active { transition: all 0.2s ease; }

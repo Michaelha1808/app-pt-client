@@ -66,15 +66,15 @@ function isActive(path: string) {
             class="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-lg shadow-ios-blue/35"
             :class="isActive('/scan')
               ? 'bg-ios-blue'
-              : 'bg-gradient-to-br from-ios-blue to-[#5AC8FA]'"
+              : 'bg-gradient-to-br from-[#8fae7f] to-[#5e7a54]'"
           >
             <svg viewBox="0 0 24 24" fill="white" class="w-7 h-7">
               <path d="M4 4h3V2H2v5h2V4zm13-2v2h3v3h2V2h-5zm3 16h-3v2h5v-5h-2v3zM4 17H2v5h5v-2H4v-3zM15 9H9v6h6V9zm-2 4h-2v-2h2v2zm-7 0V9l1-1h6l1 1v4l-1 1H7l-1-1z"/>
             </svg>
           </div>
           <span
-            class="text-[10px] mt-1 font-medium"
-            :class="isActive('/scan') ? 'text-ios-blue' : 'text-ios-gray'"
+            class="text-[9.5px] mt-1 font-semibold"
+            :class="isActive('/scan') ? 'text-calor-dark' : 'text-[#b8c0ac]'"
           >Nhận diện</span>
         </NuxtLink>
 
@@ -87,12 +87,12 @@ function isActive(path: string) {
           <svg
             viewBox="0 0 24 24"
             class="w-[26px] h-[26px] transition-colors duration-150"
-            :fill="isActive(tab.path) ? '#007AFF' : '#8E8E93'"
+            :fill="isActive(tab.path) ? '#5e7a54' : '#b8c0ac'"
             v-html="tab.icon"
           />
           <span
-            class="text-[10px] font-medium transition-colors duration-150"
-            :class="isActive(tab.path) ? 'text-ios-blue' : 'text-ios-gray'"
+            class="text-[9.5px] font-semibold transition-colors duration-150"
+            :class="isActive(tab.path) ? 'text-calor-dark' : 'text-[#b8c0ac]'"
           >{{ tab.name }}</span>
         </NuxtLink>
       </template>

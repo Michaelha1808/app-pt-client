@@ -34,9 +34,9 @@ export function useProfile() {
     if (!bmi.value) return null
     const b = parseFloat(bmi.value)
     if (b < 18.5) return { text: 'Gầy', color: '#32ADE6' }
-    if (b < 25)   return { text: 'Bình thường', color: '#34C759' }
+    if (b < 25)   return { text: 'Bình thường', color: '#7c9a70' }
     if (b < 30)   return { text: 'Thừa cân', color: '#FF9500' }
-    return { text: 'Béo phì', color: '#FF3B30' }
+    return { text: 'Béo phì', color: '#c96a6a' }
   })
 
   async function fetchProfile(): Promise<void> {

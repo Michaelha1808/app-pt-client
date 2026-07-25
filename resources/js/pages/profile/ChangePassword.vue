@@ -83,7 +83,7 @@ async function handleSubmit() {
     <!-- Header -->
     <div class="flex items-center gap-3 px-5 pt-2 pb-4">
       <button class="ios-press -ml-1 p-1" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="#007AFF">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="#7c9a70">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>

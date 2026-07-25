@@ -5,25 +5,25 @@
    Chỉ là CSS variables + alias @theme — không đổi giao diện user app. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #2c3a2b;           /* ink */
   --card: #ffffff;
-  --card-foreground: #171717;
+  --card-foreground: #2c3a2b;
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #18A874;              /* CaloEye green */
+  --popover-foreground: #2c3a2b;
+  --primary: #7c9a70;              /* matcha */
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #f0faf6;               /* xanh brand rất nhạt cho hover */
-  --accent-foreground: #0C4D3D;
-  --destructive: #ef4444;
+  --secondary: #eef2e6;            /* mist */
+  --secondary-foreground: #2c3a2b;
+  --muted: #eef2e6;
+  --muted-foreground: #8a9a7d;     /* sage */
+  --accent: #eef5e9;               /* matcha rất nhạt cho hover */
+  --accent-foreground: #5e7a54;
+  --destructive: #c96a6a;          /* clay-red dịu hơn */
   --destructive-foreground: #ffffff;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #18A874;
-  --radius: 0.55rem;
+  --border: #e6ece0;
+  --input: #e6ece0;
+  --ring: #7c9a70;
+  --radius: 0.9rem;                /* bo tròn mềm hơn */
 }
 
 @theme inline {
@@ -53,31 +53,40 @@
 }
 
 @theme {
-  /* ── CaloEye Brand ── */
-  --color-calor-green:  #18A874;   /* primary action – slightly brighter than logo #1D9E75 */
-  --color-calor-dark:   #0F6E56;   /* hover / pressed state */
-  --color-calor-deep:   #0C4D3D;   /* text on light bg */
-  --color-calor-light:  #E1F5EE;   /* chip / badge bg */
-  --color-calor-mint:   #9FE1CB;   /* subtle accent */
-  --color-calor-navy:   #0C447C;   /* wordmark blue */
-  --color-calor-bg:     #F2F8F5;   /* app background (subtle green tint) */
+  /* ── Fonts ── */
+  --font-sans:    'Be Vietnam Pro', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Quicksand', 'Be Vietnam Pro', ui-sans-serif, sans-serif;
 
-  /* ── Keep as iOS semantic aliases so existing classes still work ── */
-  --color-ios-blue:     #18A874;   /* was #007AFF – now CaloEye green */
-  --color-ios-green:    #34C759;   /* success – unchanged */
-  --color-ios-orange:   #FF9500;   /* warning – unchanged */
-  --color-ios-red:      #FF3B30;   /* danger – unchanged */
-  --color-ios-purple:   #AF52DE;
-  --color-ios-pink:     #FF2D55;
-  --color-ios-indigo:   #5856D6;
-  --color-ios-teal:     #32ADE6;
-  --color-ios-yellow:   #FFCC00;
-  --color-ios-gray:     #8E8E93;
-  --color-ios-gray2:    #AEAEB2;
-  --color-ios-gray3:    #C7C7CC;
-  --color-ios-gray4:    #D1D1D6;
-  --color-ios-gray5:    #E5E5EA;
-  --color-ios-gray6:    #F2F8F5;   /* app bg – now with subtle green tint */
+  /* ── CaloEye Brand → matcha ── */
+  --color-calor-green:  #7c9a70;   /* primary action  (matcha) */
+  --color-calor-dark:   #5e7a54;   /* hover / pressed  (matcha đậm) */
+  --color-calor-deep:   #2c3a2b;   /* text on light bg (ink) */
+  --color-calor-light:  #eef5e9;   /* chip / badge bg */
+  --color-calor-mint:   #c3d3b3;   /* subtle accent */
+  --color-calor-navy:   #3d5a3a;   /* wordmark (deep sage thay xanh navy) */
+  --color-calor-bg:     #eef2e6;   /* app background (matcha mist) */
+
+  /* ── Matcha wellness accents ── */
+  --color-matcha:       #7c9a70;
+  --color-matcha-dark:  #5e7a54;
+  --color-matcha-soft:  #eef2e6;
+
+  /* ── iOS semantic aliases (mọi class cũ vẫn chạy) ── */
+  --color-ios-blue:     #7c9a70;   /* primary → matcha (thay cho green cũ) */
+  --color-ios-green:    #7c9a70;   /* success → matcha, đồng bộ tông */
+  --color-ios-orange:   #d98c5f;   /* warning → terracotta dịu */
+  --color-ios-red:      #c96a6a;   /* danger  → clay red dịu */
+  --color-ios-purple:   #a58fb0;   /* accent phụ → mauve dịu */
+  --color-ios-pink:     #c98b8b;   /* fat macro → clay rose */
+  --color-ios-indigo:   #7d8aa8;
+  --color-ios-teal:     #6d9a8a;
+  --color-ios-yellow:   #e0a86a;   /* carbs macro → amber ấm */
+  --color-ios-gray:     #8a9a7d;   /* sage */
+  --color-ios-gray2:    #a3ad98;
+  --color-ios-gray3:    #b8c0ac;
+  --color-ios-gray4:    #cfd6c4;
+  --color-ios-gray5:    #e6ece0;
+  --color-ios-gray6:    #eef2e6;   /* app bg mist */
 }
 
 *, *::before, *::after {
@@ -88,12 +97,13 @@
 }
 
 html, body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+  /* Ưu tiên Be Vietnam Pro cho tiếng Việt; heading dùng font-display (.font-display) */
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
                'Helvetica Neue', Arial, sans-serif;
   font-size: 16px;
   /* dvh = vùng nhìn thấy thật (khớp cả PWA standalone lẫn in-app browser có toolbar) */
   height: 100dvh;
-  background: #1C2B24;   /* dark green instead of near-black */
+  background: #2c3a2b;   /* dark matcha thay near-black */
   /* Khoá scroll/rubber-band ở cấp document để không lộ background khi kéo */
   overflow: hidden;
   overscroll-behavior: none;
@@ -103,10 +113,10 @@ html, body {
   max-width: 430px;
   margin: 0 auto;
   height: 100dvh;
-  background: #F2F8F5;
+  background: #eef2e6;   /* mist */
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 60px rgba(44, 58, 43, 0.35);
 }
 
 ::-webkit-scrollbar { display: none; }
@@ -127,19 +137,19 @@ body.admin-mode #app {
 .ios-blur {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  background: rgba(242, 248, 245, 0.88);
+  background: rgba(238, 242, 230, 0.88);
 }
 
 .ios-blur-white {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .ios-blur-dark {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  background: rgba(15, 50, 35, 0.80);
+  background: rgba(44, 58, 43, 0.8);
 }
 
 /* ──── Animations ──── */
@@ -284,7 +294,7 @@ body.admin-mode #app {
 .typing-dot-3 { animation: typingBounce 1.4s 0.4s ease-in-out infinite; }
 
 .skeleton {
-  background: linear-gradient(90deg, #D8EDE4 25%, #E8F5EF 50%, #D8EDE4 75%);
+  background: linear-gradient(90deg, #e2e9d8 25%, #eef2e6 50%, #e2e9d8 75%);
   background-size: 400px 100%;
   animation: shimmer 1.3s infinite linear;
   border-radius: 8px;
@@ -300,5 +310,5 @@ body.admin-mode #app {
 
 .ios-separator {
   height: 0.5px;
-  background: rgba(24, 168, 116, 0.15);
+  background: rgba(124, 154, 112, 0.18);
 }

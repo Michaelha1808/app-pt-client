@@ -7,8 +7,8 @@
   <!-- App icon background -->
   <rect width="1024" height="1024" rx="230" fill="#E1F5EE"/>
 
-  <!-- AVO – nhân vật "xin chào" (nguồn: /svg/AVO-01-xin-chao.svg), căn giữa -->
-  <g transform="translate(54,61) scale(2.18)">
+  <!-- AVO – khuôn mặt "xin chào" (nguồn: /svg/AVO-01-xin-chao.svg), zoom vào mặt, thân bị cắt ngoài khung -->
+  <g transform="translate(-230,76) scale(3.5)">
     <ellipse cx="210" cy="470" rx="116" ry="17" fill="rgba(0,0,0,0.08)"></ellipse>
     <circle cx="210" cy="240" r="195" fill="url(#auraBg)"></circle>
     <ellipse cx="183" cy="452" rx="28" ry="16" fill="#2E7D32" stroke="#1A4A1F" stroke-width="3.5"></ellipse>

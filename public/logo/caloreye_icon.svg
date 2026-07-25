@@ -22,7 +22,6 @@
     <ellipse cx="210" cy="325" rx="52" ry="54" fill="#8B5E3C" stroke="#6B4520" stroke-width="2.5"></ellipse>
     <ellipse cx="199" cy="307" rx="15" ry="19" fill="#A8753E" opacity="0.6"></ellipse>
     <ellipse cx="194" cy="299" rx="6" ry="8" fill="#C8955A" opacity="0.48"></ellipse>
-    <rect x="150" y="238.5" width="109.17875251164945" height="27" rx="13.5" fill="#2E7D32" stroke="#1A4A1F" stroke-width="3.5" transform="rotate(98.42696902148069,150,252)"></rect><circle cx="134" cy="360" r="18" fill="#2E7D32" stroke="#1A4A1F" stroke-width="3.5"></circle><rect x="270" y="238.5" width="114.49017425089369" height="27" rx="13.5" fill="#2E7D32" stroke="#1A4A1F" stroke-width="3.5" transform="rotate(-62.98733465206146,270,252)"></rect><circle cx="322" cy="150" r="18" fill="#2E7D32" stroke="#1A4A1F" stroke-width="3.5"></circle>
 
     <g transform="translate(0,30) rotate(-10,210,89)">
       <ellipse cx="210" cy="112" rx="58" ry="8" fill="#1A4A1F" opacity="0.13"></ellipse>
@@ -46,6 +45,5 @@
 
     <path d="M 156,196 Q 178,176 200,196" fill="none" stroke="#1A4A1F" stroke-width="5.5" stroke-linecap="round"></path>
     <path d="M 220,196 Q 242,176 264,196" fill="none" stroke="#1A4A1F" stroke-width="5.5" stroke-linecap="round"></path><path d="M154,159 Q178,147 204,157" fill="none" stroke="#1A4A1F" stroke-width="5.5" stroke-linecap="round"></path><path d="M216,157 Q242,145 268,159" fill="none" stroke="#1A4A1F" stroke-width="5.5" stroke-linecap="round"></path><path d="M 183,228 Q 210,254 237,228" fill="none" stroke="#1A4A1F" stroke-width="5.5" stroke-linecap="round"></path><path d="M 196,242 Q 210,258 224,242 Q 217,258 210,260 Q 203,258 196,242 Z" fill="#FF8A80" opacity="0.68"></path>
-    <path d="M 338,135 Q 348,128 356,138" fill="none" stroke="#66BB6A" stroke-width="3" stroke-linecap="round" opacity="0.7"></path><path d="M 344,122 Q 354,114 362,124" fill="none" stroke="#A5D6A7" stroke-width="2.6" stroke-linecap="round" opacity="0.6"></path><path transform="translate(96,150) scale(0.85)" d="M0,-12 Q1.5,-1.5 12,0 Q1.5,1.5 0,12 Q-1.5,1.5 -12,0 Q-1.5,-1.5 0,-12 Z" fill="#FFCE1A"></path>
   </g>
 </svg>

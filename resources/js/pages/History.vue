@@ -343,7 +343,7 @@ onMounted(async () => {
       <div v-if="showChart" class="mx-5 mb-4 bg-white rounded-[18px] p-4 animate-fadeInUp delay-2" style="opacity:0">
         <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-3">Calo nạp theo ngày</p>
         <div class="flex items-end gap-1.5 h-24 overflow-x-auto">
-          <div v-for="d in days" :key="d.date" class="flex-1 min-w-[16px] flex flex-col items-center gap-1">
+          <div v-for="d in days" :key="d.date" class="flex-1 min-w-[16px] h-full flex flex-col items-center gap-1">
             <div class="w-full flex-1 flex items-end">
               <div
                 class="w-full rounded-t-[4px] transition-all duration-700"

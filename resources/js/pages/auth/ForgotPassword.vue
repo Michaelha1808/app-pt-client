@@ -67,7 +67,7 @@ async function handleResend() {
       class="w-9 h-9 rounded-full bg-ios-gray6 flex items-center justify-center mt-2 ios-press"
       @click="navigateTo('/auth/login')"
     >
-      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
         <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
       </svg>
     </button>
@@ -75,7 +75,7 @@ async function handleResend() {
     <!-- Success state -->
     <div v-if="sent" class="flex-1 flex flex-col items-center justify-center gap-4 animate-scaleIn">
       <div class="w-24 h-24 rounded-full bg-ios-green/10 flex items-center justify-center">
-        <svg viewBox="0 0 24 24" class="w-12 h-12" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-12 h-12" style="fill:var(--color-calor-green)">
           <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
         </svg>
       </div>
@@ -116,7 +116,7 @@ async function handleResend() {
     <div v-else class="flex flex-col">
       <div class="mt-8 mb-8 animate-fadeInUp" style="opacity:0">
         <div class="w-16 h-16 rounded-[14px] bg-ios-blue/10 flex items-center justify-center mb-5">
-          <svg viewBox="0 0 24 24" class="w-9 h-9" fill="#7c9a70">
+          <svg viewBox="0 0 24 24" class="w-9 h-9" style="fill:var(--color-calor-green)">
             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
           </svg>
         </div>

@@ -142,7 +142,7 @@ const genderOptions = [
     <!-- Header -->
     <div class="flex items-center gap-3 px-5 pt-2 pb-4">
       <button class="ios-press -ml-1 p-1" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" style="fill:var(--color-calor-green)">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -177,7 +177,7 @@ const genderOptions = [
       <div class="flex items-center gap-4">
         <!-- Avatar preview -->
         <div class="relative flex-shrink-0">
-          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#8bab77] to-[#5e7a54] overflow-hidden flex items-center justify-center">
+          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--color-matcha-mid)] to-[var(--color-calor-dark)] overflow-hidden flex items-center justify-center">
             <img
               v-if="avatarSrc"
               :src="avatarSrc"

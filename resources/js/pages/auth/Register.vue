@@ -178,7 +178,7 @@ const caloriePresets = [
         class="w-9 h-9 rounded-full bg-ios-gray6 flex items-center justify-center ios-press"
         @click="prevStep"
       >
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -199,7 +199,7 @@ const caloriePresets = [
         @click="skipStep2"
       >
         <span class="text-[14px] text-ios-blue font-semibold">Bỏ qua</span>
-        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="#7c9a70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" style="stroke:var(--color-calor-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 6l6 6-6 6"/>
         </svg>
       </button>

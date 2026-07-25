@@ -68,7 +68,7 @@ async function resend() {
     <!-- Header -->
     <div class="flex items-center gap-3 px-4 pt-2 pb-4">
       <button class="ios-press p-1 -ml-1" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" style="fill:var(--color-calor-green)">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -77,7 +77,7 @@ async function resend() {
 
     <div class="px-6">
       <div class="w-16 h-16 rounded-[14px] bg-ios-blue/10 flex items-center justify-center mb-5">
-        <svg viewBox="0 0 24 24" class="w-9 h-9" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-9 h-9" style="fill:var(--color-calor-green)">
           <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
         </svg>
       </div>

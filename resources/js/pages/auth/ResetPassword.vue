@@ -75,7 +75,7 @@ async function handleSubmit() {
       class="w-9 h-9 rounded-full bg-ios-gray6 flex items-center justify-center mt-2 ios-press"
       @click="navigateTo('/auth/login')"
     >
-      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
         <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
       </svg>
     </button>
@@ -83,7 +83,7 @@ async function handleSubmit() {
     <!-- Success state -->
     <div v-if="success" class="flex-1 flex flex-col items-center justify-center gap-4 animate-scaleIn">
       <div class="w-24 h-24 rounded-full bg-ios-green/10 flex items-center justify-center">
-        <svg viewBox="0 0 24 24" class="w-12 h-12" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-12 h-12" style="fill:var(--color-calor-green)">
           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
         </svg>
       </div>
@@ -103,7 +103,7 @@ async function handleSubmit() {
     <div v-else class="flex flex-col">
       <div class="mt-8 mb-8 animate-fadeInUp" style="opacity:0">
         <div class="w-16 h-16 rounded-[14px] bg-calor-green/10 flex items-center justify-center mb-5">
-          <svg viewBox="0 0 24 24" class="w-9 h-9" fill="#7c9a70">
+          <svg viewBox="0 0 24 24" class="w-9 h-9" style="fill:var(--color-calor-green)">
             <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/>
           </svg>
         </div>

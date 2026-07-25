@@ -38,7 +38,7 @@ onMounted(() => fetchPlan('daily'))
 </script>
 
 <template>
-  <div class="flex flex-col bg-[#eef2e6] min-h-full pb-6">
+  <div class="flex flex-col bg-[var(--color-calor-bg)] min-h-full pb-6">
     <!-- Header -->
     <div class="px-5 pt-3 pb-2">
       <h1 class="font-display text-[22px] font-bold text-black">Kế hoạch của bạn</h1>
@@ -113,7 +113,7 @@ onMounted(() => fetchPlan('daily'))
       <!-- ── DAILY ── -->
       <template v-if="dailyPlan">
         <!-- Target card (gradient matcha) -->
-        <div class="relative overflow-hidden rounded-[22px] px-5 py-4 text-white bg-gradient-to-br from-[#8bab77] to-[#5e7a54] shadow-lg shadow-matcha/25">
+        <div class="relative overflow-hidden rounded-[22px] px-5 py-4 text-white bg-gradient-to-br from-[var(--color-matcha-mid)] to-[var(--color-calor-dark)] shadow-lg shadow-matcha/25">
           <div class="absolute -right-4 -top-3 text-[92px] leading-none opacity-[0.14] pointer-events-none select-none">🥑</div>
           <p class="relative text-[13px] text-white/90 leading-snug">{{ dailyPlan.summary }}</p>
           <div class="relative flex items-baseline gap-2 mt-2">
@@ -130,9 +130,9 @@ onMounted(() => fetchPlan('daily'))
 
         <!-- Vertical timeline: bữa ăn + tập luyện -->
         <div class="relative pl-[26px]">
-          <div class="absolute left-[9px] top-3 bottom-3 w-0.5 bg-[#eef1e8]"/>
+          <div class="absolute left-[9px] top-3 bottom-3 w-0.5 bg-[var(--color-line)]"/>
           <div v-for="(m, i) in dailyPlan.meals" :key="'m' + i" class="relative mb-3">
-            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-calor-light border-[3px] border-[#eef2e6] grid place-items-center text-[10px]">{{ SLOT_ICON[m.slot] }}</div>
+            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-calor-light border-[3px] border-[var(--color-calor-bg)] grid place-items-center text-[10px]">{{ SLOT_ICON[m.slot] }}</div>
             <div class="bg-white rounded-[18px] px-4 py-3.5 shadow-[0_8px_22px_rgba(60,74,52,0.06)]">
               <div class="flex items-center justify-between">
                 <b class="text-[13px] font-semibold text-calor-deep">{{ SLOT_LABEL[m.slot] ?? m.name }}</b>
@@ -143,7 +143,7 @@ onMounted(() => fetchPlan('daily'))
             </div>
           </div>
           <div v-for="(w, i) in (dailyPlan.workouts ?? [])" :key="'w' + i" class="relative mb-3">
-            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-[#f6e2cd] border-[3px] border-[#eef2e6] grid place-items-center text-[10px]">{{ WORKOUT_ICON[w.type] }}</div>
+            <div class="absolute -left-[26px] top-4 w-5 h-5 rounded-full bg-[#f6e2cd] border-[3px] border-[var(--color-calor-bg)] grid place-items-center text-[10px]">{{ WORKOUT_ICON[w.type] }}</div>
             <div class="bg-white rounded-[18px] px-4 py-3.5 shadow-[0_8px_22px_rgba(60,74,52,0.06)]">
               <div class="flex items-center justify-between">
                 <b class="text-[13px] font-semibold text-calor-deep">{{ w.name }}</b>
@@ -221,7 +221,7 @@ onMounted(() => fetchPlan('daily'))
 
       <!-- ── MONTHLY ── -->
       <template v-else-if="monthlyPlan">
-        <div class="bg-gradient-to-br from-[#7c9a70]/12 to-[#5e7a54]/10 rounded-[18px] px-5 py-4">
+        <div class="bg-gradient-to-br from-[var(--color-calor-green)]/12 to-[var(--color-calor-dark)]/10 rounded-[18px] px-5 py-4">
           <p class="text-[14px] text-black font-medium leading-snug">{{ monthlyPlan.summary }}</p>
           <div class="flex gap-4 mt-3 text-[13px] text-ios-gray">
             <span><strong class="text-black">{{ monthlyPlan.avg_daily_calories.toLocaleString('vi') }}</strong> kcal TB/ngày</span>

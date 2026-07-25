@@ -5,6 +5,10 @@ import './assets/css/main.css'
 import App from './App.vue'
 import router from './router'
 import { initNotificationNav } from './plugins/notificationNav'
+import { useTheme } from './composables/useTheme'
+
+// Áp chủ đề màu đã lưu (matcha/green) trước khi mount → không nháy màu
+useTheme()
 
 const app = createApp(App)
 app.use(createPinia())

@@ -41,11 +41,11 @@ onMounted(() => {
       <svg :width="ringSize" :height="ringSize" viewBox="0 0 220 220" class="rotate-[-90deg]">
         <defs>
           <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stop-color="#8bab77"/>
-            <stop offset="100%" stop-color="#5e7a54"/>
+            <stop offset="0%"   style="stop-color:var(--color-matcha-mid)"/>
+            <stop offset="100%" style="stop-color:var(--color-calor-dark)"/>
           </linearGradient>
         </defs>
-        <circle cx="110" cy="110" :r="radius" fill="none" stroke="#eef5e9" stroke-width="16" stroke-linecap="round"/>
+        <circle cx="110" cy="110" :r="radius" fill="none" stroke="var(--color-calor-light)" stroke-width="16" stroke-linecap="round"/>
         <circle
           cx="110" cy="110" :r="radius" fill="none"
           :stroke="ringColor" stroke-width="16" stroke-linecap="round"
@@ -69,12 +69,12 @@ onMounted(() => {
         <span class="text-[12px] text-ios-gray">🎯 Mục tiêu</span>
         <b class="font-display text-[15px] font-bold text-calor-deep tabular-nums">{{ goal.toLocaleString('vi') }}</b>
       </div>
-      <div class="h-px bg-[#eef1e8]"/>
+      <div class="h-px bg-[var(--color-line)]"/>
       <div class="flex items-center justify-between">
         <span class="text-[12px] text-ios-gray">🍽 Đã ăn</span>
         <b class="font-display text-[15px] font-bold text-calor-deep tabular-nums">{{ consumed.toLocaleString('vi') }}</b>
       </div>
-      <div class="h-px bg-[#eef1e8]"/>
+      <div class="h-px bg-[var(--color-line)]"/>
       <div class="flex items-center justify-between">
         <span class="text-[12px] text-ios-gray">🔥 Tập luyện</span>
         <b class="font-display text-[15px] font-bold text-calor-deep tabular-nums">{{ burned.toLocaleString('vi') }}</b>
@@ -88,11 +88,11 @@ onMounted(() => {
       <svg :width="ringSize" :height="ringSize" viewBox="0 0 220 220" class="rotate-[-90deg]">
         <defs>
           <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stop-color="#8bab77"/>
-            <stop offset="100%" stop-color="#5e7a54"/>
+            <stop offset="0%"   style="stop-color:var(--color-matcha-mid)"/>
+            <stop offset="100%" style="stop-color:var(--color-calor-dark)"/>
           </linearGradient>
         </defs>
-        <circle cx="110" cy="110" :r="radius" fill="none" stroke="#eef5e9" stroke-width="16" stroke-linecap="round"/>
+        <circle cx="110" cy="110" :r="radius" fill="none" stroke="var(--color-calor-light)" stroke-width="16" stroke-linecap="round"/>
         <circle
           cx="110" cy="110" :r="radius" fill="none"
           :stroke="ringColor" stroke-width="16" stroke-linecap="round"

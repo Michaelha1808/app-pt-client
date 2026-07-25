@@ -16,9 +16,9 @@ const zoomStyle = computed(() =>
 </script>
 
 <template>
-  <div class="h-dvh flex flex-col bg-[#eef2e6] overflow-hidden">
+  <div class="h-dvh flex flex-col bg-[var(--color-calor-bg)] overflow-hidden">
     <!-- Safe area spacer (real device status bar) -->
-    <div class="flex-none bg-[#eef2e6]" style="height: env(safe-area-inset-top)" />
+    <div class="flex-none bg-[var(--color-calor-bg)]" style="height: env(safe-area-inset-top)" />
     <div class="flex-1 overflow-y-auto overscroll-contain">
       <!-- h-full để trang con dùng `h-full`/`min-h-full` (vd màn Chat) phân giải đúng chiều cao
            → cột chat lấp đầy viewport, ô nhập ghim đáy thay vì trôi lên giữa/trên. -->

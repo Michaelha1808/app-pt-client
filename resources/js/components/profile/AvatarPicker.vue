@@ -147,7 +147,7 @@ defineExpose({ open })
               @click="pickCamera"
             >
               <div class="w-10 h-10 rounded-full bg-ios-blue/10 flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
                   <path d="M12 15.2A3.2 3.2 0 0 1 8.8 12 3.2 3.2 0 0 1 12 8.8 3.2 3.2 0 0 1 15.2 12 3.2 3.2 0 0 1 12 15.2M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9Z"/>
                 </svg>
               </div>

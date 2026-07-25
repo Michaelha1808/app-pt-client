@@ -125,11 +125,11 @@ async function confirmMeal() {
 </script>
 
 <template>
-  <div class="flex flex-col bg-[#eef2e6] min-h-full">
+  <div class="flex flex-col bg-[var(--color-calor-bg)] min-h-full">
     <!-- Nav bar -->
-    <div class="sticky top-0 z-10 flex items-center px-5 py-3 bg-[#eef2e6]/95 backdrop-blur-sm border-b-hairline border-ios-gray5">
+    <div class="sticky top-0 z-10 flex items-center px-5 py-3 bg-[var(--color-calor-bg)]/95 backdrop-blur-sm border-b-hairline border-ios-gray5">
       <button class="w-9 h-9 rounded-full bg-ios-gray5 flex items-center justify-center ios-press" @click="navigateTo('/scan')">
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+        <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>

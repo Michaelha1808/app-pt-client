@@ -125,6 +125,7 @@ declare global {
   const useSlots: typeof import('vue').useSlots
   const useStreak: typeof import('./composables/useStreak').useStreak
   const useTemplateRef: typeof import('vue').useTemplateRef
+  const useTheme: typeof import('./composables/useTheme').useTheme
   const useToast: typeof import('./composables/useToast').useToast
   const useUiSettings: typeof import('./composables/useUiSettings').useUiSettings
   const useWater: typeof import('./composables/useWater').useWater
@@ -163,6 +164,9 @@ declare global {
   // @ts-ignore
   export type { StreakData, MealStreakResult } from './composables/useStreak'
   import('./composables/useStreak')
+  // @ts-ignore
+  export type { ThemeName } from './composables/useTheme'
+  import('./composables/useTheme')
   // @ts-ignore
   export type { FontScale } from './composables/useUiSettings'
   import('./composables/useUiSettings')
@@ -298,6 +302,7 @@ declare module 'vue' {
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useStreak: UnwrapRef<typeof import('./composables/useStreak')['useStreak']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
+    readonly useTheme: UnwrapRef<typeof import('./composables/useTheme')['useTheme']>
     readonly useToast: UnwrapRef<typeof import('./composables/useToast')['useToast']>
     readonly useUiSettings: UnwrapRef<typeof import('./composables/useUiSettings')['useUiSettings']>
     readonly useWater: UnwrapRef<typeof import('./composables/useWater')['useWater']>

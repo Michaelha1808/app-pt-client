@@ -70,6 +70,9 @@
   --color-matcha:       #7c9a70;
   --color-matcha-dark:  #5e7a54;
   --color-matcha-soft:  #eef2e6;
+  --color-matcha-mid:   #8bab77;   /* gradient stop giữa (header/hero) */
+  --color-matcha-light: #8fae7f;   /* gradient stop sáng (nút/nav) */
+  --color-line:         #eef1e8;   /* đường kẻ mảnh trong thẻ */
 
   /* ── iOS semantic aliases (mọi class cũ vẫn chạy) ── */
   --color-ios-blue:     #7c9a70;   /* primary → matcha (thay cho green cũ) */
@@ -89,6 +92,44 @@
   --color-ios-gray6:    #eef2e6;   /* app bg mist */
 }
 
+/* ════════════════════════════════════════════════════════════════
+   THEME "green" — palette CaloEye gốc (xanh). Người dùng chọn trong
+   Cài đặt → Hiển thị. Tailwind v4 phát @theme token ra :root nên
+   override tại đây là mọi class token tự đổi. Matcha = mặc định.
+   ════════════════════════════════════════════════════════════════ */
+:root[data-theme="green"] {
+  --color-calor-green:  #18A874;
+  --color-calor-dark:   #0F6E56;
+  --color-calor-deep:   #0C4D3D;
+  --color-calor-light:  #E1F5EE;
+  --color-calor-mint:   #9FE1CB;
+  --color-calor-navy:   #0C447C;
+  --color-calor-bg:     #F2F8F5;
+
+  --color-matcha:       #18A874;
+  --color-matcha-dark:  #0F6E56;
+  --color-matcha-soft:  #F2F8F5;
+  --color-matcha-mid:   #34C759;   /* gradient stop giữa (xanh) */
+  --color-matcha-light: #5AC8FA;   /* gradient stop sáng (xanh dương nhạt như bản gốc) */
+  --color-line:         #E5EFEA;
+
+  --color-ios-blue:     #18A874;
+  --color-ios-green:    #34C759;
+  --color-ios-orange:   #FF9500;
+  --color-ios-red:      #FF3B30;
+  --color-ios-purple:   #AF52DE;
+  --color-ios-pink:     #FF2D55;
+  --color-ios-indigo:   #5856D6;
+  --color-ios-teal:     #32ADE6;
+  --color-ios-yellow:   #FFCC00;
+  --color-ios-gray:     #8E8E93;
+  --color-ios-gray2:    #AEAEB2;
+  --color-ios-gray3:    #C7C7CC;
+  --color-ios-gray4:    #D1D1D6;
+  --color-ios-gray5:    #E5E5EA;
+  --color-ios-gray6:    #F2F8F5;
+}
+
 *, *::before, *::after {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
@@ -103,7 +144,7 @@ html, body {
   font-size: 16px;
   /* dvh = vùng nhìn thấy thật (khớp cả PWA standalone lẫn in-app browser có toolbar) */
   height: 100dvh;
-  background: #2c3a2b;   /* dark matcha thay near-black */
+  background: var(--color-calor-deep);   /* dark frame – theo theme */
   /* Khoá scroll/rubber-band ở cấp document để không lộ background khi kéo */
   overflow: hidden;
   overscroll-behavior: none;
@@ -113,7 +154,7 @@ html, body {
   max-width: 430px;
   margin: 0 auto;
   height: 100dvh;
-  background: #eef2e6;   /* mist */
+  background: var(--color-calor-bg);   /* app bg – theo theme */
   position: relative;
   overflow: hidden;
   box-shadow: 0 0 60px rgba(44, 58, 43, 0.35);

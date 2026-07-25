@@ -193,7 +193,7 @@ async function eatAgainCluster(c: MealCluster) {
   if (ok) { cluster.value = null; await reload() }
 }
 const detailMacros = computed(() => detail.value ? [
-  { label: 'Protein',  value: detail.value.protein, unit: 'g',  color: '#7c9a70' },
+  { label: 'Protein',  value: detail.value.protein, unit: 'g',  color: 'var(--color-calor-green)' },
   { label: 'Carbs',    value: detail.value.carbs,   unit: 'g',  color: '#e0a86a' },
   { label: 'Chất béo', value: detail.value.fat,     unit: 'g',  color: '#c98b8b' },
   { label: 'Natri',    value: detail.value.sodium,  unit: 'mg', color: '#8a9a7d' },
@@ -323,7 +323,7 @@ onMounted(async () => {
         </p>
         <p v-else class="text-[12px] mt-1 text-ios-gray">Mục tiêu {{ goal.toLocaleString('vi') }} kcal/ngày</p>
         <div class="flex gap-2.5 mt-4">
-          <div class="flex-1 rounded-[14px] py-2.5 bg-[#eef5e9]">
+          <div class="flex-1 rounded-[14px] py-2.5 bg-[var(--color-calor-light)]">
             <p class="font-display text-[16px] font-bold text-calor-dark tabular-nums">{{ totalIntake.toLocaleString('vi') }}</p>
             <p class="text-[10px] text-ios-gray">Nạp</p>
           </div>
@@ -347,7 +347,7 @@ onMounted(async () => {
             <div class="w-full flex-1 flex items-end">
               <div
                 class="w-full rounded-t-[4px] transition-all duration-700"
-                :style="`height: ${d.intake > 0 ? Math.max(6, Math.round((d.intake / maxCal) * 100)) : 0}%; background: ${d.intake > goal ? '#c96a6a' : '#7c9a70'}`"
+                :style="`height: ${d.intake > 0 ? Math.max(6, Math.round((d.intake / maxCal) * 100)) : 0}%; background: ${d.intake > goal ? '#c96a6a' : 'var(--color-calor-green)'}`"
               />
             </div>
             <span class="text-[9px] text-ios-gray whitespace-nowrap">{{ days.length > 10 ? d.day_num : d.day_label }}</span>
@@ -462,8 +462,8 @@ onMounted(async () => {
     <Teleport to="body">
       <div v-if="detail" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="detail = null">
         <div class="absolute inset-0 bg-black/40" @click="detail = null"/>
-        <div class="relative w-full max-w-[430px] bg-[#eef2e6] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
-          <div class="sticky top-0 bg-[#eef2e6] pt-3 px-5 pb-2 z-10">
+        <div class="relative w-full max-w-[430px] bg-[var(--color-calor-bg)] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
+          <div class="sticky top-0 bg-[var(--color-calor-bg)] pt-3 px-5 pb-2 z-10">
             <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-2"/>
             <div class="flex items-center justify-between">
               <p class="text-[13px] text-ios-gray">{{ dayHeader(detail.date) }} · {{ detail.time }}</p>
@@ -535,8 +535,8 @@ onMounted(async () => {
     <Teleport to="body">
       <div v-if="cluster" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="cluster = null">
         <div class="absolute inset-0 bg-black/40" @click="cluster = null"/>
-        <div class="relative w-full max-w-[430px] bg-[#eef2e6] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
-          <div class="sticky top-0 bg-[#eef2e6] pt-3 px-5 pb-2 z-10">
+        <div class="relative w-full max-w-[430px] bg-[var(--color-calor-bg)] rounded-t-[24px] max-h-[88vh] overflow-y-auto animate-slideUpSheet">
+          <div class="sticky top-0 bg-[var(--color-calor-bg)] pt-3 px-5 pb-2 z-10">
             <div class="w-10 h-1 bg-ios-gray4 rounded-full mx-auto mb-2"/>
             <div class="flex items-center justify-between">
               <p class="text-[13px] text-ios-gray">{{ dayHeader(cluster.date) }} · {{ cluster.time }} · {{ cluster.meals.length }} món</p>

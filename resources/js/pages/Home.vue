@@ -119,7 +119,7 @@ const macros = computed(() => {
   const carbGoal    = Math.round(goal.value * 0.45 / 4)
   const fatGoal     = Math.round(goal.value * 0.25 / 9)
   return [
-    { label: 'Protein',   value: s?.total_protein ?? 0, max: proteinGoal, unit: 'g', color: '#7c9a70' },
+    { label: 'Protein',   value: s?.total_protein ?? 0, max: proteinGoal, unit: 'g', color: 'var(--color-calor-green)' },
     { label: 'Carbs',     value: s?.total_carbs   ?? 0, max: carbGoal,    unit: 'g', color: '#e0a86a' },
     { label: 'Chất béo',  value: s?.total_fat     ?? 0, max: fatGoal,     unit: 'g', color: '#c98b8b' },
   ]
@@ -173,7 +173,7 @@ onMounted(() => {
 <template>
   <div class="pb-4">
     <!-- ══ Curved gradient header ══ -->
-    <div class="relative overflow-hidden text-white rounded-b-[34px] px-5 pt-9 pb-[72px] bg-gradient-to-b from-[#8bab77] to-[#5e7a54] animate-fadeInUp" style="opacity:0">
+    <div class="relative overflow-hidden text-white rounded-b-[34px] px-5 pt-9 pb-[72px] bg-gradient-to-b from-[var(--color-matcha-mid)] to-[var(--color-calor-dark)] animate-fadeInUp" style="opacity:0">
       <div class="absolute -right-5 -top-3 text-[120px] leading-none opacity-[0.14] pointer-events-none select-none">🥑</div>
       <div class="relative flex items-start justify-between gap-3">
         <div class="min-w-0">
@@ -240,7 +240,7 @@ onMounted(() => {
         >
           <p class="text-[11px] text-ios-gray">{{ m.label }}</p>
           <p class="font-display text-[17px] font-bold text-calor-deep leading-tight tabular-nums">{{ m.value }}<span class="text-[11px] text-ios-gray2 font-medium">/{{ m.max }}</span></p>
-          <div class="h-[5px] rounded-full bg-[#eef1e8] mt-1.5 overflow-hidden">
+          <div class="h-[5px] rounded-full bg-[var(--color-line)] mt-1.5 overflow-hidden">
             <div class="h-full rounded-full transition-all duration-1000" :style="`width:${Math.min((m.value / m.max) * 100, 100)}%;background:${m.color}`"/>
           </div>
         </div>
@@ -398,7 +398,7 @@ onMounted(() => {
         <div class="ios-separator mx-4"/>
         <NuxtLink to="/scan" class="flex items-center gap-3 px-4 py-3.5 ios-press">
           <div class="w-10 h-10 rounded-[10px] bg-ios-blue/10 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="#7c9a70">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" style="fill:var(--color-calor-green)">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
           </div>
@@ -410,7 +410,7 @@ onMounted(() => {
     <!-- AI plan suggestion → mở trang kế hoạch ngày mai -->
     <NuxtLink
       to="/plan"
-      class="mx-5 mt-4 relative overflow-hidden bg-gradient-to-br from-[#8bab77] via-[#7c9a70] to-[#5e7a54] rounded-[22px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5 shadow-lg shadow-ios-purple/25"
+      class="mx-5 mt-4 relative overflow-hidden bg-gradient-to-br from-[var(--color-matcha-mid)] via-[var(--color-calor-green)] to-[var(--color-calor-dark)] rounded-[22px] p-4 flex gap-3 ios-press animate-fadeInUp delay-5 shadow-lg shadow-ios-purple/25"
       style="opacity:0"
     >
       <div class="absolute -bottom-8 -right-6 w-28 h-28 rounded-full bg-white/10 blur-xl pointer-events-none"/>

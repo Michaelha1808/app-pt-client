@@ -44,7 +44,7 @@ function inc() {
       :disabled="disabled || modelValue <= min"
       @click="dec"
     >
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70"><path d="M19 13H5v-2h14v2z"/></svg>
+      <svg viewBox="0 0 24 24" class="w-4 h-4" style="fill:var(--color-calor-green)"><path d="M19 13H5v-2h14v2z"/></svg>
     </button>
 
     <div class="min-w-[60px] text-center">
@@ -58,7 +58,7 @@ function inc() {
       :disabled="disabled || modelValue >= max"
       @click="inc"
     >
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <svg viewBox="0 0 24 24" class="w-4 h-4" style="fill:var(--color-calor-green)"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
     </button>
   </div>
 </template>

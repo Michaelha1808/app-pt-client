@@ -111,7 +111,7 @@ async function handleLogout() {
 
     <template v-else>
       <!-- ══ Curved gradient header ══ -->
-      <div class="relative overflow-hidden text-white text-center rounded-b-[34px] px-5 pt-10 pb-[92px] bg-gradient-to-b from-[#8bab77] to-[#5e7a54] animate-fadeInUp" style="opacity:0">
+      <div class="relative overflow-hidden text-white text-center rounded-b-[34px] px-5 pt-10 pb-[92px] bg-gradient-to-b from-[var(--color-matcha-mid)] to-[var(--color-calor-dark)] animate-fadeInUp" style="opacity:0">
         <div class="absolute -left-4 -top-2 text-[110px] leading-none opacity-[0.12] pointer-events-none select-none">🥑</div>
         <div class="relative inline-block">
           <div class="w-[84px] h-[84px] rounded-full bg-white/25 ring-[3px] ring-white/40 overflow-hidden flex items-center justify-center">
@@ -133,7 +133,7 @@ async function handleLogout() {
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
               <path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
             </svg>
-            <svg v-else viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70">
+            <svg v-else viewBox="0 0 24 24" class="w-4 h-4" style="fill:var(--color-calor-green)">
               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
           </button>
@@ -337,7 +337,7 @@ async function handleLogout() {
           <div v-if="!user?.email_verified" class="ios-separator mx-4"/>
           <NuxtLink to="/profile/edit" class="flex items-center gap-3 px-4 py-3.5 ios-press">
             <div class="w-8 h-8 rounded-[8px] bg-ios-blue/10 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#7c9a70"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4" style="fill:var(--color-calor-green)"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             </div>
             <span class="flex-1 text-left text-[15px] text-black">Chỉnh sửa hồ sơ</span>
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#b8c0ac"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>

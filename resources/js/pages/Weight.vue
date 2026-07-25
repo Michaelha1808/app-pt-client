@@ -49,7 +49,7 @@ const bmiLabelColor = computed(() => {
   if (!bmi.value) return '#8a9a7d'
   const v = bmi.value.value
   if (v < 18.5) return '#32ADE6'
-  if (v < 25)   return '#7c9a70'
+  if (v < 25)   return 'var(--color-calor-green)'
   if (v < 30)   return '#FF9500'
   return '#c96a6a'
 })
@@ -171,7 +171,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center gap-2 px-4 pt-2 pb-2">
       <button class="ios-press p-1 -ml-1" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="#5e7a54">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" style="fill:var(--color-calor-dark)">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
         </svg>
       </button>
@@ -188,7 +188,7 @@ onMounted(() => {
           <span class="font-display text-[64px] font-bold text-calor-deep leading-none tabular-nums">{{ currentWeight ?? '—' }}</span>
           <span class="font-display text-[18px] font-semibold text-ios-gray">kg</span>
         </div>
-        <span v-if="trend" class="inline-flex items-center gap-1 mt-1.5 rounded-full bg-[#eef5e9] text-calor-dark text-[12px] font-medium px-3 py-1">
+        <span v-if="trend" class="inline-flex items-center gap-1 mt-1.5 rounded-full bg-[var(--color-calor-light)] text-calor-dark text-[12px] font-medium px-3 py-1">
           {{ trend.delta_kg <= 0 ? '▼' : '▲' }} {{ Math.abs(trend.delta_kg) }} kg / {{ range }} ngày
         </span>
       </div>
@@ -201,7 +201,7 @@ onMounted(() => {
             <button
               v-for="r in [30, 90, 180] as WeightRange[]" :key="r"
               class="rounded-full text-[10px] font-semibold px-2.5 py-1 transition-colors"
-              :class="range === r ? 'bg-matcha text-white' : 'bg-[#eef1e8] text-ios-gray'"
+              :class="range === r ? 'bg-matcha text-white' : 'bg-[var(--color-line)] text-ios-gray'"
               @click="selectRange(r)"
             >{{ r }}N</button>
           </div>
@@ -213,14 +213,14 @@ onMounted(() => {
         <svg v-else :viewBox="`0 0 ${CHART_W} ${CHART_H}`" class="w-full h-32">
           <defs>
             <linearGradient id="wfill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#7c9a70" stop-opacity="0.28"/>
-              <stop offset="1" stop-color="#7c9a70" stop-opacity="0"/>
+              <stop offset="0" style="stop-color:var(--color-calor-green)" stop-opacity="0.28"/>
+              <stop offset="1" style="stop-color:var(--color-calor-green)" stop-opacity="0"/>
             </linearGradient>
           </defs>
           <path :d="areaPath" fill="url(#wfill)"/>
           <polyline :points="avgPoints" fill="none" stroke="#8a9a7d" stroke-width="1.5" stroke-opacity="0.4" stroke-linejoin="round" stroke-linecap="round"/>
-          <polyline :points="rawPoints" fill="none" stroke="#5e7a54" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-          <circle v-if="lastPoint" :cx="lastPoint.x" :cy="lastPoint.y" r="4.5" fill="#5e7a54"/>
+          <polyline :points="rawPoints" fill="none" style="stroke:var(--color-calor-dark)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle v-if="lastPoint" :cx="lastPoint.x" :cy="lastPoint.y" r="4.5" style="fill:var(--color-calor-dark)"/>
         </svg>
       </div>
 
@@ -231,7 +231,7 @@ onMounted(() => {
           <p class="text-[10px] text-ios-gray">BMI<template v-if="bmi"> · {{ bmi.label }}</template></p>
         </div>
         <div class="flex-1 bg-white rounded-[16px] py-3 text-center shadow-[0_6px_16px_rgba(60,74,52,0.05)]">
-          <p class="font-display text-[18px] font-bold tabular-nums" :style="`color:${trend && trend.weekly_rate_kg <= 0 ? '#5e7a54' : '#d98c5f'}`">{{ trend ? trend.weekly_rate_kg : '—' }}</p>
+          <p class="font-display text-[18px] font-bold tabular-nums" :style="`color:${trend && trend.weekly_rate_kg <= 0 ? 'var(--color-calor-dark)' : '#d98c5f'}`">{{ trend ? trend.weekly_rate_kg : '—' }}</p>
           <p class="text-[10px] text-ios-gray">kg / tuần</p>
         </div>
       </div>

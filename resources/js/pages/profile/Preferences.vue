@@ -103,7 +103,7 @@ onMounted(() => fetchAll(true))
     <!-- Header -->
     <div class="px-4 pt-2 pb-3 flex items-center gap-2">
       <button class="w-9 h-9 -ml-1 flex items-center justify-center ios-press" aria-label="Quay lại" @click="router.back()">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="#7c9a70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" style="stroke:var(--color-calor-green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </button>

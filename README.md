@@ -1,11 +1,27 @@
+<div align="center">
+  <img src="./public/logo/AVO-mascot-nobg.png" alt="AVO Mascot" width="150" />
+</div>
+
 # CaloEye – AI Nutrition Tracker
 
+> Xin chào! 👋 Tôi là AVO - trợ lý dinh dưỡng của bạn
+
 AI-powered nutrition tracking app. Snap a photo, get instant food analysis, personalized recommendations, and track your nutrition goals.
+
+**Với AVO, ăn uống khôn ngoan chưa bao giờ dễ dàng hơn! 🥗✨**
+
+## 🥑 Meet AVO
+
+**AVO** là nhân vật hướng dẫn của CaloEye - một cô gái tươi vui, luôn sẵn sàng giúp bạn đạt mục tiêu sức khoẻ! Cô ấy sẽ:
+- 💭 Tư vấn về dinh dưỡng
+- 🎯 Động viên bạn mỗi ngày
+- 📈 Theo dõi tiến độ của bạn
+- 😊 Làm cho việc ăn uống trở nên vui vẻ
 
 ## ✨ Features
 
 - 📸 **AI Food Recognition** – Analyze meals from photos
-- 🤖 **Personalized Advice** – AI nutrition chat advisor
+- 🤖 **AVO AI Advisor** – Chat với AVO để nhận lời khuyên
 - 📊 **Complete Tracking** – Calories, macros, weight, streak
 - 🔗 **Integrations** – Strava sync, push notifications
 - 🔐 **Secure Auth** – Email, OAuth, Passkey (WebAuthn)
@@ -102,3 +118,10 @@ MIT License
 
 - Email: fboyquangninh@gmail.com
 - Issues: GitHub Issues
+
+---
+
+<div align="center">
+  <p><strong>AVO nói:</strong> "Hãy bắt đầu ngay hôm nay! Mỗi bữa ăn thông minh là một bước tiến. 🌟"</p>
+  <p><em>Cùng AVO, bạn sẽ luôn khỏe mạnh và vui vẻ! 💚</em></p>
+</div>

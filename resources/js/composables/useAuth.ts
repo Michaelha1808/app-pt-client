@@ -23,6 +23,8 @@ export function useAuth() {
     try {
       localStorage.removeItem('caloeye:chat')
       localStorage.removeItem('guest_quota')
+      localStorage.removeItem('weight_reminder_dismissed_date')
+      localStorage.removeItem('email_verify_reminder_dismissed_date')
     } catch {}
   }
 

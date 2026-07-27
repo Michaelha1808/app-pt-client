@@ -18,6 +18,14 @@ export function useAuth() {
     return dest && !dest.startsWith('/auth') ? dest : '/home'
   }
 
+  // Reset chat history khi guest đăng nhập (để lấy lịch sử cá nhân hóa từ server)
+  function clearGuestChat(): void {
+    try {
+      localStorage.removeItem('caloeye:chat')
+      localStorage.removeItem('guest_quota')
+    } catch {}
+  }
+
   function extractError(err: unknown): string {
     const e = err as any
     // Sentinel thrown by api.ts after redirect — suppress
@@ -34,12 +42,14 @@ export function useAuth() {
 
   async function login(email: string, password: string): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, password } })
+    clearGuestChat()
     store.token = res.access_token; store.user = res.user; store.isGuest = false
     router.push(consumePendingRedirect())
   }
 
   async function register(payload: RegisterPayload): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: payload })
+    clearGuestChat()
     store.token = res.access_token; store.user = res.user; store.isGuest = false
     router.push(consumePendingRedirect())
   }
@@ -83,6 +93,7 @@ export function useAuth() {
   }
 
   async function handleOAuthCallback(oauthToken: string): Promise<void> {
+    clearGuestChat()
     store.token = oauthToken; store.isGuest = false
     const res = await apiFetch<{ user: User }>('/auth/me')
     store.user = res.user

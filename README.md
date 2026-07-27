@@ -1,32 +1,40 @@
 <div align="center">
-  <img src="./public/logo/AVO-mascot-nobg.png" alt="AVO Mascot" width="150" />
+  <img src="./public/svg/AVO-11-thich.svg" alt="AVO Mascot" width="180" />
+  <h1>CaloEye – AI Nutrition Tracker</h1>
+  <p><em>"Xin chào! 👋 Tôi là AVO - bạn đồng hành dinh dưỡng của bạn"</em></p>
 </div>
 
-# CaloEye – AI Nutrition Tracker
-
-> Xin chào! 👋 Tôi là AVO - trợ lý dinh dưỡng của bạn
+> ✨ **AVO nói:** "Ăn uống khôn ngoan chưa bao giờ dễ dàng hơn! Cùng tôi, bạn sẽ khỏe mạnh & vui vẻ mỗi ngày!"
 
 AI-powered nutrition tracking app. Snap a photo, get instant food analysis, personalized recommendations, and track your nutrition goals.
 
-**Với AVO, ăn uống khôn ngoan chưa bao giờ dễ dàng hơn! 🥗✨**
+---
 
-## 🥑 Meet AVO
+## 🥑 Gặp AVO - Trợ Lý Dinh Dưỡng AI Của Bạn
 
-**AVO** là nhân vật hướng dẫn của CaloEye - một cô gái tươi vui, luôn sẵn sàng giúp bạn đạt mục tiêu sức khoẻ! Cô ấy sẽ:
-- 💭 Tư vấn về dinh dưỡng
-- 🎯 Động viên bạn mỗi ngày
-- 📈 Theo dõi tiến độ của bạn
-- 😊 Làm cho việc ăn uống trở nên vui vẻ
+**AVO** không chỉ là một ứng dụng - cô ấy là **bạn đồng hành** của bạn trên hành trình sức khỏe! 💚
 
-## ✨ Features
+Cô ấy:
 
-- 📸 **AI Food Recognition** – Analyze meals from photos
-- 🤖 **AVO AI Advisor** – Chat với AVO để nhận lời khuyên
-- 📊 **Complete Tracking** – Calories, macros, weight, streak
-- 🔗 **Integrations** – Strava sync, push notifications
-- 🔐 **Secure Auth** – Email, OAuth, Passkey (WebAuthn)
-- 📱 **PWA Ready** – Works offline, mobile-first
-- 👥 **Guest Mode** – Try before signing up
+- 🧠 **Thông minh** – AI phân tích ảnh thức ăn, tính dinh dưỡng chính xác
+- 💬 **Đồng cảm** – Luôn sẵn sàng tư vấn & động viên bạn
+- 📊 **Chăm sóc** – Theo dõi từng bữa ăn, mỗi bước tiến của bạn
+- 😊 **Vui vẻ** – Làm cho việc ăn uống trở nên thú vị & bổ ích
+- 🎯 **Hiệu quả** – Giúp bạn đạt mục tiêu sức khỏe một cách tự nhiên
+
+> 💬 **AVO: "Hôm nay bạn chọn gì ăn? Hãy chụp ảnh cho tôi xem!"** 📸
+
+## ✨ AVO Giúp Bạn Làm Gì?
+
+| Tính Năng              | AVO Nói Gì?                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| 📸 **Phân tích ảnh**   | "Chỉ cần chụp ảnh, tôi sẽ nhận diện & tính toán dinh dưỡng!"             |
+| 💬 **Tư vấn AI**       | "Chat với tôi về dinh dưỡng, lên kế hoạch ăn, bất cứ điều gì!"           |
+| 📊 **Theo dõi**        | "Mỗi bữa ăn, mỗi kg giảm, mỗi ngày - tôi đều ghi nhớ!"                   |
+| 🏃 **Tích hợp Strava** | "Biết bạn tập luyện mạnh mẽ, sẽ tính calo đốt cho bạn!"                  |
+| 🔐 **Bảo mật**         | "Tài khoản bạn an toàn - Email, Google, Facebook, hay Passkey đều được!" |
+| 📱 **Mobile-first**    | "Bất kỳ lúc, bất kỳ nơi - AVO luôn ở bên cạnh bạn!"                      |
+| 👥 **Thử miễn phí**    | "Chưa quyết định? Hãy thử guest mode trước, không cần đăng ký!"          |
 
 ## 🛠️ Tech Stack
 
@@ -38,9 +46,12 @@ AI-powered nutrition tracking app. Snap a photo, get instant food analysis, pers
 - **AI**: Google Gemini API
 - **PWA**: Vite PWA Plugin
 
-## 🚀 Quick Start
+## 🚀 Bắt Đầu Với AVO
 
-### Install & Setup
+> 💬 **AVO:** "Muốn chạy ứng dụng để gặp tôi? Đơn giản lắm!"
+
+### 1️⃣ Cài Đặt
+
 ```bash
 # Backend
 composer install
@@ -51,21 +62,23 @@ php artisan migrate
 # Frontend
 npm install
 npm run dev
-
-# Or build for production
-npm run build
 ```
 
-### Start Servers
+### 2️⃣ Chạy Ứng Dụng
+
 ```bash
-# Terminal 1: PHP
+# Terminal 1: PHP Backend
 php artisan serve
 
-# Terminal 2: Vue dev
+# Terminal 2: Vue Frontend
 npm run dev
 ```
 
-Visit `http://localhost:8000`
+### 3️⃣ Gặp AVO! 🥑
+
+Mở browser: `http://localhost:8000` và chào tôi nào! 👋
+
+> 💚 **AVO:** "Mình đã sẵn sàng giúp bạn rồi!"
 
 ## 📁 Project Structure
 
@@ -102,6 +115,7 @@ See [DEPLOY.md](./DEPLOY.md) for full API docs.
 3. Push & create PR
 
 Code style:
+
 - Backend: PSR-12 (Laravel)
 - Frontend: ESLint + Prettier
 
@@ -114,14 +128,27 @@ npm run test
 
 MIT License
 
-## 👤 Contact
+## 💬 AVO Muốn Nói Với Bạn...
 
-- Email: fboyquangninh@gmail.com
-- Issues: GitHub Issues
+<div align="center">
+  
+  ### 🌟 "Hãy bắt đầu ngay hôm nay!"
+  
+  _"Mỗi bữa ăn thông minh là một bước tiến. Tôi sẽ ở đây, giúp bạn từng ngày._
+  
+  _Chụp ảnh thức ăn, nhắn tin cho tôi, hoặc kiểm tra tiến độ - dù lúc nào tôi cũng sẵn sàng!_
+  
+  _Cùng tôi, bạn sẽ không bao giờ cảm thấy một mình. Chúng ta sẽ cùng nhau làm nên điều kỳ diệu!"_ 💚
+  
+  #### ✨ Hãy thay đổi cuộc sống bạn - Ngay từ bây giờ!
+</div>
 
 ---
 
-<div align="center">
-  <p><strong>AVO nói:</strong> "Hãy bắt đầu ngay hôm nay! Mỗi bữa ăn thông minh là một bước tiến. 🌟"</p>
-  <p><em>Cùng AVO, bạn sẽ luôn khỏe mạnh và vui vẻ! 💚</em></p>
-</div>
+## 👤 Liên Hệ & Support
+
+- 📧 **Email**: fboyquangninh@gmail.com
+- 🐛 **Issues**: GitHub Issues
+- 💬 **Chat**: Gặp AVO trong app!
+
+> **AVO luôn ở đây cho bạn!** 🥑💚

@@ -34,6 +34,14 @@ const toast = useToast()
 const { loadPublicConfig, flag } = usePublicConfig()
 const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
 
+// Reset frequent items khi đăng nhập từ guest
+watch(() => store.isGuest, (isGuest) => {
+  if (!isGuest && store.user) {
+    frequentItems.value = []
+    fetchFrequent(currentMealSlot(), 4)
+  }
+})
+
 const quickAddTarget = ref<FrequentMealItem | null>(null)
 const quickAddSaving = ref(false)
 

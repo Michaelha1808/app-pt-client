@@ -153,6 +153,10 @@ export function usePasskey() {
 
     store.token = res.access_token
     store.isGuest = false
+    try {
+      localStorage.removeItem('caloeye:chat')
+      localStorage.removeItem('guest_quota')
+    } catch {}
     const me = await apiFetch<{ user: User }>('/auth/me')
     store.user = me.user
     registered.value = true

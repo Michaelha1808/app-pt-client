@@ -23,6 +23,14 @@ const { streaming, error, send } = useChat()
 // Flag admin: tắt chat AI → hiện empty-state, khoá ô nhập (vào thẳng URL vẫn thấy thông báo)
 const { loadPublicConfig, flag } = usePublicConfig()
 const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
+
+// Reset chat history khi đăng nhập từ guest (để load lịch sử cá nhân hóa từ server)
+watch(() => auth.isGuest, (isGuest) => {
+  if (!isGuest && auth.user) {
+    messages.value = initialMessages()
+    persist()
+  }
+})
 const { canUse, increment } = useGuestQuota()
 const { success, error: toastError } = useToast()
 const gateOpen = ref(false)

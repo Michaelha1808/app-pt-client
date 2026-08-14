@@ -7,6 +7,7 @@ use App\Models\MealPlan;
 use App\Services\MealPlanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlanController extends Controller
@@ -90,6 +91,13 @@ class PlanController extends Controller
                     }
                     $record->update(['reasoning' => $reasoning]);
                 } catch (\Throwable $e) {
+                    Log::error('Tạo kế hoạch thất bại', [
+                        'user_id' => $user->id,
+                        'scope'   => $scope,
+                        'error'   => $e->getMessage(),
+                    ]);
+                    report($e);
+
                     echo 'data: ' . json_encode(['type' => 'error', 'message' => 'Không thể tạo kế hoạch. Vui lòng thử lại.']) . "\n\n";
                     flush();
                 }

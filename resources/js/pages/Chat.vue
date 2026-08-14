@@ -19,7 +19,7 @@ const MEMORY_KIND_LABEL: Record<PreferenceKind, string> = {
 }
 
 const auth = useAuthStore()
-const { streaming, send } = useChat()
+const { streaming, error, send } = useChat()
 // Flag admin: tắt chat AI → hiện empty-state, khoá ô nhập (vào thẳng URL vẫn thấy thông báo)
 const { loadPublicConfig, flag } = usePublicConfig()
 const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
@@ -205,7 +205,7 @@ async function sendMessage() {
 
   isTyping.value = false
   if (aiIndex === -1) {
-    aiMsg.text = 'Xin lỗi, mình chưa thể phản hồi lúc này. Bạn thử lại nhé! 🙏'
+    aiMsg.text = error.value ?? 'Xin lỗi, mình chưa thể phản hồi lúc này. Bạn thử lại nhé! 🙏'
     messages.value.push(aiMsg)
   }
   persist()

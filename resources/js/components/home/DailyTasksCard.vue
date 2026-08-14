@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useStreak, type MealStreakResult } from '@/composables/useStreak'
+import { useToast } from '@/composables/useToast'
 import { useWater } from '@/composables/useWater'
 import { apiFetch } from '@/utils/api'
 import { navigateTo } from '@/utils/navigate'
@@ -9,6 +11,8 @@ const props = defineProps<{
 }>()
 
 const { totalMl, isCompleted: waterCompleted, percentage: waterPct, logWater } = useWater()
+const { onMealLogged } = useStreak()
+const { success, error: toastError } = useToast()
 
 const QUICK_AMOUNTS = [150, 250, 500]
 
@@ -33,6 +37,10 @@ const workout = ref<WorkoutTask | null>(null)
 const meals = ref<MealTask[]>([])
 const hasPlan = ref(true)   // mặc định true để tránh CTA nhấp nháy trước khi tải xong
 
+// Slot đang "thực hiện" (đang gọi API) — disable nút tránh bấm trùng khi đang chờ.
+const completingSlot = ref<string | null>(null)
+const completingWorkout = ref(false)
+
 onMounted(async () => {
   try {
     const r = await apiFetch<{ has_plan: boolean; workout: WorkoutTask | null; meals: MealTask[] }>('/home/daily-tasks')
@@ -43,6 +51,44 @@ onMounted(async () => {
     // Không tải được kế hoạch → giữ task mặc định, không chặn UI
   }
 })
+
+// Bấm "Thực hiện" bên cạnh 1 bữa: ghi luôn MealLog đúng như kế hoạch — không cần chờ
+// nhận diện theo khung giờ như trước.
+async function completeMeal(m: MealTask) {
+  if (m.done || completingSlot.value) return
+  completingSlot.value = m.slot
+  try {
+    const res = await apiFetch<{ streak: MealStreakResult }>('/home/daily-tasks/complete-meal', {
+      method: 'POST',
+      body: { slot: m.slot },
+    })
+    m.done = true
+    onMealLogged(res.streak)
+    success(`Đã ghi ${SLOT_LABEL[m.slot] ?? m.name}`)
+  } catch (e: any) {
+    toastError(e?.data?.message ?? 'Không thể ghi lại bữa ăn này.')
+  } finally {
+    completingSlot.value = null
+  }
+}
+
+// Bấm "Thực hiện" buổi tập: ghi luôn HealthActivity thủ công đúng như kế hoạch.
+async function completeWorkoutTask() {
+  if (!workout.value || workout.value.done || completingWorkout.value) return
+  completingWorkout.value = true
+  try {
+    const res = await apiFetch<{ streak: MealStreakResult }>('/home/daily-tasks/complete-workout', {
+      method: 'POST',
+    })
+    workout.value.done = true
+    onMealLogged(res.streak)
+    success('Đã ghi buổi tập')
+  } catch (e: any) {
+    toastError(e?.data?.message ?? 'Không thể ghi lại buổi tập này.')
+  } finally {
+    completingWorkout.value = false
+  }
+}
 
 const workoutSubtitle = computed(() => {
   const w = workout.value
@@ -105,7 +151,13 @@ const allDone = computed(() =>
           <p class="flex-1 min-w-0 text-[13px] truncate" :class="m.done ? 'line-through text-ios-gray3' : 'text-black'">
             {{ m.name }}
           </p>
-          <span v-if="m.calories" class="text-[11px] text-ios-gray3 flex-shrink-0">{{ m.calories }} kcal</span>
+          <span v-if="m.calories" class="text-[11px] text-ios-gray3 flex-shrink-0 mr-1">{{ m.calories }} kcal</span>
+          <button
+            v-if="!m.done"
+            class="flex-shrink-0 px-2.5 py-1 rounded-full bg-calor-green/10 text-calor-green text-[11px] font-semibold ios-press disabled:opacity-50"
+            :disabled="completingSlot === m.slot"
+            @click="completeMeal(m)"
+          >{{ completingSlot === m.slot ? 'Đang ghi...' : 'Thực hiện' }}</button>
         </div>
       </div>
     </template>
@@ -174,7 +226,12 @@ const allDone = computed(() =>
           <p class="text-[14px] font-medium text-black truncate">{{ workout.name }}</p>
           <p class="text-[12px] text-ios-gray">{{ workout.done ? 'Đã hoàn thành' : workoutSubtitle }}</p>
         </div>
-        <span v-if="!workout.done" class="text-[12px] text-ios-gray3">🔥</span>
+        <button
+          v-if="!workout.done"
+          class="flex-shrink-0 px-2.5 py-1 rounded-full bg-calor-green/10 text-calor-green text-[11px] font-semibold ios-press disabled:opacity-50"
+          :disabled="completingWorkout"
+          @click="completeWorkoutTask"
+        >{{ completingWorkout ? 'Đang ghi...' : 'Thực hiện' }}</button>
       </div>
     </template>
 

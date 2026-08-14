@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\HealthActivity;
 use App\Models\MealPlan;
+use App\Services\Health\HealthActivityWriter;
+use App\Services\StreakService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class DailyTaskController extends Controller
 {
@@ -16,6 +19,15 @@ class DailyTaskController extends Controller
         1 => 'Thứ 2', 2 => 'Thứ 3', 3 => 'Thứ 4', 4 => 'Thứ 5',
         5 => 'Thứ 6', 6 => 'Thứ 7', 7 => 'Chủ nhật',
     ];
+
+    /** Map loại bài tập trong kế hoạch AI (cardio/strength/flexibility) sang key MET (config('health.met')). */
+    private const WORKOUT_TYPE_TO_MET = [
+        'cardio'      => 'run',
+        'strength'    => 'workout',
+        'flexibility' => 'yoga',
+    ];
+
+    private const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'];
 
     /**
      * Nhiệm vụ ăn uống & tập luyện HÔM NAY. Ưu tiên kế hoạch daily riêng cho hôm nay
@@ -31,36 +43,10 @@ class DailyTaskController extends Controller
         $user  = $request->user();
         $today = now(config('app.timezone'));
 
-        // Kế hoạch daily đã thiết lập RIÊNG cho hôm nay (từ chat "Thiết lập kế hoạch ăn hôm nay").
-        $todayPlan = MealPlan::where('user_id', $user->id)
-            ->where('scope', 'daily')
-            ->whereDate('target_date', $today->toDateString())
-            ->first();
-
-        $weeklyToday = $this->weeklyDayForToday($user->id, $today);
-
-        $w       = $weeklyToday['day']['workout'] ?? null;
-        $hasPlan = $weeklyToday['exists'];
-
-        // Fallback workout: plan hôm nay → plan daily mới nhất.
-        if (!$w) {
-            $daily   = $todayPlan ?? MealPlan::where('user_id', $user->id)
-                ->where('scope', 'daily')
-                ->latest('target_date')
-                ->first();
-            $hasPlan = $hasPlan || (bool) $daily;
-            $w       = $daily?->plan['workouts'][0] ?? null;
-        }
-
-        // Fallback thứ 3: không daily, không weekly → buổi tập theo thứ trong kế hoạch THÁNG.
-        if (!$w) {
-            $w2      = $this->workoutFromMonthly($user->id, $today);
-            $hasPlan = $hasPlan || $w2['exists'];
-            $w       = $w2['workout'];
-        }
+        $tasks = $this->resolveTodayTasks($user->id, $today);
 
         $workout = null;
-        if ($w) {
+        if ($w = $tasks['workout']) {
             $doneToday = HealthActivity::where('user_id', $user->id)
                 ->whereDate('started_at', $today->toDateString())
                 ->exists();
@@ -73,18 +59,138 @@ class DailyTaskController extends Controller
             ];
         }
 
-        $meals = $todayPlan?->plan['meals'] ?? $weeklyToday['day']['meals'] ?? null;
-
         return response()->json([
-            'has_plan' => $hasPlan,
+            'has_plan' => $tasks['has_plan'],
             'workout'  => $workout,
-            'meals'    => $this->mealTasks($user->id, $meals, $today),
+            'meals'    => $this->mealTasks($user->id, $tasks['meals'], $today),
         ]);
     }
 
     /**
+     * "Thực hiện" nhiệm vụ bữa ăn: ghi luôn 1 MealLog đúng như bữa trong kế hoạch hôm nay —
+     * không cần chờ nhận diện theo khung giờ như trước. Dùng khi user ăn đúng gợi ý của AI.
+     */
+    public function completeMeal(Request $request, StreakService $streakService): JsonResponse
+    {
+        $data = $request->validate([
+            'slot' => ['required', 'string', Rule::in(self::MEAL_SLOTS)],
+        ]);
+
+        $user  = $request->user();
+        $today = now(config('app.timezone'));
+
+        $meals = $this->resolveTodayTasks($user->id, $today)['meals'] ?? [];
+        $meal  = collect($meals)->firstWhere('slot', $data['slot']);
+
+        abort_if(!$meal, 422, 'Không tìm thấy bữa ăn này trong kế hoạch hôm nay.');
+
+        $log = $user->mealLogs()->create([
+            'food_name' => $meal['name'] ?? ($meal['items'][0] ?? 'Bữa ăn theo kế hoạch'),
+            'serving'   => !empty($meal['items']) ? implode(', ', $meal['items']) : null,
+            'calories'  => (int) ($meal['calories'] ?? 0),
+            'protein'   => (int) ($meal['protein'] ?? 0),
+            'carbs'     => (int) ($meal['carbs'] ?? 0),
+            'fat'       => (int) ($meal['fat'] ?? 0),
+            'sodium'    => 0,
+            'logged_at' => $today,
+        ]);
+
+        $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
+
+        return response()->json([
+            'message' => 'Đã ghi lại bữa ăn theo kế hoạch',
+            'id'      => $log->id,
+            'streak'  => $streak,
+        ], 201);
+    }
+
+    /**
+     * "Thực hiện" nhiệm vụ tập luyện: ghi luôn 1 HealthActivity thủ công đúng như buổi tập
+     * trong kế hoạch hôm nay (daily/weekly/monthly) — không cần chờ Strava/log tay riêng.
+     */
+    public function completeWorkout(Request $request, StreakService $streakService): JsonResponse
+    {
+        $user  = $request->user();
+        $today = now(config('app.timezone'));
+
+        $workout = $this->resolveTodayTasks($user->id, $today)['workout'];
+        abort_if(!$workout, 422, 'Không tìm thấy buổi tập nào trong kế hoạch hôm nay.');
+
+        $type            = self::WORKOUT_TYPE_TO_MET[$workout['type'] ?? ''] ?? 'other';
+        $durationMinutes = (int) ($workout['duration_min'] ?? 30);
+        $durationSeconds = max(60, $durationMinutes * 60);
+        $calories        = isset($workout['est_calories_burned'])
+            ? (int) $workout['est_calories_burned']
+            : HealthActivityWriter::estimateCalories($type, $durationSeconds, $user->weight_kg);
+
+        $activity = $user->healthActivities()->create([
+            'provider'         => 'manual',
+            'source'           => 'manual',
+            'type'             => $type,
+            'name'             => $workout['name'] ?? 'Buổi tập theo kế hoạch',
+            'started_at'       => $today,
+            'duration_seconds' => $durationSeconds,
+            'calories'         => $calories,
+        ]);
+
+        $streak = $streakService->recordActivity($user->load('streakMilestones', 'notificationSubscriptions'));
+
+        return response()->json([
+            'message' => 'Đã ghi lại buổi tập theo kế hoạch',
+            'id'      => $activity->id,
+            'streak'  => $streak,
+        ], 201);
+    }
+
+    /**
+     * Bữa ăn & buổi tập của HÔM NAY từ bất kỳ kế hoạch nào đang active — dùng chung cho
+     * index() (hiển thị) và completeMeal()/completeWorkout() (thực hiện).
+     *
+     * @return array{has_plan: bool, meals: ?array<int, array<string, mixed>>, workout: ?array<string, mixed>}
+     */
+    private function resolveTodayTasks(int $userId, Carbon $today): array
+    {
+        // Kế hoạch daily đã thiết lập RIÊNG cho hôm nay (từ chat "Thiết lập kế hoạch ăn hôm nay").
+        $todayPlan = MealPlan::where('user_id', $userId)
+            ->where('scope', 'daily')
+            ->whereDate('target_date', $today->toDateString())
+            ->first();
+
+        $weeklyToday = $this->weeklyDayForToday($userId, $today);
+
+        $meals       = $todayPlan?->plan['meals'] ?? $weeklyToday['day']['meals'] ?? null;
+        $mealsExists = (bool) $todayPlan || $weeklyToday['exists'];
+
+        $workout = $weeklyToday['day']['workout'] ?? null;
+        $hasPlan = $weeklyToday['exists'];
+
+        // Fallback workout: plan hôm nay → plan daily mới nhất.
+        if (!$workout) {
+            $daily   = $todayPlan ?? MealPlan::where('user_id', $userId)
+                ->where('scope', 'daily')
+                ->latest('target_date')
+                ->first();
+            $hasPlan = $hasPlan || (bool) $daily;
+            $workout = $daily?->plan['workouts'][0] ?? null;
+        }
+
+        // Fallback thứ 3: không daily, không weekly → buổi tập theo thứ trong kế hoạch THÁNG.
+        if (!$workout) {
+            $monthly = $this->workoutFromMonthly($userId, $today);
+            $hasPlan = $hasPlan || $monthly['exists'];
+            $workout = $monthly['workout'];
+        }
+
+        return [
+            'has_plan' => $mealsExists || $hasPlan,
+            'meals'    => $meals,
+            'workout'  => $workout,
+        ];
+    }
+
+    /**
      * Các bữa trong kế hoạch hôm nay (daily riêng hoặc đúng ngày trong kế hoạch tuần) →
-     * nhiệm vụ. done = đã có bữa ăn ghi nhận trong khung giờ của slot.
+     * nhiệm vụ. done = đã có bữa ăn ghi nhận trong khung giờ của slot (hoặc "thực hiện" thủ công).
      *
      * @param  ?array<int,array<string,mixed>>  $meals
      * @return array<int,array{slot:string,name:string,calories:?int,done:bool}>

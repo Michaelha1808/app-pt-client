@@ -77,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Nhiệm vụ tập luyện hôm nay theo kế hoạch AI
     Route::get('/home/daily-tasks', [\App\Http\Controllers\Api\V1\DailyTaskController::class, 'index']);
+    // "Thực hiện" nhiệm vụ: ghi luôn log ăn/tập đúng như kế hoạch, không cần chờ nhận diện theo giờ.
+    Route::post('/home/daily-tasks/complete-meal', [\App\Http\Controllers\Api\V1\DailyTaskController::class, 'completeMeal']);
+    Route::post('/home/daily-tasks/complete-workout', [\App\Http\Controllers\Api\V1\DailyTaskController::class, 'completeWorkout']);
 });
 
 // Kế hoạch ăn uống & tập luyện (AI) — auth required

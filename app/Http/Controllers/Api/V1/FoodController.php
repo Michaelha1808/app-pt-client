@@ -504,7 +504,10 @@ class FoodController extends Controller
         $entries = $entries->sortByDesc('at')->values();
 
         // Tổng hợp theo từng ngày trong khoảng (cho biểu đồ + strip ngày).
-        $dayCount = $from->diffInDays($to) + 1;
+        // (int) bắt buộc: diffInDays() giữa startOfDay và endOfDay cùng 1 ngày trả về
+        // float xấp xỉ 1 (vd 0.999999...) thay vì 0 nguyên — cộng 1 rồi đưa vào range()
+        // làm PHP báo lỗi "step must be less than range" ngay khi lọc đúng 1 ngày (mode=day).
+        $dayCount = (int) $from->diffInDays($to) + 1;
         $days = collect(range(0, $dayCount - 1))->map(function ($i) use ($from, $meals, $activities) {
             $day  = $from->copy()->addDays($i);
             $dstr = $day->toDateString();

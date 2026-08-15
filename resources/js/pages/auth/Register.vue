@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePublicConfig } from '@/composables/usePublicConfig'
+import type { PreferenceKind } from '@/types/preference'
 
 const { register, loginWithGoogle, loginWithFacebook, extractError } = useAuth()
 const { config, loadPublicConfig, flag } = usePublicConfig()
@@ -12,7 +13,7 @@ const registrationClosed = computed(() => config.value?.features.registration_op
 onMounted(loadPublicConfig)
 
 const step = ref(1)
-const totalSteps = 3
+const totalSteps = 4
 const skippedPersonalInfo = ref(false)
 
 // Step 1
@@ -39,12 +40,58 @@ const errors = reactive({
   name: '', birthYear: '', gender: '', height: '', weight: '',
 })
 
-const stepTitles = ['Tạo tài khoản', 'Thông tin cá nhân', 'Mục tiêu của bạn']
+const stepTitles = ['Tạo tài khoản', 'Thông tin cá nhân', 'Mục tiêu của bạn', 'Sở thích ăn uống']
 const stepSubtitles = [
   'Nhập email và mật khẩu để bắt đầu',
   'Giúp AI tính toán chính xác hơn',
   'Thiết lập chỉ tiêu calo hàng ngày',
+  'Chọn nhanh để AVO gợi ý đúng gu hơn — có thể bỏ qua',
 ]
+
+// Step 4 — quick-pick, không bắt buộc. Lưu qua endpoint /preferences có sẵn
+// (giống trang /profile/preferences) — chỉ chạy được vì register() ở bước 3
+// đã tạo phiên đăng nhập (token), nên gọi ngay được API cần auth.
+interface PrefGroup { key: PreferenceKind; title: string; icon: string; options: string[] }
+const prefGroups: PrefGroup[] = [
+  { key: 'allergy', title: 'Dị ứng / kiêng tuyệt đối', icon: '🚫', options: ['Hải sản', 'Tôm', 'Đậu phộng', 'Sữa', 'Trứng', 'Gluten'] },
+  { key: 'diet', title: 'Chế độ ăn', icon: '🥗', options: ['Ăn chay', 'Keto', 'Low-carb', 'Giảm cân', 'Tăng cơ'] },
+  { key: 'dislike', title: 'Không thích ăn', icon: '👎', options: ['Nội tạng', 'Rau mùi', 'Mướp đắng', 'Sầu riêng'] },
+  { key: 'like', title: 'Món khoái khẩu', icon: '❤️', options: ['Phở', 'Bún bò', 'Cơm gà', 'Rau xanh', 'Ức gà'] },
+  { key: 'habit', title: 'Thói quen ăn uống', icon: '⏰', options: ['Hay bỏ bữa sáng', 'Ăn khuya', 'Ăn nhanh', 'Uống ít nước'] },
+]
+
+const selectedPrefs = ref<Set<string>>(new Set())
+const prefKey = (kind: string, label: string) => `${kind}|${label}`
+const isPrefSelected = (kind: PreferenceKind, label: string) => selectedPrefs.value.has(prefKey(kind, label))
+
+function togglePref(kind: PreferenceKind, label: string) {
+  const key = prefKey(kind, label)
+  const next = new Set(selectedPrefs.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  selectedPrefs.value = next
+}
+
+async function finishPreferences() {
+  loading.value = true
+  try {
+    if (selectedPrefs.value.size) {
+      const { add } = usePreferences()
+      const entries = Array.from(selectedPrefs.value).map((k) => {
+        const [kind, label] = k.split('|') as [PreferenceKind, string]
+        return { kind, label }
+      })
+      await Promise.all(entries.map(e => add(e.kind, e.label)))
+    }
+  } finally {
+    loading.value = false
+    navigateTo('/home')
+  }
+}
+
+function skipPreferences() {
+  navigateTo('/home')
+}
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -122,37 +169,55 @@ function skipStep2() {
 }
 
 async function nextStep() {
-  if (step.value === 1 && !validateStep1()) return
-  if (step.value === 2 && !validateStep2()) return
-
-  if (step.value < totalSteps) {
+  if (step.value === 1) {
+    if (!validateStep1()) return
     step.value++
     return
   }
 
-  loading.value = true
-  formError.value = ''
-  try {
-    await register({
-      email: email.value,
-      password: password.value,
-      name: name.value.trim(),
-      birth_year: Number(birthYear.value),
-      gender: gender.value as 'male' | 'female' | 'other',
-      height_cm: Number(height.value),
-      weight_kg: Number(weight.value),
-      calorie_goal: Number(calorieGoal.value),
-      morning_notify: morningTime.value,
-      evening_notify: eveningTime.value,
-    })
-  } catch (err) {
-    formError.value = extractError(err)
-  } finally {
-    loading.value = false
+  if (step.value === 2) {
+    if (!validateStep2()) return
+    step.value++
+    return
   }
+
+  if (step.value === 3) {
+    // Tạo tài khoản ngay đây (không redirect) — bước 4 cần phiên đăng nhập
+    // để lưu sở thích qua endpoint /preferences.
+    loading.value = true
+    formError.value = ''
+    try {
+      await register({
+        email: email.value,
+        password: password.value,
+        name: name.value.trim(),
+        birth_year: Number(birthYear.value),
+        gender: gender.value as 'male' | 'female' | 'other',
+        height_cm: Number(height.value),
+        weight_kg: Number(weight.value),
+        calorie_goal: Number(calorieGoal.value),
+        morning_notify: morningTime.value,
+        evening_notify: eveningTime.value,
+      }, { redirect: false })
+      step.value++
+    } catch (err) {
+      formError.value = extractError(err)
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
+  // Step 4
+  await finishPreferences()
 }
 
 function prevStep() {
+  // Bước 4: tài khoản đã tạo xong, không còn "quay lại" thật sự — coi như bỏ qua.
+  if (step.value === 4) {
+    skipPreferences()
+    return
+  }
   if (step.value > 1) step.value--
   else navigateTo('/auth/login')
 }
@@ -192,11 +257,21 @@ const caloriePresets = [
         />
       </div>
 
-      <!-- Skip button (step 2 only) -->
+      <!-- Skip button (step 2 personal info, step 4 preferences) -->
       <button
         v-if="step === 2"
         class="h-9 px-2 flex items-center gap-1 ios-press whitespace-nowrap"
         @click="skipStep2"
+      >
+        <span class="text-[14px] text-ios-blue font-semibold">Bỏ qua</span>
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" style="stroke:var(--color-calor-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 6l6 6-6 6"/>
+        </svg>
+      </button>
+      <button
+        v-else-if="step === 4"
+        class="h-9 px-2 flex items-center gap-1 ios-press whitespace-nowrap"
+        @click="skipPreferences"
       >
         <span class="text-[14px] text-ios-blue font-semibold">Bỏ qua</span>
         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" style="stroke:var(--color-calor-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -470,6 +545,26 @@ const caloriePresets = [
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Step 4: Preferences (bỏ qua được, chỉnh sửa lại sau trong Hồ sơ) -->
+    <div v-if="step === 4" class="px-6 flex flex-col gap-4 animate-fadeInUp delay-1" style="opacity:0">
+      <div v-for="group in prefGroups" :key="group.key" class="flex flex-col gap-2">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide px-1">{{ group.icon }} {{ group.title }}</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="opt in group.options" :key="opt"
+            type="button"
+            class="px-3.5 py-2 rounded-full text-[13px] font-medium border-2 ios-press transition-colors"
+            :class="isPrefSelected(group.key, opt) ? 'bg-ios-blue border-ios-blue text-white' : 'bg-ios-gray6 border-transparent text-black'"
+            @click="togglePref(group.key, opt)"
+          >{{ opt }}</button>
+        </div>
+      </div>
+
+      <p class="text-[12px] text-ios-gray text-center mt-1">
+        Có thể chỉnh sửa đầy đủ sau trong Hồ sơ &gt; Sở thích ăn uống
+      </p>
     </div>
 
     <!-- CTA -->

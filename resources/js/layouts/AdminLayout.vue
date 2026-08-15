@@ -14,7 +14,7 @@ import {
 import {
   LayoutDashboard, Users, Bell, UtensilsCrossed, Database,
   Settings, ScrollText, LogOut, Menu, ChevronDown, ChevronRight,
-  Smartphone,
+  Smartphone, MessageCircle,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -47,8 +47,9 @@ const navGroups = [
   {
     label: 'Nội dung & AI',
     items: [
-      { to: '/admin/dishes',  label: 'Thư viện món', icon: UtensilsCrossed },
-      { to: '/admin/dataset', label: 'Dataset AI',   icon: Database },
+      { to: '/admin/dishes',    label: 'Thư viện món',    icon: UtensilsCrossed },
+      { to: '/admin/dataset',   label: 'Dataset AI',      icon: Database },
+      { to: '/admin/chat-logs', label: 'Nhật ký Chat AI', icon: MessageCircle },
     ],
   },
   {

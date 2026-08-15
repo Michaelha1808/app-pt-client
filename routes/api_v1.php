@@ -189,6 +189,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
     Route::get('/audit-logs', [\App\Http\Controllers\Api\V1\Admin\AuditLogController::class, 'index']);
 
+    // Nhật ký prompt chatbot tư vấn: câu hỏi user + prompt cá nhân hóa cuối cùng gửi Gemini
+    Route::get('/chat-logs', [\App\Http\Controllers\Api\V1\Admin\ChatLogController::class, 'index']);
+    Route::get('/chat-logs/{chatLog}', [\App\Http\Controllers\Api\V1\Admin\ChatLogController::class, 'show']);
+
     // Quan trắc hệ thống: info + health check, xoá cache, xem log
     Route::get('/system', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'info']);
     Route::post('/system/cache-clear', [\App\Http\Controllers\Api\V1\Admin\SystemController::class, 'clearCache']);

@@ -37,6 +37,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/admin/notifications', component: () => import('@/pages/admin/Notifications.vue'), meta: { layout: 'admin', middleware: 'admin' } },
   { path: '/admin/dishes', component: () => import('@/pages/admin/Dishes.vue'), meta: { layout: 'admin', middleware: 'admin' } },
   { path: '/admin/dataset', component: () => import('@/pages/admin/Dataset.vue'), meta: { layout: 'admin', middleware: 'admin' } },
+  { path: '/admin/chat-logs', component: () => import('@/pages/admin/ChatLogs.vue'), meta: { layout: 'admin', middleware: 'admin' } },
   { path: '/admin/settings', component: () => import('@/pages/admin/Settings.vue'), meta: { layout: 'admin', middleware: 'admin' } },
   { path: '/admin/audit-logs', component: () => import('@/pages/admin/AuditLogs.vue'), meta: { layout: 'admin', middleware: 'admin' } },
 ]

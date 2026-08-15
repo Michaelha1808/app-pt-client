@@ -273,3 +273,26 @@ export interface DatasetDetail {
   created_at: string
   image: string | null   // data URI base64
 }
+
+// ── Nhật ký prompt chatbot tư vấn ──
+export interface ChatLogRow {
+  id: number
+  user: { id: number; name: string; email: string } | null
+  user_message: string
+  reply: string | null
+  model: string | null
+  in_scope: boolean
+  has_prompt: boolean
+  created_at: string
+}
+
+export interface ChatLogDetail {
+  id: number
+  user: { id: number; name: string; email: string } | null
+  user_message: string
+  final_prompt: string | null   // prompt cá nhân hóa cuối cùng đã gửi Gemini
+  reply: string | null
+  model: string | null
+  in_scope: boolean
+  created_at: string
+}

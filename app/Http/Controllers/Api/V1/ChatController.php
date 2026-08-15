@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatPromptLog;
 use App\Services\ChatService;
 use App\Services\MealPlanService;
 use App\Services\PreferenceService;
@@ -34,26 +35,30 @@ class ChatController extends Controller
 
         UsageTracker::record('chat', $user?->id);
 
+        $lastUserMessage = collect($messages)->reverse()
+            ->first(fn ($m) => ($m['role'] ?? 'user') === 'user')['text'] ?? '';
+
         return response()->stream(
-            function () use ($service, $preferences, $user, $messages) {
+            function () use ($service, $preferences, $user, $messages, $lastUserMessage) {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
 
-                $inScope = true;
-                $reply   = '';
+                $inScope      = true;
+                $reply        = '';
+                $systemPrompt = null;
 
                 try {
                     // Cổng phân loại: chặn sớm yêu cầu ngoài phạm vi dinh dưỡng/tập luyện
                     if (!$service->isInScope($messages)) {
                         $inScope = false;
-                        echo 'data: ' . json_encode([
-                            'type'  => 'text',
-                            'delta' => 'Mình là trợ lý dinh dưỡng của CaloEye nên chỉ hỗ trợ về ăn uống, dinh dưỡng và tập luyện thôi nhé 🥗 Bạn muốn mình gợi ý kế hoạch ăn uống cho ngày mai không?',
-                        ]) . "\n\n";
+                        $reply   = 'Mình là trợ lý dinh dưỡng của CaloEye nên chỉ hỗ trợ về ăn uống, dinh dưỡng và tập luyện thôi nhé 🥗 Bạn muốn mình gợi ý kế hoạch ăn uống cho ngày mai không?';
+                        echo 'data: ' . json_encode(['type' => 'text', 'delta' => $reply]) . "\n\n";
                         flush();
                     } else {
-                        foreach ($service->streamReply($user, $messages) as $delta) {
+                        // Build prompt cá nhân hóa TRƯỚC khi gọi Gemini, để log lại đúng nội dung đã gửi.
+                        $systemPrompt = $service->buildSystemPrompt($user);
+                        foreach ($service->streamReply($user, $messages, $systemPrompt) as $delta) {
                             $reply .= $delta;
                             echo 'data: ' . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
                             flush();
@@ -67,11 +72,23 @@ class ChatController extends Controller
                     flush();
                 }
 
+                // Lưu lại câu hỏi + prompt cá nhân hóa cuối cùng đã gửi Gemini (phục vụ đối chiếu/kiểm tra).
+                try {
+                    ChatPromptLog::create([
+                        'user_id'      => $user?->id,
+                        'user_message' => $lastUserMessage,
+                        'final_prompt' => $systemPrompt,
+                        'reply'        => $reply,
+                        'model'        => $service->modelName(),
+                        'in_scope'     => $inScope,
+                    ]);
+                } catch (\Throwable $e) {
+                    report($e); // log lỗi không được làm hỏng chat
+                }
+
                 // Gợi ý nút hành động theo ngữ cảnh (chỉ user đăng nhập — hành động cần dữ liệu cá nhân).
                 if ($user && $inScope && $reply !== '') {
-                    $lastUser = collect($messages)->reverse()
-                        ->first(fn ($m) => ($m['role'] ?? 'user') === 'user')['text'] ?? '';
-                    $actions = $service->suggestActions($reply, $lastUser);
+                    $actions = $service->suggestActions($reply, $lastUserMessage);
                     if ($actions !== []) {
                         echo 'data: ' . json_encode(['type' => 'actions', 'actions' => $actions]) . "\n\n";
                         flush();
@@ -82,11 +99,8 @@ class ChatController extends Controller
                 // Chỉ chạy khi đăng nhập, câu trong phạm vi, và qua cổng heuristic rẻ.
                 if ($user && $inScope) {
                     try {
-                        $lastUser = collect($messages)->reverse()
-                            ->first(fn ($m) => ($m['role'] ?? 'user') === 'user')['text'] ?? '';
-
-                        if ($preferences->shouldExtract($lastUser)) {
-                            $result = $preferences->extractFromTurn($user, $lastUser);
+                        if ($preferences->shouldExtract($lastUserMessage)) {
+                            $result = $preferences->extractFromTurn($user, $lastUserMessage);
                             if ($result['saved'] !== [] || $result['conflicts'] !== []) {
                                 echo 'data: ' . json_encode([
                                     'type'      => 'memory',

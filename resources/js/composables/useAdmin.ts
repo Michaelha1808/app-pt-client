@@ -5,6 +5,7 @@ import type {
   SystemInfo, SystemLogs, CacheTarget, FailedJobRow,
   NotificationSegment, NotificationPreview, NotificationCampaign,
   DishRow, DishInput, DatasetStats, DatasetRow, DatasetDetail,
+  ChatLogRow, ChatLogDetail,
 } from '@/types/admin'
 
 function qs(params: Record<string, unknown>): string {
@@ -116,6 +117,13 @@ export function useAdmin() {
   const deleteDatasetSample = (id: number) =>
     apiFetch<{ message: string }>(`/admin/dataset/${id}`, { method: 'DELETE' })
 
+  // ── Nhật ký prompt chatbot tư vấn ──
+  const fetchChatLogs = (params: Record<string, unknown> = {}) =>
+    apiFetch<Paginated<ChatLogRow>>(`/admin/chat-logs${qs(params)}`)
+
+  const fetchChatLog = (id: number) =>
+    apiFetch<ChatLogDetail>(`/admin/chat-logs/${id}`)
+
   return {
     fetchStats, fetchUsers, fetchUser, updateUser, suspendUser, restoreUser,
     resetUserPassword, deleteUser, revokeUserSession, fetchSettings, saveSettings, testService, fetchAuditLogs,
@@ -124,5 +132,6 @@ export function useAdmin() {
     previewNotification, sendNotification, fetchCampaigns,
     fetchDishes, createDish, updateDish, deleteDish,
     fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample,
+    fetchChatLogs, fetchChatLog,
   }
 }

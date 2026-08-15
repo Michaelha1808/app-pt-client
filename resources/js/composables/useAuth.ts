@@ -49,11 +49,11 @@ export function useAuth() {
     router.push(consumePendingRedirect())
   }
 
-  async function register(payload: RegisterPayload): Promise<void> {
+  async function register(payload: RegisterPayload, opts?: { redirect?: boolean }): Promise<void> {
     const res = await apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: payload })
     clearGuestChat()
     store.token = res.access_token; store.user = res.user; store.isGuest = false
-    router.push(consumePendingRedirect())
+    if (opts?.redirect !== false) router.push(consumePendingRedirect())
   }
 
   async function forgotPassword(email: string): Promise<string> {

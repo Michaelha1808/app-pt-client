@@ -3,10 +3,13 @@
 namespace App\Jobs;
 
 use App\Models\HealthConnection;
+use App\Models\NotificationLog;
+use App\Services\FcmService;
 use App\Services\Health\HealthProviderFactory;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
@@ -22,15 +25,15 @@ class RefreshExpiringTokensJob implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 300;
 
-    public function handle(HealthProviderFactory $providers): void
+    public function handle(HealthProviderFactory $providers, FcmService $fcm): void
     {
-        HealthConnection::query()
+        HealthConnection::with('user.notificationSubscriptions')
             ->where('status', 'active')
             ->whereNotNull('refresh_token')
             ->where(fn ($q) => $q
                 ->whereNull('token_expires_at')
                 ->orWhere('token_expires_at', '<', now()->addMinutes(30)))
-            ->chunkById(100, function ($connections) use ($providers) {
+            ->chunkById(100, function ($connections) use ($providers, $fcm) {
                 foreach ($connections as $connection) {
                     try {
                         $tokens = $providers->make($connection->provider)
@@ -41,13 +44,46 @@ class RefreshExpiringTokensJob implements ShouldQueue
                             'refresh_token'    => $tokens->refreshToken ?? $connection->refresh_token,
                             'token_expires_at' => $tokens->expiresAt,
                         ]);
+                    } catch (RequestException $e) {
+                        // Strava trả 400 (refresh_token invalid/revoked) → không thể tự phục hồi,
+                        // cần user kết nối lại. Lỗi khác (5xx/timeout) là tạm thời → giữ nguyên
+                        // status, để lần chạy hourly kế tiếp tự thử lại.
+                        if ($e->response->status() === 400) {
+                            Log::warning('RefreshExpiringTokens: refresh_token không còn hợp lệ', [
+                                'connection' => $connection->id, 'msg' => $e->getMessage(),
+                            ]);
+                            $connection->update(['status' => 'error']);
+                            $this->notifyReconnectNeeded($fcm, $connection);
+                        } else {
+                            Log::warning('RefreshExpiringTokens: lỗi tạm thời, sẽ thử lại giờ sau', [
+                                'connection' => $connection->id, 'status' => $e->response->status(), 'msg' => $e->getMessage(),
+                            ]);
+                        }
                     } catch (\Throwable $e) {
-                        Log::warning('RefreshExpiringTokens thất bại', [
+                        Log::warning('RefreshExpiringTokens: lỗi tạm thời, sẽ thử lại giờ sau', [
                             'connection' => $connection->id, 'msg' => $e->getMessage(),
                         ]);
-                        $connection->update(['status' => 'error']);
                     }
                 }
             });
+    }
+
+    /** Báo cho user biết cần vào Hồ sơ kết nối lại — connection sẽ không tự phục hồi. */
+    private function notifyReconnectNeeded(FcmService $fcm, HealthConnection $connection): void
+    {
+        $provider = ucfirst($connection->provider);
+        $title    = "Mất kết nối {$provider}";
+        $body     = "Buổi tập từ {$provider} sẽ không được đồng bộ nữa. Vào Hồ sơ để kết nối lại nhé.";
+
+        NotificationLog::create([
+            'user_id' => $connection->user_id,
+            'type'    => 'integration_error',
+            'title'   => $title,
+            'body'    => $body,
+            'url'     => '/profile',
+        ]);
+
+        $tokens = $connection->user->notificationSubscriptions->pluck('fcm_token')->toArray();
+        $fcm->sendMulticast($tokens, $title, $body, ['type' => 'integration_error', 'url' => '/profile']);
     }
 }

@@ -42,7 +42,10 @@ export function useChat() {
 
       if (!response.ok || !response.body) {
         const errBody = await response.json().catch(() => ({}))
-        throw new Error((errBody as any).message ?? 'Không thể kết nối trợ lý AI')
+        // Backend trả lỗi dạng { detail: "..." } (xem bootstrap/app.php ValidationException handler),
+        // không phải { message: "..." } — dùng sai key khiến lỗi thật (vd 422 validate) bị nuốt
+        // thành thông báo chung chung "Không thể kết nối trợ lý AI", không phản ánh đúng nguyên nhân.
+        throw new Error((errBody as any).detail ?? (errBody as any).message ?? 'Không thể kết nối trợ lý AI')
       }
 
       const reader  = response.body.getReader()

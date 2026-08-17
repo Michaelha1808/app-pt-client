@@ -33,6 +33,25 @@ class ChatHistoryControllerTest extends TestCase
         ]);
     }
 
+    public function test_sending_chat_accepts_long_ai_reply_text_from_history(): void
+    {
+        // FE gửi lại toàn bộ lịch sử mỗi lượt, kể cả câu trả lời AI trước đó — câu trả lời AI
+        // (kế hoạch ăn/tập chi tiết) thường dài hơn 2000 ký tự. Giới hạn quá chặt từng khiến
+        // lượt gửi kế tiếp bị 422 ngay ở validate (bug thật gặp trên production).
+        $user = User::factory()->create();
+        $longAiReply = str_repeat('Gợi ý kế hoạch ăn uống chi tiết cho bạn hôm nay. ', 100); // ~4900 ký tự
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/chat', [
+            'messages' => [
+                ['role' => 'user', 'text' => 'Lên kế hoạch ăn uống cho tôi'],
+                ['role' => 'ai', 'text' => $longAiReply],
+                ['role' => 'user', 'text' => 'Gợi ý thêm bài tập nữa'],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+    }
+
     public function test_sending_chat_with_conversation_id_appends_to_same_conversation(): void
     {
         $user         = User::factory()->create();

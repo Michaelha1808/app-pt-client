@@ -13,12 +13,16 @@ export function useChat() {
    * Gửi lịch sử hội thoại, stream phản hồi AI.
    * `onDelta` được gọi mỗi khi có thêm text → cập nhật tin nhắn đang hiển thị.
    * `onMemory` (tuỳ chọn) được gọi khi AI ghi nhớ sở thích mới từ lượt vừa gửi.
+   * `conversationId` (tuỳ chọn, chỉ áp dụng khi đăng nhập): nối tiếp vào 1 cuộc trò chuyện
+   * đã lưu server-side; bỏ trống để server tự tạo mới. `onConversation` báo lại id vừa tạo/dùng.
    */
   async function send(
     history: ChatTurn[],
     onDelta: (delta: string) => void,
     onMemory?: (items: MemoryItem[], conflicts: MemoryConflict[]) => void,
     onActions?: (actions: ChatAction[]) => void,
+    conversationId?: number | null,
+    onConversation?: (id: number) => void,
   ) {
     const store = useAuthStore()
 
@@ -33,7 +37,7 @@ export function useChat() {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ messages: history, conversation_id: conversationId ?? undefined }),
       })
 
       if (!response.ok || !response.body) {
@@ -63,6 +67,7 @@ export function useChat() {
             if (event.type === 'text') onDelta(event.delta)
             else if (event.type === 'memory') onMemory?.(event.items, event.conflicts ?? [])
             else if (event.type === 'actions') onActions?.(event.actions ?? [])
+            else if (event.type === 'conversation') onConversation?.(event.id)
             else if (event.type === 'error') error.value = event.message
           } catch {
             // bỏ qua event JSON không hợp lệ

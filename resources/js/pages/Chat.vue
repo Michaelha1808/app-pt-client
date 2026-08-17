@@ -28,6 +28,7 @@ const chatEnabled = computed(() => flag(c => c.ai.chat_enabled))
 watch(() => auth.isGuest, (isGuest) => {
   if (!isGuest && auth.user) {
     messages.value = initialMessages()
+    currentConversationId.value = null
     persist()
   }
 })
@@ -93,32 +94,41 @@ function initialMessages(): ChatMessage[] {
   }]
 }
 
-function loadMessages(): ChatMessage[] {
+type StoredChat = { date: string; messages: ChatMessage[]; conversationId?: number | null }
+
+function loadStored(): StoredChat | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const saved = JSON.parse(raw) as { date: string; messages: ChatMessage[] }
+      const saved = JSON.parse(raw) as StoredChat
       if (saved.date === todayStr() && Array.isArray(saved.messages) && saved.messages.length) {
-        return saved.messages
+        return saved
       }
     }
   } catch { /* localStorage hỏng/không dùng được → dùng mặc định */ }
-  return initialMessages()
+  return null
 }
 
-const messages = ref<ChatMessage[]>(loadMessages())
+const storedOnLoad = loadStored()
+const messages = ref<ChatMessage[]>(storedOnLoad?.messages ?? initialMessages())
+// Id cuộc trò chuyện server-side đang tiếp tục (chỉ có khi đăng nhập). Null → lượt gửi kế
+// tiếp sẽ tạo conversation mới (tin đầu tiên trong ngày, hoặc sau khi bấm "Làm mới").
+const currentConversationId = ref<number | null>(storedOnLoad?.conversationId ?? null)
 
 function persist() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr(), messages: messages.value }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      date: todayStr(), messages: messages.value, conversationId: currentConversationId.value,
+    }))
   } catch { /* hết quota → bỏ qua */ }
 }
 
-// Nút làm mới: xoá lịch sử hiện tại, quay về lời chào ban đầu.
+// Nút làm mới: xoá lịch sử hiện tại, quay về lời chào ban đầu + bắt đầu conversation mới.
 function resetChat() {
   if (streaming.value) return
   if (messages.value.length > 1 && !confirm('Bắt đầu cuộc trò chuyện mới? Lịch sử hôm nay sẽ bị xoá.')) return
   messages.value = initialMessages()
+  currentConversationId.value = null
   persist()
   scrollToBottom()
 }
@@ -195,6 +205,14 @@ async function sendMessage() {
       // Nút hành động gợi ý theo ngữ cảnh
       if (aiIndex !== -1 && actions.length) {
         messages.value[aiIndex].actions = actions
+        persist()
+      }
+    },
+    currentConversationId.value,
+    (id: number) => {
+      // Server vừa tạo/xác nhận conversation cho phiên hôm nay → lưu lại để lượt sau nối tiếp
+      if (currentConversationId.value !== id) {
+        currentConversationId.value = id
         persist()
       }
     },
@@ -300,9 +318,23 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- Lịch sử: xem lại các cuộc trò chuyện cũ (chỉ user đăng nhập mới có lưu server-side) -->
+      <button
+        v-if="!auth.isGuest"
+        class="ml-auto w-9 h-9 rounded-full bg-white border border-ios-gray5 flex items-center justify-center flex-shrink-0 ios-press"
+        aria-label="Lịch sử trò chuyện"
+        @click="navigateTo('/chat/history')"
+      >
+        <svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" style="stroke:var(--color-calor-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7v5l3 3"/>
+        </svg>
+      </button>
+
       <!-- Làm mới: bắt đầu cuộc trò chuyện mới -->
       <button
-        class="ml-auto w-9 h-9 rounded-full bg-white border border-ios-gray5 flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40"
+        class="w-9 h-9 rounded-full bg-white border border-ios-gray5 flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40"
+        :class="{ 'ml-auto': auth.isGuest }"
         :disabled="streaming"
         aria-label="Làm mới cuộc trò chuyện"
         @click="resetChat"

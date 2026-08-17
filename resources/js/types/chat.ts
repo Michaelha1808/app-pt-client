@@ -35,4 +35,22 @@ export type ChatStreamEvent =
   | { type: 'text'; delta: string }
   | { type: 'memory'; items: MemoryItem[]; conflicts: MemoryConflict[] }
   | { type: 'actions'; actions: ChatAction[] }
+  | { type: 'conversation'; id: number }
   | { type: 'error'; message: string }
+
+/** 1 dòng trong danh sách lịch sử chat (`GET /chat/conversations`) */
+export interface ChatConversationSummary {
+  id: number
+  title: string | null
+  preview: string
+  message_count: number
+  last_message_at: string | null
+}
+
+/** Xem lại 1 cuộc trò chuyện đầy đủ (`GET /chat/conversations/{id}`) */
+export interface ChatConversationDetail {
+  id: number
+  title: string | null
+  created_at: string
+  messages: { role: 'user' | 'ai'; text: string; created_at: string }[]
+}

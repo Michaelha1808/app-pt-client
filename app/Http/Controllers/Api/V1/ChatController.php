@@ -89,6 +89,14 @@ class ChatController extends Controller
                         }
                     }
                 } catch (\Throwable $e) {
+                    // Trước đây exception bị nuốt hoàn toàn (không report()) → không có cách nào
+                    // debug khi lỗi xảy ra trên production. Log lại kèm user_id để đối chiếu.
+                    Log::error('Chat streamReply/isInScope thất bại', [
+                        'user_id' => $user?->id,
+                        'error'   => $e->getMessage(),
+                    ]);
+                    report($e);
+
                     echo 'data: ' . json_encode([
                         'type'    => 'error',
                         'message' => 'Không thể kết nối trợ lý AI. Vui lòng thử lại.',

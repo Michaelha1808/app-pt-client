@@ -28,7 +28,10 @@ class ChatController extends Controller
         $request->validate([
             'messages'          => 'required|array|min:1|max:30',
             'messages.*.role'   => 'required|string|in:user,ai,model',
-            'messages.*.text'   => 'required|string|max:2000',
+            // 2000 ký tự đủ cho tin nhắn user, nhưng câu trả lời AI (được gửi lại nguyên vẹn trong
+            // history ở lượt sau) thường dài hơn nhiều — vd kế hoạch ăn/tập chi tiết. Giới hạn quá
+            // chặt khiến lượt gửi kế tiếp bị 422 ngay ở validate, chưa kịp vào code xử lý/log.
+            'messages.*.text'   => 'required|string|max:8000',
             'conversation_id'   => 'nullable|integer',
         ]);
 
@@ -184,7 +187,7 @@ class ChatController extends Controller
         $request->validate([
             'messages'        => 'required|array|min:1|max:30',
             'messages.*.role' => 'required|string|in:user,ai,model',
-            'messages.*.text' => 'required|string|max:2000',
+            'messages.*.text' => 'required|string|max:8000', // xem giải thích cùng giới hạn ở send()
         ]);
 
         $user = $request->user();

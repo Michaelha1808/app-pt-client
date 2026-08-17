@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatConversation;
 use App\Models\ChatPromptLog;
 use App\Services\ChatService;
 use App\Services\MealPlanService;
@@ -11,6 +12,7 @@ use App\Support\UsageTracker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
@@ -24,9 +26,10 @@ class ChatController extends Controller
         if ($disabled = $this->chatDisabled()) return $disabled;
 
         $request->validate([
-            'messages'        => 'required|array|min:1|max:30',
-            'messages.*.role' => 'required|string|in:user,ai,model',
-            'messages.*.text' => 'required|string|max:2000',
+            'messages'          => 'required|array|min:1|max:30',
+            'messages.*.role'   => 'required|string|in:user,ai,model',
+            'messages.*.text'   => 'required|string|max:2000',
+            'conversation_id'   => 'nullable|integer',
         ]);
 
         // Không bắt buộc auth: resolve user qua sanctum guard nếu có Bearer token (khách → null)
@@ -38,10 +41,31 @@ class ChatController extends Controller
         $lastUserMessage = collect($messages)->reverse()
             ->first(fn ($m) => ($m['role'] ?? 'user') === 'user')['text'] ?? '';
 
+        // Chỉ user đăng nhập mới có lịch sử lưu server-side. Nạp conversation nếu client gửi
+        // kèm id (đang tiếp tục phiên hôm nay), hoặc tạo mới nếu đây là tin đầu tiên/sau "Làm mới".
+        $conversation = null;
+        if ($user) {
+            $conversationId = $request->input('conversation_id');
+            if ($conversationId) {
+                $conversation = ChatConversation::where('id', $conversationId)->where('user_id', $user->id)->first();
+                abort_if(!$conversation, 403);
+            } else {
+                $conversation = $user->chatConversations()->create([
+                    'title'           => Str::limit($lastUserMessage, 60, ''),
+                    'last_message_at' => now(),
+                ]);
+            }
+        }
+
         return response()->stream(
-            function () use ($service, $preferences, $user, $messages, $lastUserMessage) {
+            function () use ($service, $preferences, $user, $messages, $lastUserMessage, $conversation) {
                 while (ob_get_level()) {
                     ob_end_clean();
+                }
+
+                if ($conversation) {
+                    echo 'data: ' . json_encode(['type' => 'conversation', 'id' => $conversation->id]) . "\n\n";
+                    flush();
                 }
 
                 $inScope      = true;
@@ -84,6 +108,19 @@ class ChatController extends Controller
                     ]);
                 } catch (\Throwable $e) {
                     report($e); // log lỗi không được làm hỏng chat
+                }
+
+                // Lưu lượt hội thoại vào lịch sử của user (để xem lại ở /chat/history).
+                if ($conversation) {
+                    try {
+                        $conversation->messages()->create(['role' => 'user', 'text' => $lastUserMessage]);
+                        if ($reply !== '') {
+                            $conversation->messages()->create(['role' => 'ai', 'text' => $reply]);
+                        }
+                        $conversation->update(['last_message_at' => now()]);
+                    } catch (\Throwable $e) {
+                        report($e); // log lỗi không được làm hỏng chat
+                    }
                 }
 
                 // Gợi ý nút hành động theo ngữ cảnh (chỉ user đăng nhập — hành động cần dữ liệu cá nhân).

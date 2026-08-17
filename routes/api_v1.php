@@ -110,6 +110,13 @@ Route::middleware('throttle:chat')->post('/chat', [ChatController::class, 'send'
 // "Thiết lập kế hoạch ăn hôm nay" từ lời tư vấn — auth required, tốn token AI nên siết chặt.
 Route::middleware(['auth:sanctum', 'throttle:plan-generate'])->post('/chat/apply-plan', [ChatController::class, 'applyPlan']);
 
+// Lịch sử chat của user (khác Admin\ChatLogController — đó là log audit nội bộ)
+Route::middleware('auth:sanctum')->prefix('chat/conversations')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\V1\ChatHistoryController::class, 'index']);
+    Route::get('/{conversation}', [\App\Http\Controllers\Api\V1\ChatHistoryController::class, 'show']);
+    Route::delete('/{conversation}', [\App\Http\Controllers\Api\V1\ChatHistoryController::class, 'destroy']);
+});
+
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/subscribe', [NotificationController::class, 'subscribe']);
     Route::delete('/subscribe', [NotificationController::class, 'unsubscribe']);

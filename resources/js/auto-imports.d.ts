@@ -99,6 +99,7 @@ declare global {
   const useAuth: typeof import('./composables/useAuth').useAuth
   const useAuthStore: typeof import('./stores/auth').useAuthStore
   const useChat: typeof import('./composables/useChat').useChat
+  const useChatHistory: typeof import('./composables/useChatHistory').useChatHistory
   const useClock: typeof import('./composables/useClock').useClock
   const useCssModule: typeof import('vue').useCssModule
   const useCssVars: typeof import('vue').useCssVars
@@ -276,6 +277,7 @@ declare module 'vue' {
     readonly useAuth: UnwrapRef<typeof import('./composables/useAuth')['useAuth']>
     readonly useAuthStore: UnwrapRef<typeof import('./stores/auth')['useAuthStore']>
     readonly useChat: UnwrapRef<typeof import('./composables/useChat')['useChat']>
+    readonly useChatHistory: UnwrapRef<typeof import('./composables/useChatHistory')['useChatHistory']>
     readonly useClock: UnwrapRef<typeof import('./composables/useClock')['useClock']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>

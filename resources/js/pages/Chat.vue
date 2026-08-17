@@ -123,6 +123,16 @@ function persist() {
   } catch { /* hết quota → bỏ qua */ }
 }
 
+// Nhãn hiển thị ngày áp dụng kế hoạch (khớp logic BE ở ChatController::applyPlan)
+function whenLabel(targetDate?: string): string {
+  if (!targetDate) return 'hôm nay'
+  if (targetDate === todayStr()) return 'hôm nay'
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (targetDate === tomorrow.toLocaleDateString('en-CA')) return 'ngày mai'
+  return `ngày ${new Date(targetDate).toLocaleDateString('vi-VN')}`
+}
+
 // Nút làm mới: xoá lịch sử hiện tại, quay về lời chào ban đầu + bắt đầu conversation mới.
 function resetChat() {
   if (streaming.value) return
@@ -276,13 +286,17 @@ async function handleAction(msg: ChatMessage, a: ChatAction) {
     applyingPlan.value = true
     try {
       const history = messages.value.map(m => ({ role: m.role, text: m.text }))
-      await apiFetch('/chat/apply-plan', { method: 'POST', body: { messages: history } })
+      const res = await apiFetch<{ message: string }>('/chat/apply-plan', {
+        method: 'POST',
+        body: { messages: history, target_date: a.target_date },
+      })
       msg.planApplied = true
+      msg.planAppliedWhen = whenLabel(a.target_date)
       msg.actions = msg.actions?.filter(x => x.action !== 'apply_plan')
       persist()
-      success('Đã thiết lập kế hoạch hôm nay 🎯')
+      success(`${res.message} 🎯`)
     } catch (e: any) {
-      toastError(e?.data?.message ?? 'Không thể thiết lập kế hoạch. Thử lại nhé.')
+      toastError(e?.data?.message ?? e?.data?.detail ?? 'Không thể thiết lập kế hoạch. Thử lại nhé.')
     } finally {
       applyingPlan.value = false
     }
@@ -430,7 +444,7 @@ onMounted(() => {
             >{{ a.action === 'apply_plan' && applyingPlan ? 'Đang thiết lập...' : a.label }}</button>
           </div>
           <p v-if="msg.role === 'ai' && msg.planApplied" class="mt-1.5 text-[11px] text-calor-green font-medium">
-            ✓ Đã thêm vào Nhiệm vụ hôm nay
+            ✓ Đã thêm vào Nhiệm vụ {{ msg.planAppliedWhen ?? 'hôm nay' }}
           </p>
 
           <p class="text-[10px] text-ios-gray mt-1" :class="msg.role === 'user' ? 'text-right' : 'text-left'">

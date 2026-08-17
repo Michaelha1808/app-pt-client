@@ -252,9 +252,15 @@ CTX;
 
         $actions = [];
 
-        // Lời khuyên có nội dung bữa ăn/thực đơn → nút CHÍNH: biến thành kế hoạch hôm nay.
+        // Hội thoại đang bàn về "ngày mai" → nút áp dụng phải ghi vào ĐÚNG ngày đó, không phải
+        // luôn ghi đè hôm nay (trước đây hardcode 'today()', áp lời khuyên cho ngày mai vào nhầm hôm nay).
+        $forTomorrow = $has('ngay mai');
+        $planLabel   = $forTomorrow ? '🍽️ Thiết lập kế hoạch ăn ngày mai' : '🍽️ Thiết lập kế hoạch ăn hôm nay';
+        $planDate    = ($forTomorrow ? today()->addDay() : today())->toDateString();
+
+        // Lời khuyên có nội dung bữa ăn/thực đơn → nút CHÍNH: biến thành kế hoạch cho đúng ngày.
         if ($has('bua sang', 'bua trua', 'bua toi', 'bua phu', 'thuc don', 'ke hoach', 'goi y', 'nen an', 'an gi', 'mon')) {
-            $actions[] = ['id' => 'set_daily_plan', 'label' => '🍽️ Thiết lập kế hoạch ăn hôm nay', 'action' => 'apply_plan'];
+            $actions[] = ['id' => 'set_daily_plan', 'label' => $planLabel, 'action' => 'apply_plan', 'target_date' => $planDate];
         }
 
         // Có nhắc tập luyện → gợi ý bài tập (gửi câu hỏi mồi).
@@ -279,7 +285,7 @@ CTX;
 
         // Không khớp gì → vẫn cho lối tắt thiết lập kế hoạch.
         if ($actions === []) {
-            $actions[] = ['id' => 'set_daily_plan', 'label' => '🍽️ Thiết lập kế hoạch ăn hôm nay', 'action' => 'apply_plan'];
+            $actions[] = ['id' => 'set_daily_plan', 'label' => $planLabel, 'action' => 'apply_plan', 'target_date' => $planDate];
         }
 
         return array_slice($actions, 0, 3);

@@ -9,8 +9,10 @@ export interface ChatMessage {
   conflicts?: MemoryConflict[]
   /** Nút hành động gợi ý dưới tin nhắn AI. */
   actions?: ChatAction[]
-  /** Đã thiết lập kế hoạch hôm nay từ tin nhắn này chưa (để đổi nút thành trạng thái xong). */
+  /** Đã thiết lập kế hoạch từ tin nhắn này chưa (để đổi nút thành trạng thái xong). */
   planApplied?: boolean
+  /** Ngày đã áp dụng kế hoạch, dạng hiển thị (vd "hôm nay", "ngày mai") — đi kèm planApplied. */
+  planAppliedWhen?: string
 }
 
 /** Payload gửi lên API (chỉ role + text) */
@@ -25,10 +27,12 @@ import type { MemoryItem, MemoryConflict } from '@/types/preference'
 export interface ChatAction {
   id: string
   label: string
-  /** apply_plan: gọi API tạo kế hoạch hôm nay · navigate: chuyển trang · prompt: gửi câu hỏi mồi */
+  /** apply_plan: gọi API tạo kế hoạch (theo target_date) · navigate: chuyển trang · prompt: gửi câu hỏi mồi */
   action: 'apply_plan' | 'navigate' | 'prompt'
   to?: string
   text?: string
+  /** Chỉ có ở action=apply_plan — ngày áp dụng kế hoạch (YYYY-MM-DD), suy ra từ ngữ cảnh hội thoại (hôm nay/ngày mai) */
+  target_date?: string
 }
 
 export type ChatStreamEvent =

@@ -11,6 +11,7 @@ use App\Services\PreferenceService;
 use App\Support\UsageTracker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -177,8 +178,9 @@ class ChatController extends Controller
     }
 
     /**
-     * "Thiết lập kế hoạch ăn hôm nay": biến lời tư vấn trong hội thoại thành
-     * kế hoạch daily cho HÔM NAY → hiển thị dưới dạng nhiệm vụ (Home / /plan).
+     * "Thiết lập kế hoạch ăn hôm nay/ngày mai": biến lời tư vấn trong hội thoại thành
+     * kế hoạch daily cho ĐÚNG NGÀY đang được bàn tới (mặc định hôm nay nếu không truyền
+     * `target_date`) → hiển thị dưới dạng nhiệm vụ (Home / /plan) vào đúng ngày đó.
      */
     public function applyPlan(Request $request, MealPlanService $service): JsonResponse
     {
@@ -188,9 +190,20 @@ class ChatController extends Controller
             'messages'        => 'required|array|min:1|max:30',
             'messages.*.role' => 'required|string|in:user,ai,model',
             'messages.*.text' => 'required|string|max:8000', // xem giải thích cùng giới hạn ở send()
+            // Không cho ghi vào quá khứ (nhiệm vụ đã qua thì vô nghĩa) — chỉ hôm nay trở đi.
+            'target_date'     => 'nullable|date|after_or_equal:today',
         ]);
 
-        $user = $request->user();
+        $user       = $request->user();
+        $targetDate = $request->filled('target_date')
+            ? Carbon::parse($request->input('target_date'))->toDateString()
+            : today()->toDateString();
+
+        $dayLabel = match ($targetDate) {
+            today()->toDateString()         => 'HÔM NAY',
+            today()->addDay()->toDateString() => 'NGÀY MAI',
+            default                          => 'ngày ' . Carbon::parse($targetDate)->format('d/m/Y'),
+        };
 
         try {
             $context = $service->buildContext($user, 'daily');
@@ -200,7 +213,7 @@ class ChatController extends Controller
         }
 
         try {
-            $plan = $service->planFromConversation($context, $request->input('messages'));
+            $plan = $service->planFromConversation($context, $request->input('messages'), $dayLabel);
         } catch (\Throwable $e) {
             Log::error('applyPlan thất bại', ['user_id' => $user->id, 'error' => $e->getMessage()]);
             report($e);
@@ -211,7 +224,7 @@ class ChatController extends Controller
         UsageTracker::record('chat_apply_plan', $user->id);
 
         $record = $user->mealPlans()->updateOrCreate(
-            ['scope' => 'daily', 'target_date' => today()->toDateString()],
+            ['scope' => 'daily', 'target_date' => $targetDate],
             [
                 'plan'             => $plan,
                 'context_snapshot' => $context,
@@ -220,8 +233,14 @@ class ChatController extends Controller
             ]
         );
 
+        $whenText = match ($targetDate) {
+            today()->toDateString()           => 'hôm nay',
+            today()->addDay()->toDateString() => 'ngày mai',
+            default                            => 'ngày ' . Carbon::parse($targetDate)->format('d/m/Y'),
+        };
+
         return response()->json([
-            'message'     => 'Đã thiết lập kế hoạch cho hôm nay',
+            'message'     => "Đã thiết lập kế hoạch cho {$whenText}",
             'plan'        => $record->plan,
             'target_date' => $record->target_date->toDateString(),
         ]);

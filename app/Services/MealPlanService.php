@@ -266,10 +266,12 @@ PROMPT;
      *
      * @param  array<string,mixed>  $context  kết quả buildContext($user,'daily')
      * @param  array<int,array{role?:string,text?:string}>  $messages
+     * @param  string  $dayLabel  mô tả ngày áp dụng bằng tiếng Việt (vd "HÔM NAY", "NGÀY MAI") — khớp
+     *                            với target_date thực tế sẽ lưu, để AI không tự ý viết summary sai ngày.
      * @return array<string,mixed>
      * @throws \RuntimeException
      */
-    public function planFromConversation(array $context, array $messages): array
+    public function planFromConversation(array $context, array $messages, string $dayLabel = 'HÔM NAY'): array
     {
         $advice = $this->extractAdvice($messages);
 
@@ -282,8 +284,8 @@ Dưới đây là nội dung vừa trao đổi giữa người dùng và trợ l
 {$context['pref_constraints']}
 RÀNG BUỘC BẮT BUỘC: tuyệt đối KHÔNG món chứa nguyên liệu dị ứng; tuân thủ chế độ ăn nếu có.
 
-Hãy chuyển lời tư vấn trên thành KẾ HOẠCH ĂN UỐNG & TẬP LUYỆN cho HÔM NAY. Giữ đúng các món/bài tập đã được gợi ý trong hội thoại; nếu thiếu bữa nào thì bổ sung hợp lý theo mục tiêu {$context['calorie_goal']} kcal/ngày. Trả JSON đúng schema:
-{"summary":"1 câu tóm tắt định hướng hôm nay","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workouts":[{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}],"tips":["lời khuyên ngắn 1","lời khuyên 2"]}
+Hãy chuyển lời tư vấn trên thành KẾ HOẠCH ĂN UỐNG & TẬP LUYỆN cho {$dayLabel}. Giữ đúng các món/bài tập đã được gợi ý trong hội thoại; nếu thiếu bữa nào thì bổ sung hợp lý theo mục tiêu {$context['calorie_goal']} kcal/ngày. Trả JSON đúng schema:
+{"summary":"1 câu tóm tắt định hướng cho ngày này","target_calories":0,"target_macros":{"protein":0,"carbs":0,"fat":0},"water_target_ml":0,"meals":[{"slot":"breakfast|lunch|dinner|snack","name":"tên bữa/món","items":["món 1","món 2"],"calories":0,"protein":0,"carbs":0,"fat":0}],"workouts":[{"name":"tên bài tập","type":"cardio|strength|flexibility","duration_min":0,"intensity":"low|medium|high","est_calories_burned":0}],"tips":["lời khuyên ngắn 1","lời khuyên 2"]}
 
 Tổng calo các bữa xấp xỉ mục tiêu (±10%).
 PROMPT;

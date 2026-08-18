@@ -56,6 +56,10 @@ Route::middleware('throttle:20,1')->post('/food/detect/{sample}/feedback', [Food
 // Nhận xét AI cho cả bữa (SSE) — public, chung quota với food analysis
 Route::middleware('throttle:food-analyze')->post('/food/advise-meal', [FoodController::class, 'adviseMeal']);
 
+// Sinh lại lời khuyên cho 1 món sau khi user sửa tên/calo ở Result.vue (không chạy lại nhận
+// diện ảnh) — public, chung quota với food analysis
+Route::middleware('throttle:food-analyze')->post('/food/advise', [FoodController::class, 'advise']);
+
 // Food log — auth required
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/food/log', [FoodController::class, 'log']);

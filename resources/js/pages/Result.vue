@@ -16,7 +16,7 @@ const gateOpen = ref(false)
 
 const isManual = computed(() => !!route.query.food)
 
-const { result, streamingText, streamDone, loading, error, analyze } = useFoodAnalysis()
+const { result, streamingText, streamDone, loading, error, analyze, refetchAdvice } = useFoodAnalysis()
 const { todayStats, fetchTodayStats, logMeal } = useMealLog()
 
 const todayConsumed = computed(() => todayStats.value?.total_calories ?? 0)
@@ -75,6 +75,30 @@ const savedImage = ref<string | null>(null)
 
 function buildContext() {
   return { today_calories: todayConsumed.value, goal: todayGoal.value }
+}
+
+const refetchingAdvice = ref(false)
+
+// Bấm "Xong" sau khi sửa tên/calo → nếu khác với AI đoán ban đầu, sinh lại lời khuyên cho
+// đúng dữ liệu đã sửa. Trước đây sửa tên chỉ update state ở FE, lời khuyên hiển thị vẫn
+// "đóng băng" theo món AI đoán sai (bug đã báo) — không refetch trên từng phím gõ để tránh
+// spam API, chỉ khi user xác nhận xong bằng nút "Xong".
+async function toggleEditing() {
+  if (isEditing.value && result.value) {
+    const name = editName.value.trim()
+    const cal  = editCalories.value
+    const nameChanged     = name !== '' && name !== result.value.food_name
+    const caloriesChanged = cal > 0 && cal !== result.value.calories
+
+    if (nameChanged || caloriesChanged) {
+      refetchingAdvice.value = true
+      displayedText.value    = ''
+      pendingChars           = ''
+      await refetchAdvice(name || result.value.food_name, cal || result.value.calories, buildContext())
+      refetchingAdvice.value = false
+    }
+  }
+  isEditing.value = !isEditing.value
 }
 
 // Nhận diện có kiểm soát quota cho khách. Chỉ trừ lượt khi nhận diện thành công.
@@ -270,15 +294,16 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         <div class="flex items-center justify-between mb-3">
           <p class="text-[13px] text-ios-gray uppercase tracking-wide font-semibold">Món ăn</p>
           <button
-            class="flex items-center gap-1 text-[12px] font-medium ios-press"
+            class="flex items-center gap-1 text-[12px] font-medium ios-press disabled:opacity-50"
             :class="isEditing ? 'text-ios-green' : 'text-ios-blue'"
-            @click="isEditing = !isEditing"
+            :disabled="refetchingAdvice"
+            @click="toggleEditing"
           >
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor">
               <path v-if="isEditing" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
               <path v-else d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
-            {{ isEditing ? 'Xong' : 'Chỉnh sửa' }}
+            {{ refetchingAdvice ? 'Đang cập nhật...' : (isEditing ? 'Xong' : 'Chỉnh sửa') }}
           </button>
         </div>
 

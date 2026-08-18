@@ -106,11 +106,17 @@ PROMPT,
         $goal        = $context['goal'] ?? 2000;
         $afterEating = $today + $calories;
 
+        // Chỉ có khi user đăng nhập (FoodController::analyze/advise) — cùng pattern với
+        // streamMealAdvice(), khách vẫn nhận tư vấn chung bình thường.
+        $prefBlock = isset($context['pref_constraints'])
+            ? "\n{$context['pref_constraints']}\nRÀNG BUỘC BẮT BUỘC: nếu món trên chứa nguyên liệu người dùng dị ứng, PHẢI cảnh báo rõ ràng ngay đầu lời khuyên.\n"
+            : '';
+
         $prompt = <<<PROMPT
 Món: {$foodName} (~{$calories} kcal/khẩu phần).
 Hôm nay đã ăn: {$today} kcal / mục tiêu {$goal} kcal.
 Sau khi ăn món này: {$afterEating} kcal.
-
+{$prefBlock}
 Viết lời khuyên dinh dưỡng (3–4 câu):
 1. Điểm mạnh / điểm yếu dinh dưỡng của món
 2. Tác động đến mục tiêu calo hôm nay

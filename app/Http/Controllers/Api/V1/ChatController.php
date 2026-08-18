@@ -223,8 +223,9 @@ class ChatController extends Controller
 
         UsageTracker::record('chat_apply_plan', $user->id);
 
+        // Carbon (không phải chuỗi) cho khoá tìm kiếm — xem giải thích ở PlanController::apply()
         $record = $user->mealPlans()->updateOrCreate(
-            ['scope' => 'daily', 'target_date' => $targetDate],
+            ['scope' => 'daily', 'target_date' => Carbon::parse($targetDate)],
             [
                 'plan'             => $plan,
                 'context_snapshot' => $context,

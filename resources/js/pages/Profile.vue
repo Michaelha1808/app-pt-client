@@ -210,6 +210,15 @@ async function handleLogout() {
           </div>
         </NuxtLink>
 
+        <!-- Tiến độ kế hoạch -->
+        <NuxtLink to="/plan/progress" class="bg-white rounded-[18px] p-4 shadow-sm ios-press flex flex-col gap-2.5">
+          <div class="w-11 h-11 rounded-[13px] bg-calor-green/12 flex items-center justify-center text-xl">📈</div>
+          <div class="min-w-0">
+            <p class="text-[14px] font-semibold text-black">Tiến độ kế hoạch</p>
+            <p class="text-[12px] text-ios-gray truncate">Hôm nay &amp; tuần này</p>
+          </div>
+        </NuxtLink>
+
         <!-- Sở thích -->
         <NuxtLink to="/profile/preferences" class="bg-white rounded-[18px] p-4 shadow-sm ios-press flex flex-col gap-2.5">
           <div class="w-11 h-11 rounded-[13px] bg-ios-pink/12 flex items-center justify-center text-xl">🍽️</div>

@@ -3,9 +3,17 @@ import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useMealPlan } from '@/composables/useMealPlan'
 import type { DailyPlan, MonthlyPlan, PlanScope, WeeklyPlan } from '@/types/plan'
 
-const { plan, reasoning, isStale, loading, generating, error, fetchPlan, generate } = useMealPlan()
+const { plan, reasoning, isStale, isDraft, loading, generating, applying, error, fetchPlan, generate, apply } = useMealPlan()
+const { success, error: toastError } = useToast()
 
 const scope = ref<PlanScope>('daily')
+
+async function applyPlan() {
+  if (applying.value) return
+  const ok = await apply(scope.value)
+  if (ok) success(`Đã áp dụng kế hoạch ${SCOPE_LABEL[scope.value]} 🎯`)
+  else toastError(error.value ?? 'Không thể áp dụng kế hoạch.')
+}
 
 const dailyPlan   = computed(() => (scope.value === 'daily' ? plan.value as DailyPlan | null : null))
 const weeklyPlan  = computed(() => (scope.value === 'weekly' ? plan.value as WeeklyPlan | null : null))
@@ -92,6 +100,15 @@ onMounted(() => fetchPlan('daily'))
 
     <!-- Content -->
     <div v-else class="px-5 space-y-4">
+      <!-- Bản xem trước: chưa lưu, kế hoạch cũ vẫn còn nguyên cho tới khi bấm Áp dụng -->
+      <div v-if="isDraft" class="bg-ios-blue/8 border border-ios-blue/25 rounded-[14px] px-4 py-3 flex items-center gap-3">
+        <span class="text-xl">👀</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-[13px] font-medium text-black">Bản xem trước</p>
+          <p class="text-[12px] text-ios-gray">Chưa áp dụng. Bấm “Áp dụng kế hoạch” bên dưới để bắt đầu theo kế hoạch này.</p>
+        </div>
+      </div>
+
       <!-- Stale banner -->
       <div v-if="isStale" class="bg-ios-orange/10 border border-ios-orange/30 rounded-[14px] px-4 py-3 flex items-center gap-3">
         <span class="text-xl">🔄</span>
@@ -272,14 +289,34 @@ onMounted(() => fetchPlan('daily'))
         </div>
       </div>
 
-      <!-- Tạo lại -->
-      <button
-        v-if="plan && !generating"
-        class="w-full h-11 rounded-[14px] border border-ios-gray4 text-[14px] text-ios-blue font-medium ios-press"
-        @click="generate(scope)"
-      >
-        Tạo lại kế hoạch
-      </button>
+      <!-- Áp dụng (bản nháp) / Tạo lại -->
+      <div v-if="plan && !generating" class="space-y-2.5">
+        <button
+          v-if="isDraft"
+          class="w-full h-12 rounded-[14px] bg-calor-green text-white text-[16px] font-semibold ios-press disabled:opacity-60"
+          :disabled="applying"
+          @click="applyPlan"
+        >
+          {{ applying ? 'Đang áp dụng…' : 'Áp dụng kế hoạch' }}
+        </button>
+
+        <button
+          class="w-full h-11 rounded-[14px] border border-ios-gray4 text-[14px] text-ios-blue font-medium ios-press"
+          :disabled="applying"
+          @click="generate(scope)"
+        >
+          Tạo lại kế hoạch
+        </button>
+
+        <!-- Đã là kế hoạch đang theo → mở trang tiến độ -->
+        <NuxtLink
+          v-if="!isDraft"
+          to="/plan/progress"
+          class="w-full h-11 rounded-[14px] bg-white border border-ios-gray5 text-[14px] text-black font-medium ios-press flex items-center justify-center gap-2"
+        >
+          📈 Xem tiến độ thực hiện
+        </NuxtLink>
+      </div>
     </div>
   </div>
 </template>

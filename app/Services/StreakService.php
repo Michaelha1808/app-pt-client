@@ -185,6 +185,14 @@ class StreakService
         $title = "{$meta[0]} {$meta[1]}";
         $body  = str_replace('{days}', $milestone->days, $meta[2]);
 
+        // Gợi ý cột mốc tiếp theo (số liệu thật, không phải câu khen chung chung dừng lại ở đây)
+        // để giữ động lực tiếp tục thay vì chỉ báo đã đạt xong.
+        $next = collect(self::MILESTONES)->first(fn ($d) => $d > $milestone->days);
+        if ($next) {
+            $remaining = $next - $milestone->days;
+            $body .= " Cột mốc tiếp theo: {$next} ngày — còn {$remaining} ngày nữa thôi!";
+        }
+
         try {
             app(FcmService::class)->sendMulticast(
                 $user->notificationSubscriptions->pluck('fcm_token')->toArray(),

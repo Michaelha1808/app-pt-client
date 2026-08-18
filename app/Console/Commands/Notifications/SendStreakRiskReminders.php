@@ -46,7 +46,11 @@ class SendStreakRiskReminders extends Command
             if ($alreadySent) continue;
 
             $title = "🥑 Chuỗi {$streak->current_streak} ngày sắp bị gián đoạn!";
-            $body  = 'Bạn chưa log bữa ăn nào hôm nay. Còn vài tiếng để giữ chuỗi nhé!';
+            // Chèn số liệu thật (streak dài nhất) thay vì câu tĩnh — trước đây body giống hệt
+            // nhau cho mọi user dù dữ liệu streak khác nhau.
+            $body  = $streak->current_streak >= $streak->best_streak
+                ? "Bạn chưa log bữa ăn nào hôm nay. Đây đang là chuỗi DÀI NHẤT từ trước đến giờ của bạn — đừng để đứt giữa chừng nhé!"
+                : "Bạn chưa log bữa ăn nào hôm nay. Giữ chuỗi {$streak->current_streak} ngày để tiến gần hơn tới kỷ lục {$streak->best_streak} ngày của chính bạn!";
 
             $this->dispatchPush($fcm, $user, [
                 'type'  => 'streak_risk',

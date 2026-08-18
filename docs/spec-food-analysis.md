@@ -1,8 +1,15 @@
 # Spec: Food Analysis — Nhận diện món ăn bằng AI
 
 > **App:** CaloEye — Vue 3 SPA + Laravel 13 + Tailwind CSS 4 (iOS-style PWA)
-> **Cập nhật lần cuối:** 2026-06-20
-> **Trạng thái tổng:** ✅ Phase 1 hoàn thành — Chờ thêm OPENAI_API_KEY vào .env để test
+> **Cập nhật lần cuối:** 2026-08-18 (đồng bộ provider — xem ghi chú dưới)
+> **Trạng thái tổng:** ✅ Đã triển khai và chạy production
+
+> ⚠️ **Đồng bộ provider (2026-08-18):** Spec này viết ban đầu cho OpenAI GPT-4o-mini (kế hoạch
+> lúc thiết kế), nhưng **code thực tế hiện tại gọi Google Gemini** (`app/Services/FoodAnalysisService.php`,
+> config `services.gemini.*`, env `GEMINI_API_KEY`/`GEMINI_MODEL`) — quyết định đổi provider được
+> thực hiện sau khi doc này viết và spec chưa được cập nhật theo. Các đoạn bên dưới nhắc tới
+> OpenAI/GPT-4o-mini/`openai-php/client` mô tả Ý ĐỊNH THIẾT KẾ BAN ĐẦU, không phải hiện trạng —
+> đọc `app/Services/FoodAnalysisService.php` để biết prompt/model/tham số chính xác đang chạy.
 
 ---
 
@@ -33,23 +40,24 @@
          ▼ POST /api/v1/food/analyze
 [FoodController]
   └── FoodAnalysisService
-        ├── Phase A: getStructuredData() — gọi OpenAI (JSON mode, ~500ms)
+        ├── Phase A: getStructuredData() — gọi Gemini (JSON mode, ~500ms)
         │     └── emit SSE: {"type":"result","data":{...}}
-        └── Phase B: streamAdvice() — gọi OpenAI (streaming)
+        └── Phase B: streamAdvice() — gọi Gemini (streaming)
               └── emit SSE: {"type":"text","delta":"..."} × N
                     └── emit: data: [DONE]
 ```
+(Sơ đồ giữ nguyên cấu trúc 2-phase như thiết kế ban đầu — chỉ đổi tên provider cho khớp code.)
 
 **Lý do thiết kế 2-phase:**
 - Người dùng thấy calo + macros ngay (~500ms) trong khi text advice đang stream
 - Tách biệt structured data (cần chính xác) và narrative (cần tự nhiên)
 - Tránh parse JSON từ stream (phức tạp, dễ lỗi)
 
-**AI Model:** OpenAI GPT-4o-mini
-- Tốc độ nhanh (~500ms first token), chi phí thấp (~$0.0003/lần)
+**AI Model (thực tế đang chạy):** Google Gemini (`config('services.gemini.model')`, mặc định
+`gemini-2.0-flash`, override qua env `GEMINI_MODEL` hoặc runtime `Settings` — xem `SettingsService`)
 - Hỗ trợ vision (nhận diện ảnh) + JSON mode + streaming
 - Nhận diện tốt đồ ăn Việt Nam
-- PHP SDK: `openai-php/client`
+- Gọi trực tiếp REST API qua Guzzle (không dùng SDK riêng) — `app/Services/FoodAnalysisService.php`
 
 **Phạm vi Phase 1:**
 - ✅ Nén ảnh trước khi upload (frontend)
@@ -148,8 +156,9 @@ data: {"type":"error","message":"Không thể phân tích món ăn. Vui lòng th
 
 **Method `getStructuredData()`:**
 - Input: `$image` (base64|null), `$text` (string|null), `$context` (array)
-- OpenAI call: model `gpt-4o-mini`, `response_format: json_object`, `max_tokens: 300`
-- Image detail: `low` (đủ để nhận diện, tiết kiệm token)
+- Gemini call thực tế: `generateContent`, `responseMimeType: application/json` — xem tham số
+  chính xác (`maxOutputTokens`, `thinkingConfig`...) trong `FoodAnalysisService.php`, spec này
+  không lặp lại để tránh lệch khi code đổi.
 - Output: array với keys `food_name, serving, calories, protein, carbs, fat, sodium, confidence, advice_short`
 
 **System prompt (getStructuredData):**
@@ -179,7 +188,8 @@ Ngữ cảnh: Người dùng đã ăn {today_calories} kcal hôm nay, mục tiê
 
 **Method `streamAdvice()`:**
 - Input: `$foodName`, `$calories`, `$context`
-- OpenAI call: model `gpt-4o-mini`, streaming, `max_tokens: 300`
+- Gemini call thực tế: `streamGenerateContent&alt=sse` (SSE thủ công qua Guzzle) — xem tham số
+  chính xác trong `FoodAnalysisService.php`.
 - Output: `StreamResponse` (iterable)
 
 **System prompt (streamAdvice):**
@@ -214,19 +224,25 @@ Logic trong `analyze()`:
 6. Emit `data: [DONE]` → `flush()`
 7. Wrap toàn bộ trong `try/catch` → emit `error` event nếu fail
 
-### 3.3 Config AI
+### 3.3 Config AI (thực tế — Gemini)
 
-**`config/services.php`** — thêm:
+**`config/services.php`:**
 ```php
-'openai' => [
-    'key' => env('OPENAI_API_KEY'),
+'gemini' => [
+    'key'   => env('GEMINI_API_KEY'),
+    'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
 ],
 ```
 
-**`.env` / `.env.example`** — thêm:
+**`.env` / `.env.example`:**
 ```
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.0-flash
 ```
+
+Model/key có thể override runtime qua Admin Settings (`ai.api_key`/`ai.model` — `SettingsService`),
+dùng chung cho toàn bộ 4 service gọi AI (`ChatService`, `MealPlanService`, `FoodAnalysisService`,
+`PreferenceService`), không riêng gì food analysis.
 
 ---
 
@@ -375,16 +391,15 @@ export type FoodStreamEvent =
 | File | Việc cần làm | Ưu tiên |
 |------|-------------|---------|
 | `routes/api_v1.php` | Thêm `POST /food/analyze` | 🔴 P0 |
-| `config/services.php` | Thêm `openai.key` | 🔴 P0 |
-| `.env.example` | Thêm `OPENAI_API_KEY` | 🔴 P0 |
+| `config/services.php` | Thêm `gemini.key`/`gemini.model` | 🔴 P0 |
+| `.env.example` | Thêm `GEMINI_API_KEY`/`GEMINI_MODEL` | 🔴 P0 |
 | `resources/js/pages/Scan.vue` | Resize canvas 800px (camera + gallery) | 🔴 P0 |
 | `resources/js/pages/Result.vue` | Kết nối useFoodAnalysis, bỏ hardcode | 🔴 P0 |
 
 ### Cài package
 
-| Package | Lý do |
-|---------|-------|
-| `openai-php/client` | PHP SDK để gọi OpenAI API (vision + streaming + JSON mode) |
+Không cần SDK riêng — gọi Gemini REST API trực tiếp qua Guzzle (đã có sẵn trong Laravel), xem
+ghi chú Phase 1 bên dưới về lý do bỏ SDK.
 
 ---
 
@@ -392,11 +407,13 @@ export type FoodStreamEvent =
 
 ### Phase 1 — Core Scan → AI → Stream ✅ HOÀN THÀNH
 
-> **Ghi chú:** openai-php/client không install được do không có internet trong môi trường dev.
-> Thay thế bằng Guzzle HTTP (đã có sẵn trong Laravel) gọi trực tiếp OpenAI REST API.
+> **Ghi chú:** kế hoạch ban đầu dùng `openai-php/client` không install được do không có internet
+> trong môi trường dev → thay bằng Guzzle HTTP gọi trực tiếp REST API. Sau đó **đổi provider
+> sang Gemini** (quyết định thực hiện sau khi phần này viết, spec chưa cập nhật kịp) — kiến trúc
+> Guzzle-trực-tiếp-không-SDK vẫn giữ nguyên, chỉ đổi endpoint/format request sang Gemini.
 
 - [x] Spec viết xong
-- [x] Thêm `OPENAI_API_KEY` vào `.env.example` + `config/services.php`
+- [x] Thêm `GEMINI_API_KEY`/`GEMINI_MODEL` vào `.env.example` + `config/services.php`
 - [x] Tạo `app/Services/FoodAnalysisService.php` (Guzzle, không cần SDK)
   - [x] `getStructuredData(image, text, context)` — JSON mode
   - [x] `streamAdvice(foodName, calories, context)` — streaming Generator
@@ -419,7 +436,7 @@ export type FoodStreamEvent =
   - [x] Error card với nút "Thử lại"
   - [x] Xóa sessionStorage sau khi load
 
-**Để test Phase 1:** Thêm `OPENAI_API_KEY=sk-...` vào `.env` rồi restart server.
+**Để test Phase 1:** Thêm `GEMINI_API_KEY=...` vào `.env` rồi restart server.
 
 ### Phase 2 — Lưu bữa ăn + Lịch sử ✅ HOÀN THÀNH
 
@@ -465,7 +482,7 @@ export type FoodStreamEvent =
 
 **Image base64 size:**
 - 800×450px JPEG q=0.80 ≈ 60–120 KB → base64 ≈ 80–160 KB
-- GPT-4o-mini với `detail: "low"` resize về 512px internally — đủ để nhận diện món ăn
+- Resize trước ở FE (800px) là đủ — không phụ thuộc tham số resize nội bộ riêng của provider nào
 
 ---
 

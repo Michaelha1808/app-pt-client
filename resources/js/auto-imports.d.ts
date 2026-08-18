@@ -115,6 +115,7 @@ declare global {
   const useModel: typeof import('vue').useModel
   const useNotifications: typeof import('./composables/useNotifications').useNotifications
   const usePasskey: typeof import('./composables/usePasskey').usePasskey
+  const usePlanProgress: typeof import('./composables/usePlanProgress').usePlanProgress
   const usePreferences: typeof import('./composables/usePreferences').usePreferences
   const useProfile: typeof import('./composables/useProfile').useProfile
   const usePublicConfig: typeof import('./composables/usePublicConfig').usePublicConfig
@@ -153,6 +154,9 @@ declare global {
   // @ts-ignore
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
+  // @ts-ignore
+  export type { ProgressMeal, ProgressWorkout, DayProgress, WeekDay, PlanProgress } from './composables/usePlanProgress'
+  import('./composables/usePlanProgress')
   // @ts-ignore
   export type { PublicConfig } from './composables/usePublicConfig'
   import('./composables/usePublicConfig')
@@ -293,6 +297,7 @@ declare module 'vue' {
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
     readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
+    readonly usePlanProgress: UnwrapRef<typeof import('./composables/usePlanProgress')['usePlanProgress']>
     readonly usePreferences: UnwrapRef<typeof import('./composables/usePreferences')['usePreferences']>
     readonly useProfile: UnwrapRef<typeof import('./composables/useProfile')['useProfile']>
     readonly usePublicConfig: UnwrapRef<typeof import('./composables/usePublicConfig')['usePublicConfig']>

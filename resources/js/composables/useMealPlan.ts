@@ -11,7 +11,10 @@ export function useMealPlan() {
   const isStale    = ref(false)
   const loading    = ref(false)   // GET
   const generating = ref(false)   // POST stream
+  const applying   = ref(false)   // POST /plan/apply
   const error      = ref<string | null>(null)
+  /** Kế hoạch đang xem là bản vừa sinh, CHƯA lưu — chờ user bấm "Áp dụng". */
+  const isDraft    = ref(false)
 
   async function fetchPlan(scope: PlanScope = 'daily') {
     loading.value = true
@@ -21,10 +24,35 @@ export function useMealPlan() {
       plan.value      = res.plan
       reasoning.value = res.reasoning ?? ''
       isStale.value   = res.is_stale ?? false
+      isDraft.value   = false
     } catch (e: any) {
       if (e?.message !== 'auth:session_expired') error.value = 'Không tải được kế hoạch.'
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Lưu bản nháp vừa sinh thành kế hoạch đang dùng. Trả về true nếu thành công. */
+  async function apply(scope: PlanScope = 'daily'): Promise<boolean> {
+    applying.value = true
+    error.value    = null
+    try {
+      const res = await apiFetch<PlanResponse & { message: string }>('/plan/apply', {
+        method: 'POST',
+        body:   { scope },
+      })
+      plan.value      = res.plan
+      reasoning.value = res.reasoning ?? reasoning.value
+      isStale.value   = false
+      isDraft.value   = false
+      return true
+    } catch (e: any) {
+      if (e?.message !== 'auth:session_expired') {
+        error.value = e?.data?.message ?? e?.data?.detail ?? 'Không thể áp dụng kế hoạch.'
+      }
+      return false
+    } finally {
+      applying.value = false
     }
   }
 
@@ -33,6 +61,7 @@ export function useMealPlan() {
     plan.value      = null
     reasoning.value = ''
     isStale.value   = false
+    isDraft.value   = false
     error.value     = null
     generating.value = true
 
@@ -67,7 +96,10 @@ export function useMealPlan() {
           if (raw === '[DONE]') continue
           try {
             const ev = JSON.parse(raw) as PlanStreamEvent
-            if (ev.type === 'plan') plan.value = ev.data
+            if (ev.type === 'plan') {
+              plan.value    = ev.data
+              isDraft.value = true   // mới chỉ là bản xem trước, chưa lưu
+            }
             else if (ev.type === 'text') reasoning.value += ev.delta
             else if (ev.type === 'error') error.value = ev.message
           } catch { /* bỏ qua */ }
@@ -80,5 +112,5 @@ export function useMealPlan() {
     }
   }
 
-  return { plan, reasoning, isStale, loading, generating, error, fetchPlan, generate }
+  return { plan, reasoning, isStale, isDraft, loading, generating, applying, error, fetchPlan, generate, apply }
 }

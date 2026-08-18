@@ -20,6 +20,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/result', component: () => import('@/pages/Result.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/meal-picker', component: () => import('@/pages/MealPicker.vue'), meta: { layout: 'app', middleware: 'auth' } },
   { path: '/plan', component: () => import('@/pages/MealPlan.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
+  { path: '/plan/progress', component: () => import('@/pages/PlanProgress.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/profile', component: () => import('@/pages/Profile.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/activities', component: () => import('@/pages/Activities.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },
   { path: '/weight', component: () => import('@/pages/Weight.vue'), meta: { layout: 'app', middleware: 'auth-strict' } },

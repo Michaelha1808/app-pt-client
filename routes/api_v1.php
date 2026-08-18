@@ -86,7 +86,11 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->prefix('plan')->group(function () {
     Route::get('/', [PlanController::class, 'show']);
     Route::get('/history', [PlanController::class, 'history']);
+    // Tiến độ thực hiện kế hoạch (% hôm nay + tuần này) — đặt TRƯỚC route động nếu có
+    Route::get('/progress', [\App\Http\Controllers\Api\V1\PlanProgressController::class, 'index']);
     Route::middleware('throttle:plan-generate')->post('/generate', [PlanController::class, 'generate']);
+    // Áp dụng bản nháp vừa sinh (generate chỉ tạo nháp, không tự ghi đè kế hoạch đang dùng)
+    Route::post('/apply', [PlanController::class, 'apply']);
 });
 
 // Passkey / WebAuthn (vân tay, Face ID)

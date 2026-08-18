@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
+import FoodEditSheet from '@/components/food/FoodEditSheet.vue'
+import type { FoodEditValues } from '@/components/food/FoodEditSheet.vue'
 import ShareMealSheet from '@/components/share/ShareMealSheet.vue'
 import type { ShareMealData } from '@/types/share'
 import { useFoodAnalysis } from '@/composables/useFoodAnalysis'
@@ -22,15 +24,26 @@ const { todayStats, fetchTodayStats, logMeal } = useMealLog()
 const todayConsumed = computed(() => todayStats.value?.total_calories ?? 0)
 const todayGoal     = computed(() => store.user?.calorie_goal ?? 2000)
 
-// Editable fields
+// Editable fields — mở popup (FoodEditSheet) để sửa thay vì ô nhập nhỏ chèn trực tiếp vào
+// thẻ kết quả (trước đây khó bấm trúng trên di động, đặc biệt phần calo/macro không sửa được).
 const editName     = ref('')
+const editServing  = ref('')
 const editCalories = ref(0)
-const isEditing    = ref(false)
+const editProtein  = ref(0)
+const editCarbs    = ref(0)
+const editFat      = ref(0)
+const editSodium   = ref(0)
+const editSheetOpen = ref(false)
 
 watch(result, (r) => {
   if (r && !editName.value) {
     editName.value     = r.food_name
+    editServing.value  = r.serving
     editCalories.value = r.calories
+    editProtein.value  = r.protein
+    editCarbs.value    = r.carbs
+    editFat.value      = r.fat
+    editSodium.value   = r.sodium
   }
 }, { immediate: true })
 
@@ -38,10 +51,10 @@ const displayCalories = computed(() => editCalories.value || (result.value?.calo
 const afterEating     = computed(() => todayConsumed.value + displayCalories.value)
 
 const macros = computed(() => result.value ? [
-  { label: 'Protein',  value: result.value.protein, unit: 'g',  color: 'var(--color-calor-green)' },
-  { label: 'Carbs',    value: result.value.carbs,   unit: 'g',  color: '#FF9500' },
-  { label: 'Chất béo', value: result.value.fat,     unit: 'g',  color: '#FF2D55' },
-  { label: 'Natri',    value: result.value.sodium,  unit: 'mg', color: '#8a9a7d' },
+  { label: 'Protein',  value: editProtein.value, unit: 'g',  color: 'var(--color-calor-green)' },
+  { label: 'Carbs',    value: editCarbs.value,   unit: 'g',  color: '#FF9500' },
+  { label: 'Chất béo', value: editFat.value,     unit: 'g',  color: '#FF2D55' },
+  { label: 'Natri',    value: editSodium.value,  unit: 'mg', color: '#8a9a7d' },
 ] : [])
 
 const lowConfidence = computed(() => result.value && result.value.confidence < 0.5)
@@ -79,26 +92,34 @@ function buildContext() {
 
 const refetchingAdvice = ref(false)
 
-// Bấm "Xong" sau khi sửa tên/calo → nếu khác với AI đoán ban đầu, sinh lại lời khuyên cho
-// đúng dữ liệu đã sửa. Trước đây sửa tên chỉ update state ở FE, lời khuyên hiển thị vẫn
-// "đóng băng" theo món AI đoán sai (bug đã báo) — không refetch trên từng phím gõ để tránh
-// spam API, chỉ khi user xác nhận xong bằng nút "Xong".
-async function toggleEditing() {
-  if (isEditing.value && result.value) {
-    const name = editName.value.trim()
-    const cal  = editCalories.value
-    const nameChanged     = name !== '' && name !== result.value.food_name
-    const caloriesChanged = cal > 0 && cal !== result.value.calories
+function openEditSheet() {
+  editSheetOpen.value = true
+}
 
-    if (nameChanged || caloriesChanged) {
-      refetchingAdvice.value = true
-      displayedText.value    = ''
-      pendingChars           = ''
-      await refetchAdvice(name || result.value.food_name, cal || result.value.calories, buildContext())
-      refetchingAdvice.value = false
-    }
+// Lưu từ popup sửa món → nếu tên/calo khác với AI đoán ban đầu, sinh lại lời khuyên cho đúng
+// dữ liệu đã sửa. Trước đây sửa tên chỉ update state ở FE, lời khuyên hiển thị vẫn "đóng băng"
+// theo món AI đoán sai (bug đã báo) — chỉ refetch khi user bấm "Lưu thay đổi", không theo
+// từng phím gõ để tránh spam API.
+async function handleEditSave(values: FoodEditValues) {
+  editName.value     = values.food_name
+  editServing.value  = values.serving
+  editCalories.value = values.calories
+  editProtein.value  = values.protein
+  editCarbs.value    = values.carbs
+  editFat.value      = values.fat
+  editSodium.value   = values.sodium
+
+  if (!result.value) return
+  const nameChanged     = values.food_name !== result.value.food_name
+  const caloriesChanged = values.calories !== result.value.calories
+
+  if (nameChanged || caloriesChanged) {
+    refetchingAdvice.value = true
+    displayedText.value    = ''
+    pendingChars           = ''
+    await refetchAdvice(values.food_name, values.calories, buildContext())
+    refetchingAdvice.value = false
   }
-  isEditing.value = !isEditing.value
 }
 
 // Nhận diện có kiểm soát quota cho khách. Chỉ trừ lượt khi nhận diện thành công.
@@ -117,8 +138,13 @@ onMounted(async () => {
     sessionStorage.removeItem('barcode_result')
     const br        = JSON.parse(barcodeRaw) as FoodAnalysisResult
     result.value    = br
-    editName.value  = br.food_name
+    editName.value     = br.food_name
+    editServing.value  = br.serving
     editCalories.value = br.calories
+    editProtein.value  = br.protein
+    editCarbs.value    = br.carbs
+    editFat.value      = br.fat
+    editSodium.value   = br.sodium
     streamDone.value = true
     if (store.token) await fetchTodayStats()
     return
@@ -140,7 +166,12 @@ async function confirmMeal() {
   const mealToLog: FoodAnalysisResult = {
     ...result.value,
     food_name: editName.value || result.value.food_name,
+    serving:   editServing.value || result.value.serving,
     calories:  editCalories.value || result.value.calories,
+    protein:   editProtein.value,
+    carbs:     editCarbs.value,
+    fat:       editFat.value,
+    sodium:    editSodium.value,
   }
   // Lưu kèm lời khuyên AI (bản đầy đủ đã stream) để xem lại phần phân tích trong Lịch sử
   const advice = (streamingText.value || displayedText.value || '').trim() || null
@@ -160,11 +191,11 @@ const shareOpen = ref(false)
 
 const shareMeal = computed<ShareMealData | null>(() => result.value ? {
   food_name: editName.value || result.value.food_name,
-  serving:   result.value.serving,
+  serving:   editServing.value || result.value.serving,
   calories:  displayCalories.value,
-  protein:   result.value.protein,
-  carbs:     result.value.carbs,
-  fat:       result.value.fat,
+  protein:   editProtein.value,
+  carbs:     editCarbs.value,
+  fat:       editFat.value,
   image:     savedImage.value,
   logged_at: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
   goal_percent: todayGoal.value > 0 ? Math.round((afterEating.value / todayGoal.value) * 100) : null,
@@ -172,8 +203,13 @@ const shareMeal = computed<ShareMealData | null>(() => result.value ? {
 
 async function retry() {
   editName.value     = ''
+  editServing.value  = ''
   editCalories.value = 0
-  isEditing.value    = false
+  editProtein.value  = 0
+  editCarbs.value    = 0
+  editFat.value      = 0
+  editSodium.value   = 0
+  editSheetOpen.value = false
   displayedText.value = ''
   pendingChars        = ''
   const text = route.query.food as string | undefined
@@ -284,48 +320,32 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         </p>
       </div>
 
-      <!-- ── Food name + calories (hiện khi result về) ── -->
-      <div
+      <!-- ── Food name + calories (hiện khi result về) — bấm để mở popup sửa ── -->
+      <button
         v-if="result"
-        class="mx-5 bg-white rounded-[18px] px-5 py-4 mb-4 shadow-sm animate-fadeInUp"
-        style="opacity:0"
+        type="button"
+        class="block w-full text-left mx-5 bg-white rounded-[18px] px-5 py-4 mb-4 shadow-sm animate-fadeInUp ios-press disabled:opacity-60"
+        style="width: calc(100% - 40px); opacity:0"
+        :disabled="refetchingAdvice"
+        @click="openEditSheet"
       >
-        <!-- Edit mode toggle -->
         <div class="flex items-center justify-between mb-3">
           <p class="text-[13px] text-ios-gray uppercase tracking-wide font-semibold">Món ăn</p>
-          <button
-            class="flex items-center gap-1 text-[12px] font-medium ios-press disabled:opacity-50"
-            :class="isEditing ? 'text-ios-green' : 'text-ios-blue'"
-            :disabled="refetchingAdvice"
-            @click="toggleEditing"
-          >
+          <span class="flex items-center gap-1 text-[12px] font-medium text-ios-blue">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor">
-              <path v-if="isEditing" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-              <path v-else d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
-            {{ refetchingAdvice ? 'Đang cập nhật...' : (isEditing ? 'Xong' : 'Chỉnh sửa') }}
-          </button>
+            {{ refetchingAdvice ? 'Đang cập nhật...' : 'Sửa' }}
+          </span>
         </div>
 
         <div class="flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
-            <input
-              v-if="isEditing"
-              v-model="editName"
-              class="w-full text-[20px] font-bold text-black bg-ios-gray6 rounded-[10px] px-3 py-1.5 outline-none"
-            />
-            <h2 v-else class="text-[22px] font-bold text-black">{{ editName || result.food_name }}</h2>
-            <p class="text-[13px] text-ios-gray mt-1">{{ result.serving }}</p>
+            <h2 class="text-[22px] font-bold text-black">{{ editName || result.food_name }}</h2>
+            <p class="text-[13px] text-ios-gray mt-1">{{ editServing || result.serving }}</p>
           </div>
           <div class="text-right flex-shrink-0">
-            <div v-if="isEditing" class="flex items-center gap-1 justify-end">
-              <input
-                v-model.number="editCalories"
-                type="number"
-                class="w-20 text-[28px] font-bold text-ios-blue bg-ios-gray6 rounded-[10px] px-2 py-1 outline-none text-right"
-              />
-            </div>
-            <p v-else class="text-[36px] font-bold text-ios-blue leading-none">{{ editCalories || result.calories }}</p>
+            <p class="text-[36px] font-bold text-ios-blue leading-none">{{ editCalories || result.calories }}</p>
             <p class="text-[13px] text-ios-gray">kcal</p>
           </div>
         </div>
@@ -340,7 +360,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
             <p class="text-[10px] text-ios-gray text-center leading-tight">{{ m.label }}</p>
           </div>
         </div>
-      </div>
+      </button>
 
       <!-- ── Impact analysis ── -->
       <div
@@ -477,4 +497,18 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
   />
 
   <ShareMealSheet v-model:open="shareOpen" :meal="shareMeal" />
+
+  <FoodEditSheet
+    v-model:open="editSheetOpen"
+    :initial="{
+      food_name: editName || result?.food_name || '',
+      serving:   editServing || result?.serving || '',
+      calories:  editCalories || result?.calories || 0,
+      protein:   editProtein,
+      carbs:     editCarbs,
+      fat:       editFat,
+      sodium:    editSodium,
+    }"
+    @save="handleEditSave"
+  />
 </template>

@@ -34,7 +34,7 @@ class FoodController extends Controller
         return null;
     }
 
-    public function analyze(Request $request, FoodAnalysisService $service): StreamedResponse|JsonResponse
+    public function analyze(Request $request, FoodAnalysisService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
     {
         if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
 
@@ -55,7 +55,8 @@ class FoodController extends Controller
             }, 400, $this->sseHeaders());
         }
 
-        UsageTracker::record('food_analyze', $request->user('sanctum')?->id);
+        $user = $request->user('sanctum');
+        UsageTracker::record('food_analyze', $user?->id);
 
         $image   = $request->input('image');
         $text    = $request->input('text');
@@ -64,6 +65,9 @@ class FoodController extends Controller
             'today_calories' => (int) ($context['today_calories'] ?? 0),
             'goal'           => (int) ($context['goal'] ?? 2000),
         ];
+        if ($user) {
+            $context['pref_constraints'] = $preferences->promptBlock($user);
+        }
 
         return response()->stream(
             function () use ($service, $image, $text, $context) {
@@ -99,6 +103,61 @@ class FoodController extends Controller
                     flush();
                 }
 
+                echo "data: [DONE]\n\n";
+                flush();
+            },
+            200,
+            $this->sseHeaders()
+        );
+    }
+
+    /**
+     * Sinh lại lời khuyên cho ĐÚNG tên món/calo user vừa sửa — dùng khi AI nhận diện sai và
+     * user chỉnh lại tên trong Result.vue. Trước đây không có endpoint này nên sửa tên chỉ
+     * update state ở FE, lời khuyên hiển thị vẫn "đóng băng" theo tên AI đoán sai ban đầu
+     * (bug thật đã gặp). Tách riêng khỏi analyze() vì không cần chạy lại Phase A (nhận diện
+     * ảnh) — chỉ cần Phase B (lời khuyên) với input đã có sẵn.
+     */
+    public function advise(Request $request, FoodAnalysisService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
+    {
+        if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
+
+        $request->validate([
+            'food_name'               => 'required|string|max:200',
+            'calories'                => 'required|integer|min:0|max:10000',
+            'context.today_calories'  => 'nullable|integer|min:0|max:10000',
+            'context.goal'            => 'nullable|integer|between:1000,5000',
+        ]);
+
+        $foodName = (string) $request->input('food_name');
+        $calories = (int) $request->input('calories');
+        $context  = [
+            'today_calories' => (int) $request->input('context.today_calories', 0),
+            'goal'           => (int) $request->input('context.goal', 2000),
+        ];
+
+        $user = $request->user('sanctum');
+        if ($user) {
+            $context['pref_constraints'] = $preferences->promptBlock($user);
+        }
+
+        return response()->stream(
+            function () use ($service, $foodName, $calories, $context) {
+                while (ob_get_level()) {
+                    ob_end_clean();
+                }
+                try {
+                    foreach ($service->streamAdvice($foodName, $calories, $context) as $delta) {
+                        echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
+                        flush();
+                    }
+                } catch (\Throwable $e) {
+                    echo "data: " . json_encode([
+                        'type'    => 'error',
+                        'message' => 'Không thể tạo lời khuyên. Vui lòng thử lại.',
+                    ]) . "\n\n";
+                    flush();
+                }
                 echo "data: [DONE]\n\n";
                 flush();
             },

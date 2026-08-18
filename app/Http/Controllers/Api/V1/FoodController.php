@@ -178,7 +178,7 @@ class FoodController extends Controller
         return response()->json(['message' => 'ok']);
     }
 
-    public function adviseMeal(Request $request, FoodAnalysisService $service): StreamedResponse|JsonResponse
+    public function adviseMeal(Request $request, FoodAnalysisService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
     {
         if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
 
@@ -200,6 +200,13 @@ class FoodController extends Controller
             'today_calories' => (int) $request->input('context.today_calories', 0),
             'goal'           => (int) $request->input('context.goal', 2000),
         ];
+
+        // Không bắt buộc auth (khách vẫn dùng được) — nhưng nếu đã đăng nhập thì kèm dị ứng
+        // để tư vấn không "mù" như trước (gợi ý món có thể chứa nguyên liệu người dùng dị ứng).
+        $user = $request->user('sanctum');
+        if ($user) {
+            $context['pref_constraints'] = $preferences->promptBlock($user);
+        }
 
         return response()->stream(
             function () use ($service, $items, $total, $context) {

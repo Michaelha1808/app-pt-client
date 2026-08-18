@@ -7,6 +7,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class MealPlanService
 {
@@ -164,7 +165,7 @@ class MealPlanService
                 [
                     'json' => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. Ưu tiên món Việt phổ biến, dễ mua/dễ nấu.']],
+                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. Ưu tiên món Việt phổ biến, dễ mua/dễ nấu. KHÔNG chẩn đoán bệnh hay kê đơn thuốc — chỉ lập kế hoạch ăn uống/tập luyện thông thường.']],
                         ],
                         'contents' => [
                             ['role' => 'user', 'parts' => [['text' => $prompt]]],
@@ -180,6 +181,7 @@ class MealPlanService
             $body = json_decode($response->getBody()->getContents(), true);
             $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
             $plan = json_decode($raw, true) ?: [];
+            $plan = $this->validatePlanSchema($plan, $scope, $raw, $body['candidates'][0]['finishReason'] ?? null);
 
             // Ngày bắt đầu tuần do server quyết định (không tin AI tính lịch).
             if ($scope === 'weekly') {
@@ -224,7 +226,7 @@ PROMPT;
                     'stream' => true,
                     'json'   => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời tiếng Việt, ngắn gọn, tự nhiên.']],
+                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời tiếng Việt, ngắn gọn, tự nhiên. KHÔNG chẩn đoán bệnh hay kê đơn thuốc.']],
                         ],
                         'contents' => [
                             ['role' => 'user', 'parts' => [['text' => $prompt]]],
@@ -296,7 +298,7 @@ PROMPT;
                 [
                     'json' => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm.']],
+                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. KHÔNG chẩn đoán bệnh hay kê đơn thuốc — chỉ lập kế hoạch ăn uống/tập luyện thông thường dựa trên lời tư vấn đã trao đổi.']],
                         ],
                         'contents'         => [['role' => 'user', 'parts' => [['text' => $prompt]]]],
                         'generationConfig' => [
@@ -311,19 +313,99 @@ PROMPT;
             $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
             $plan = json_decode($raw, true) ?: [];
 
-            if (!isset($plan['meals']) || !is_array($plan['meals'])) {
-                Log::warning('MealPlan planFromConversation: JSON kế hoạch không hợp lệ', [
-                    'finish_reason' => $body['candidates'][0]['finishReason'] ?? null,
-                    'raw'           => mb_substr($raw, 0, 1000),
-                ]);
-                throw new \RuntimeException('Kế hoạch trả về không hợp lệ.');
-            }
-
-            return $plan;
+            return $this->validatePlanSchema($plan, 'daily', $raw, $body['candidates'][0]['finishReason'] ?? null);
         } catch (GuzzleException $e) {
             $this->logGeminiFailure('planFromConversation', $e);
             throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Validate JSON kế hoạch AI trả về đúng schema trước khi lưu vào meal_plans.plan — trước
+     * đây chỉ có `getStructuredPlan()`/`planFromConversation()` decode JSON rồi dùng thẳng
+     * (planFromConversation chỉ kiểm tra qua loa `meals` là array), nên field thiếu/sai kiểu
+     * từ Gemini có thể lan ra tận FE hoặc lưu rác. Ném RuntimeException nếu sai — khớp hành vi
+     * lỗi hiện có của 2 hàm gọi (catch(\Throwable) ở PlanController/ChatController).
+     *
+     * @throws \RuntimeException
+     * @return array<string,mixed>
+     */
+    private function validatePlanSchema(array $plan, string $scope, string $raw, ?string $finishReason): array
+    {
+        $macroRules = [
+            'target_macros'         => 'required|array',
+            'target_macros.protein' => 'required|numeric|min:0|max:1000',
+            'target_macros.carbs'   => 'required|numeric|min:0|max:2000',
+            'target_macros.fat'     => 'required|numeric|min:0|max:1000',
+        ];
+
+        $mealRules = [
+            'meals'            => 'required|array|min:1',
+            'meals.*.slot'     => 'required|string|in:breakfast,lunch,dinner,snack',
+            'meals.*.name'     => 'required|string|max:200',
+            'meals.*.calories' => 'required|numeric|min:0|max:5000',
+        ];
+
+        $workoutRules = [
+            'workouts'                 => 'present|array',
+            'workouts.*.name'          => 'required_with:workouts.*|string|max:200',
+            'workouts.*.type'          => 'required_with:workouts.*|string|in:cardio,strength,flexibility',
+            'workouts.*.duration_min'  => 'required_with:workouts.*|numeric|min:0|max:300',
+        ];
+
+        $rules = match ($scope) {
+            'weekly' => [
+                'summary'                  => 'required|string|max:1000',
+                'days'                     => 'required|array|size:7',
+                'days.*.weekday'           => 'required|integer|between:1,7',
+                'days.*.label'             => 'required|string|max:50',
+                'days.*.target_calories'   => 'required|numeric|min:0|max:10000',
+                'days.*.meals'             => 'required|array',
+                'days.*.meals.*.slot'      => 'required|string|in:breakfast,lunch,dinner,snack',
+                'days.*.meals.*.name'      => 'required|string|max:200',
+                'days.*.meals.*.calories'  => 'required|numeric|min:0|max:5000',
+                'tips'                     => 'present|array',
+            ],
+            'monthly' => [
+                'summary'                  => 'required|string|max:1000',
+                'avg_daily_calories'       => 'required|numeric|min:0|max:10000',
+                'target_macros'            => 'required|array',
+                'target_macros.protein'    => 'required|numeric|min:0',
+                'target_macros.carbs'      => 'required|numeric|min:0',
+                'target_macros.fat'        => 'required|numeric|min:0',
+                'weekly_focus'             => 'present|array',
+                'weekly_workout_split'     => 'present|array',
+                'tips'                     => 'present|array',
+            ],
+            // daily — dùng chung cho getStructuredPlan(scope=daily) và planFromConversation()
+            default => array_merge(
+                [
+                    'summary'          => 'required|string|max:500',
+                    'target_calories'  => 'required|numeric|min:0|max:10000',
+                    'water_target_ml'  => 'required|numeric|min:0|max:10000',
+                    'tips'             => 'present|array',
+                ],
+                $macroRules,
+                $mealRules,
+                $workoutRules,
+            ),
+        };
+
+        $validator = Validator::make($plan, $rules);
+
+        if ($validator->fails()) {
+            Log::warning('MealPlan: JSON kế hoạch AI không đúng schema', [
+                'scope'         => $scope,
+                'errors'        => $validator->errors()->toArray(),
+                'finish_reason' => $finishReason,
+                'raw'           => mb_substr($raw, 0, 1000),
+            ]);
+            throw new \RuntimeException('Kế hoạch AI trả về không đúng định dạng. Vui lòng thử lại.');
+        }
+
+        // validated() chỉ trả field có rule — giữ nguyên $plan gốc (đã qua validate) để không
+        // mất field ngoài schema bắt buộc (vd items[] trong từng meal, không có rule riêng).
+        return $plan;
     }
 
     /** Rút lời khuyên gần nhất của trợ lý + câu hỏi gần nhất của user để làm nguồn cho kế hoạch. */

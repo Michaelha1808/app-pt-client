@@ -466,19 +466,27 @@ Giả định 100K user, ~10% active/ngày, mỗi active ~5 lượt chat → **~
 
 Codebase CaloEye đã có sẵn một phần kiến trúc này:
 
+> **Cập nhật 2026-08-18:** bảng bên dưới stale trước ngày này — viết trước khi `PreferenceService`
+> hoàn thiện và trước khi `chat_conversations`/`chat_messages` được thêm (2026-08-17). Đã đối
+> chiếu lại trực tiếp với code, các dòng dưới phản ánh hiện trạng thật.
+
 | Thành phần trong tài liệu | Hiện trạng |
 |---|---|
 | Chat SSE + scope gate + context cơ bản | ✅ `ChatService` + `ChatController` (context v1: profile, BMR/TDEE, hôm nay, TB 7 ngày) |
-| Long-term memory + extraction + habit profile + context v2 | 📄 Đã spec chi tiết tại `spec-chat-personalization.md` (bảng `user_preferences` ~ `user_memories` thu gọn) — chưa implement |
+| Long-term memory + extraction + habit profile + context v2 | ✅ Đã implement — `PreferenceService` (bảng `user_preferences`: allergy/dislike/like/diet/habit), `extractFromTurn()` trích fact từ hội thoại qua Gemini JSON mode, `habitPromptBlock()` suy thói quen từ 30 ngày `meal_logs` (cache 1h). Xem `spec-chat-personalization.md`. |
 | Kế hoạch AI + data_hash stale | ✅ `MealPlanService` + bảng `meal_plans` |
-| `usage_events`, `health_activities`, `water_logs`, `weight` (field trên users) | ✅ Đã có (cân nặng nên nâng thành `weight_logs` để giữ lịch sử) |
-| `ai_conversations` + `conversation_messages` + rolling summary | 🔴 Chưa có — hiện client giữ lịch sử, gửi tối đa 30 lượt/request |
+| `usage_events`, `health_activities`, `water_logs`, `weight_logs` | ✅ Đã có đầy đủ, kể cả lịch sử cân nặng (`weight_logs`, không còn chỉ 1 field trên `users`) — xem `spec-weight-tracking.md` |
+| `ai_conversations` + `conversation_messages` + rolling summary | 🟡 Một phần: đã có `chat_conversations`/`chat_messages` (2026-08-17, xem `spec-chat-history.md`) lưu lịch sử server-side cho user đăng nhập, user tự xem lại được. **Chưa có rolling summary** — mỗi request vẫn gửi nguyên văn tối đa 30 lượt gần nhất (client giữ, server truncate còn 12 khi build `contents`), không tóm tắt phần cũ hơn. |
 | `daily_nutrition` rollup | 🔴 Chưa có — hiện SUM trực tiếp `meal_logs` (ổn ở quy mô hiện tại) |
-| `nutrition_goals` (lịch sử mục tiêu) | 🔴 Hiện chỉ có `calorie_goal` trên `users` |
+| `nutrition_goals` (lịch sử mục tiêu) | 🔴 Hiện chỉ có `calorie_goal` trên `users` — vẫn chưa có bảng lịch sử thay đổi mục tiêu |
 | Weekly insight job | 🔴 Chưa có |
-| LlmClient interface / PromptBuilder tách riêng | 🔴 Hiện Guzzle+prompt nằm trong từng Service |
+| LlmClient interface / PromptBuilder tách riêng | 🔴 Hiện Guzzle+prompt nằm trong từng Service — 4 service (`ChatService`, `MealPlanService`, `FoodAnalysisService`, `PreferenceService`) tự lặp lại y hệt boilerplate gọi Gemini |
 
-**Lộ trình khuyến nghị:** làm `spec-chat-personalization.md` trước (giá trị user thấy ngay); sau đó theo thứ tự: `weight_logs` + `nutrition_goals` → `ai_conversations`/messages + rolling summary → `daily_nutrition` rollup → weekly insights → refactor LlmClient/PromptBuilder khi thêm provider hoặc khi prompt bắt đầu trùng lặp giữa các service.
+**Lộ trình khuyến nghị (cập nhật):** long-term memory và lưu lịch sử chat server-side đã xong.
+Còn lại theo thứ tự ưu tiên: `nutrition_goals` (lịch sử mục tiêu) → rolling summary cho
+`chat_conversations`/messages (khi hội thoại dài vượt ngưỡng 12 lượt) → `daily_nutrition` rollup
+→ weekly insights → refactor `LlmClient`/`PromptBuilder` khi thêm provider hoặc khi prompt bắt
+đầu trùng lặp giữa các service.
 
 ---
 

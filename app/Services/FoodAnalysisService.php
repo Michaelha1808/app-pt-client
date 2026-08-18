@@ -124,7 +124,7 @@ PROMPT;
                     'stream' => true,
                     'json'   => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên, không dùng markdown heading. Có thể dùng emoji phù hợp.']],
+                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên, không dùng markdown heading. Có thể dùng emoji phù hợp. KHÔNG chẩn đoán bệnh hay kê đơn thuốc.']],
                         ],
                         'contents' => [
                             ['role' => 'user', 'parts' => [['text' => $prompt]]],
@@ -307,11 +307,17 @@ PROMPT,
             ->map(fn ($i) => "- {$i['name']} (~{$i['calories']} kcal)")
             ->implode("\n");
 
+        // Chỉ có khi user đã đăng nhập (FoodController::adviseMeal) — khách vẫn nhận tư vấn
+        // chung bình thường, không chặn tính năng chỉ vì thiếu cá nhân hoá.
+        $prefBlock = isset($context['pref_constraints'])
+            ? "\n{$context['pref_constraints']}\nRÀNG BUỘC BẮT BUỘC: nếu bữa ăn ở trên chứa nguyên liệu người dùng dị ứng, PHẢI cảnh báo rõ ràng ngay đầu nhận xét.\n"
+            : '';
+
         $prompt = <<<PROMPT
 Bữa ăn gồm các món:
 {$list}
 Tổng: ~{$total} kcal. Hôm nay đã ăn {$today} kcal / mục tiêu {$goal} kcal/ngày.
-
+{$prefBlock}
 Viết nhận xét dinh dưỡng cho cả bữa (3–4 câu):
 1. Cân bằng dinh dưỡng tổng thể của bữa (đạm/tinh bột/rau, điểm mạnh/yếu).
 2. Tác động đến mục tiêu calo hôm nay.
@@ -325,7 +331,7 @@ PROMPT;
                     'stream' => true,
                     'json'   => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên, không dùng markdown heading. Có thể dùng emoji phù hợp.']],
+                            'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên, không dùng markdown heading. Có thể dùng emoji phù hợp. KHÔNG chẩn đoán bệnh hay kê đơn thuốc.']],
                         ],
                         'contents' => [
                             ['role' => 'user', 'parts' => [['text' => $prompt]]],

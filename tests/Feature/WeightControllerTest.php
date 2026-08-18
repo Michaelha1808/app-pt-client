@@ -122,11 +122,13 @@ class WeightControllerTest extends TestCase
             ->patchJson('/api/v1/user/profile', ['weight_kg' => 69.3])
             ->assertOk();
 
-        $this->assertDatabaseHas('weight_logs', [
-            'user_id'     => $user->id,
-            'logged_date' => today()->toDateString(),
-            'weight_kg'   => 69.3,
-        ]);
+        // Không dùng assertDatabaseHas cho logged_date: cast 'date' lưu xuống SQL kèm giờ
+        // ("2026-08-18 00:00:00"), so khớp chuỗi thô với toDateString() ("2026-08-18", không
+        // giờ) sẽ luôn trật dù dữ liệu đúng — đọc qua model (tự áp cast) để so cho đúng.
+        $entry = $user->weightLogs()->whereDate('logged_date', today())->first();
+        $this->assertNotNull($entry, 'Không tìm thấy weight_log của hôm nay');
+        $this->assertSame(today()->toDateString(), $entry->logged_date->toDateString());
+        $this->assertEquals(69.3, $entry->weight_kg);
     }
 
     public function test_apply_goal_updates_calorie_goal(): void

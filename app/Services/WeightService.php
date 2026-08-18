@@ -26,8 +26,11 @@ class WeightService
             $attrs['note'] = $note;
         }
 
+        // Dùng Carbon (không phải chuỗi 'Y-m-d') cho khoá tìm kiếm: cột được cast 'date' nên
+        // chuỗi ngày trần không khớp bản ghi sẵn có trên mọi driver → updateOrCreate sẽ INSERT
+        // và đụng unique (user_id, logged_date) thay vì ghi đè.
         $entry = $user->weightLogs()->updateOrCreate(
-            ['logged_date' => $date->toDateString()],
+            ['logged_date' => $date->copy()->startOfDay()],
             $attrs
         );
 

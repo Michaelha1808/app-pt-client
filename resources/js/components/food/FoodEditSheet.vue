@@ -9,10 +9,14 @@ export interface FoodEditValues {
   sodium:    number
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   open: boolean
   initial: FoodEditValues
-}>()
+  /** Nhãn ô calo — khác nhau tuỳ ngữ cảnh (calo cả phần vs calo/1 đơn vị khi có stepper số lượng riêng) */
+  caloriesLabel?: string
+}>(), {
+  caloriesLabel: 'Calo (kcal)',
+})
 
 const emit = defineEmits<{
   'update:open': [boolean]
@@ -75,7 +79,7 @@ function save() {
           />
 
           <!-- Calo -->
-          <p class="text-[13px] font-medium text-ios-gray mb-1.5">Calo (kcal)</p>
+          <p class="text-[13px] font-medium text-ios-gray mb-1.5">{{ caloriesLabel }}</p>
           <input
             v-model.number="form.calories"
             type="number"

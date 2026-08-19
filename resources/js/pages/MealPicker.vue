@@ -194,6 +194,11 @@ async function confirmMeal() {
             @update:quantity="d.quantity = $event"
             @update:calories="d.calories = $event"
             @update:food_name="d.food_name = $event"
+            @update:serving="d.serving = $event"
+            @update:protein="d.protein = $event"
+            @update:carbs="d.carbs = $event"
+            @update:fat="d.fat = $event"
+            @update:sodium="d.sodium = $event"
           />
         </div>
 

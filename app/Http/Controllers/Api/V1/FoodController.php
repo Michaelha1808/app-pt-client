@@ -90,7 +90,7 @@ class FoodController extends Controller
                         flush();
                     } else {
                         // Phase B: stream lời khuyên
-                        foreach ($service->streamAdvice($result['food_name'], $result['calories'], $context) as $delta) {
+                        foreach ($service->streamAdvice($result['food_name'], $result['calories'], $context, $result) as $delta) {
                             echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
                             flush();
                         }
@@ -125,6 +125,11 @@ class FoodController extends Controller
         $request->validate([
             'food_name'               => 'required|string|max:200',
             'calories'                => 'required|integer|min:0|max:10000',
+            'serving'                 => 'nullable|string|max:200',
+            'protein'                 => 'nullable|integer|min:0|max:1000',
+            'carbs'                   => 'nullable|integer|min:0|max:2000',
+            'fat'                     => 'nullable|integer|min:0|max:1000',
+            'sodium'                  => 'nullable|integer|min:0|max:20000',
             'context.today_calories'  => 'nullable|integer|min:0|max:10000',
             'context.goal'            => 'nullable|integer|between:1000,5000',
         ]);
@@ -135,6 +140,14 @@ class FoodController extends Controller
             'today_calories' => (int) $request->input('context.today_calories', 0),
             'goal'           => (int) $request->input('context.goal', 2000),
         ];
+        // Khẩu phần/macro user vừa sửa — optional để client cũ (chỉ gửi tên + calo) vẫn chạy.
+        $nutrition = [
+            'serving' => (string) $request->input('serving', ''),
+            'protein' => (int) $request->input('protein', 0),
+            'carbs'   => (int) $request->input('carbs', 0),
+            'fat'     => (int) $request->input('fat', 0),
+            'sodium'  => (int) $request->input('sodium', 0),
+        ];
 
         $user = $request->user('sanctum');
         if ($user) {
@@ -142,12 +155,12 @@ class FoodController extends Controller
         }
 
         return response()->stream(
-            function () use ($service, $foodName, $calories, $context) {
+            function () use ($service, $foodName, $calories, $context, $nutrition) {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
                 try {
-                    foreach ($service->streamAdvice($foodName, $calories, $context) as $delta) {
+                    foreach ($service->streamAdvice($foodName, $calories, $context, $nutrition) as $delta) {
                         echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
                         flush();
                     }
@@ -164,6 +177,39 @@ class FoodController extends Controller
             200,
             $this->sseHeaders()
         );
+    }
+
+    /**
+     * Ước tính lại calo + macro cho tên món/khẩu phần user vừa sửa.
+     *
+     * Bổ sung cho advise(): trước đây sửa tên món sai chỉ sinh lại LỜI KHUYÊN, còn con số
+     * calo/macro vẫn là của món AI đoán sai → nhật ký lưu sai số liệu. Endpoint này trả JSON
+     * (không stream) để FE áp số mới vào form trước, rồi mới gọi advise() sinh lời khuyên
+     * khớp với số đó.
+     */
+    public function estimate(Request $request, FoodAnalysisService $service): JsonResponse
+    {
+        if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
+
+        $request->validate([
+            'food_name'  => 'required|string|min:1|max:200',
+            'serving'    => 'nullable|string|max:200',
+            'unit_label' => 'nullable|string|max:50',
+        ]);
+
+        UsageTracker::record('food_estimate', $request->user('sanctum')?->id);
+
+        try {
+            return response()->json($service->estimateNutrition(
+                (string) $request->input('food_name'),
+                $request->input('serving') ?: null,
+                $request->input('unit_label') ?: null,
+            ));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Không ước tính được dinh dưỡng cho món này. Bạn có thể nhập tay.',
+            ], 502);
+        }
     }
 
     public function detect(

@@ -32,5 +32,10 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- FoodAnalysisService::__construct ep kieu string cho apiKey; khong co bien nay
+             thi MOI request cham toi FoodController deu 500 ngay tu buoc resolve dependency
+             (ke ca test validate 422). Gia tri gia — test khong goi Gemini that. -->
+        <env name="GEMINI_API_KEY" value="testing-key"/>
+        <env name="GEMINI_MODEL" value="gemini-2.0-flash"/>
     </php>
 </phpunit>

@@ -10,6 +10,16 @@ export interface FoodAnalysisResult {
   advice_short: string
 }
 
+/** Kết quả POST /food/estimate — ước tính lại dinh dưỡng theo tên món user đã sửa */
+export interface NutritionEstimate {
+  serving: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  sodium: number
+}
+
 export interface FoodAnalysisContext {
   today_calories: number
   goal: number

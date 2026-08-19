@@ -60,6 +60,10 @@ Route::middleware('throttle:food-analyze')->post('/food/advise-meal', [FoodContr
 // diện ảnh) — public, chung quota với food analysis
 Route::middleware('throttle:food-analyze')->post('/food/advise', [FoodController::class, 'advise']);
 
+// Ước tính lại calo/macro theo tên món user vừa sửa (JSON, không stream) — chạy trước
+// /food/advise để lời khuyên khớp số liệu mới; public, chung quota với food analysis
+Route::middleware('throttle:food-analyze')->post('/food/estimate', [FoodController::class, 'estimate']);
+
 // Food log — auth required
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/food/log', [FoodController::class, 'log']);

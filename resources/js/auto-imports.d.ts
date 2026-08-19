@@ -105,6 +105,7 @@ declare global {
   const useCssVars: typeof import('vue').useCssVars
   const useFoodAnalysis: typeof import('./composables/useFoodAnalysis').useFoodAnalysis
   const useFoodDetect: typeof import('./composables/useFoodDetect').useFoodDetect
+  const useFoodEstimate: typeof import('./composables/useFoodEstimate').useFoodEstimate
   const useGuestQuota: typeof import('./composables/useGuestQuota').useGuestQuota
   const useHealthIntegration: typeof import('./composables/useHealthIntegration').useHealthIntegration
   const useId: typeof import('vue').useId
@@ -145,6 +146,9 @@ declare global {
   // @ts-ignore
   export type { ClockState } from './composables/useClock'
   import('./composables/useClock')
+  // @ts-ignore
+  export type { AdviceInput } from './composables/useFoodAnalysis'
+  import('./composables/useFoodAnalysis')
   // @ts-ignore
   export type { QuotaAction } from './composables/useGuestQuota'
   import('./composables/useGuestQuota')
@@ -287,6 +291,7 @@ declare module 'vue' {
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
     readonly useFoodAnalysis: UnwrapRef<typeof import('./composables/useFoodAnalysis')['useFoodAnalysis']>
     readonly useFoodDetect: UnwrapRef<typeof import('./composables/useFoodDetect')['useFoodDetect']>
+    readonly useFoodEstimate: UnwrapRef<typeof import('./composables/useFoodEstimate')['useFoodEstimate']>
     readonly useGuestQuota: UnwrapRef<typeof import('./composables/useGuestQuota')['useGuestQuota']>
     readonly useHealthIntegration: UnwrapRef<typeof import('./composables/useHealthIntegration')['useHealthIntegration']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>

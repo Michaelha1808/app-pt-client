@@ -14,7 +14,15 @@ export function useMealAdvice() {
   const streaming = ref(false)
   const error     = ref<string | null>(null)
 
+  let abortCtl: AbortController | null = null
+
   async function fetchAdvice(payload: MealAdvicePayload) {
+    // Sửa món / đổi số lượng liên tiếp → huỷ luồng cũ, nếu không 2 stream cùng ghi vào
+    // `advice` và nhận xét hiển thị bị trộn lẫn giữa 2 lần.
+    abortCtl?.abort()
+    const abort = new AbortController()
+    abortCtl    = abort
+
     advice.value    = ''
     error.value     = null
     streaming.value = true
@@ -28,6 +36,7 @@ export function useMealAdvice() {
         method: 'POST',
         headers,
         credentials: 'include',
+        signal: abort.signal,
         body: JSON.stringify(payload),
       })
       if (!res.ok || !res.body) throw new Error('Không thể tạo nhận xét')
@@ -38,7 +47,7 @@ export function useMealAdvice() {
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done || abort.signal.aborted) break
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
         buffer = lines.pop() ?? ''
@@ -54,13 +63,25 @@ export function useMealAdvice() {
         }
       }
     } catch (e: any) {
+      if (abort.signal.aborted) return            // lần gọi mới đã tiếp quản
       if (e?.message !== 'auth:session_expired') {
         error.value = e?.message ?? 'Không thể kết nối.'
       }
     } finally {
-      streaming.value = false
+      if (abortCtl === abort) {
+        abortCtl        = null
+        streaming.value = false
+      }
     }
   }
 
-  return { advice, streaming, error, fetchAdvice }
+  /** Bỏ nhận xét đang hiển thị/đang stream (vd: user bỏ chọn hết món) */
+  function resetAdvice() {
+    abortCtl?.abort()
+    abortCtl        = null
+    advice.value    = ''
+    streaming.value = false
+  }
+
+  return { advice, streaming, error, fetchAdvice, resetAdvice }
 }

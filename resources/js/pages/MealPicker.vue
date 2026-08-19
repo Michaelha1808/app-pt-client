@@ -3,12 +3,14 @@ import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import DishPickRow from '@/components/food/DishPickRow.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import { useFoodDetect } from '@/composables/useFoodDetect'
+import { useFoodEstimate } from '@/composables/useFoodEstimate'
 import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useMealLog } from '@/composables/useMealLog'
 import { useMealAdvice } from '@/composables/useMealAdvice'
 import { useAuthStore } from '@/stores/auth'
 import { apiFetch } from '@/utils/api'
 import { dishCalories, dishMacro, totalCalories, selectedCount, formatQty } from '@/utils/nutrition'
+import type { FoodEditValues } from '@/components/food/FoodEditSheet.vue'
 import type { DishPick } from '@/types/food'
 import type { FoodAnalysisResult } from '@/types/food'
 
@@ -17,12 +19,15 @@ const store = useAuthStore()
 const { dishes, detectionId, loading, error, detect } = useFoodDetect()
 const { canUse, increment } = useGuestQuota()
 const { todayStats, fetchTodayStats, logMeals } = useMealLog()
-const { advice, streaming: adviceStreaming, fetchAdvice } = useMealAdvice()
+const { advice, streaming: adviceStreaming, fetchAdvice, resetAdvice } = useMealAdvice()
+const { estimate } = useFoodEstimate()
 
 const picks        = ref<DishPick[]>([])
 const gateOpen     = ref(false)
 const saving       = ref(false)
 const feedbackSent = ref(false)
+/** Index các món đang được AI ước tính lại dinh dưỡng (sau khi user sửa tên) */
+const estimatingAt = ref<Set<number>>(new Set())
 
 const total      = computed(() => totalCalories(picks.value))
 const pickCount  = computed(() => selectedCount(picks.value))
@@ -44,8 +49,7 @@ async function runDetect() {
   if (!error.value) {
     increment('scan')
     picks.value = dishes.value.map(d => ({ ...d, selected: true, quantity: d.quantity_default }))
-    // Tự động hiển thị phân tích AI ngay sau khi nhận diện xong
-    if (pickCount.value > 0) askMealAdvice()
+    // Nhận xét AI do watcher `picks` bên dưới kích hoạt — cả lần đầu lẫn mọi lần user sửa
   }
 }
 
@@ -83,7 +87,10 @@ onBeforeUnmount(() => { sendDetectFeedback(false) })
 
 function askMealAdvice() {
   const selected = picks.value.filter(d => d.selected)
-  if (selected.length === 0) return
+  if (selected.length === 0) {
+    resetAdvice()          // bỏ hết món → nhận xét cũ không còn đúng với bữa nào cả
+    return
+  }
   fetchAdvice({
     dishes: selected.map(d => ({
       name: d.quantity !== 1 ? `${d.food_name} ×${formatQty(d.quantity)}` : d.food_name,
@@ -92,6 +99,77 @@ function askMealAdvice() {
     total_calories: total.value,
     context: { goal: todayGoal.value, today_calories: todayConsumed.value },
   })
+}
+
+/**
+ * Bất kỳ thay đổi nào lên danh sách món (sửa trong popup, đổi số lượng, chọn/bỏ chọn) đều
+ * làm nhận xét AI hiện tại sai đi — trước đây user phải tự bấm "Phân tích lại", còn tổng kcal
+ * thì đã đúng ngay nên nhận xét lệch với con số ngay bên cạnh.
+ *
+ * Debounce vì stepper +/- bấm liên tục sẽ bắn rất nhiều lần; useMealAdvice cũng huỷ luồng cũ
+ * nên nhận xét hiển thị luôn là của trạng thái mới nhất.
+ */
+let adviceTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleMealAdvice() {
+  if (adviceTimer) clearTimeout(adviceTimer)
+  adviceTimer = setTimeout(() => { adviceTimer = null; askMealAdvice() }, 700)
+}
+
+watch(picks, () => {
+  // Còn món đang chờ AI ước tính lại calo → nhận xét bây giờ sẽ dựa trên số sắp bị thay.
+  // handleDishSave() tự lên lịch lại khi ước tính xong.
+  if (picks.value.length > 0 && estimatingAt.value.size === 0) scheduleMealAdvice()
+}, { deep: true })
+
+onBeforeUnmount(() => { if (adviceTimer) clearTimeout(adviceTimer) })
+
+/**
+ * User lưu popup sửa món → cùng quy tắc với Result.vue: đổi tên/khẩu phần mà không tự chỉnh
+ * số thì AI ước tính lại calo + macro CHO 1 ĐƠN VỊ (nhân với stepper số lượng sau), còn nếu
+ * user tự gõ số thì tôn trọng số đó. Nhận xét cả bữa do watcher `picks` tự sinh lại.
+ */
+async function handleDishSave(index: number, values: FoodEditValues) {
+  const dish = picks.value[index]
+  if (!dish) return
+
+  const identityChanged = values.food_name !== dish.food_name || values.serving !== dish.serving
+  const numbersChanged  = values.calories !== dish.calories
+                       || values.protein  !== dish.protein
+                       || values.carbs    !== dish.carbs
+                       || values.fat      !== dish.fat
+                       || values.sodium   !== dish.sodium
+
+  Object.assign(dish, values)
+
+  // User đã chốt lại số liệu → không còn là món khớp thư viện chuẩn nữa, bỏ nhãn 📚 Thư viện
+  // (giữ nhãn sẽ khiến số user tự sửa trông như số đã được kiểm chứng).
+  if (identityChanged || numbersChanged) {
+    dish.source  = 'ai'
+    dish.dish_id = null
+  }
+
+  if (!identityChanged || numbersChanged) return
+
+  estimatingAt.value = new Set(estimatingAt.value).add(index)
+  try {
+    const est = await estimate(values.food_name, values.serving, dish.unit_label)
+    const target = picks.value[index]
+    // User có thể đã sửa tiếp trong lúc chờ → chỉ áp khi tên vẫn là tên đã gửi đi
+    if (est && target && target.food_name === values.food_name) {
+      target.serving  = est.serving || target.serving
+      target.calories = est.calories
+      target.protein  = est.protein
+      target.carbs    = est.carbs
+      target.fat      = est.fat
+      target.sodium   = est.sodium
+    }
+  } finally {
+    const next = new Set(estimatingAt.value)
+    next.delete(index)
+    estimatingAt.value = next
+    scheduleMealAdvice()
+  }
 }
 
 async function confirmMeal() {
@@ -190,15 +268,10 @@ async function confirmMeal() {
             v-for="(d, i) in picks"
             :key="i"
             :dish="d"
+            :estimating="estimatingAt.has(i)"
             @update:selected="d.selected = $event"
             @update:quantity="d.quantity = $event"
-            @update:calories="d.calories = $event"
-            @update:food_name="d.food_name = $event"
-            @update:serving="d.serving = $event"
-            @update:protein="d.protein = $event"
-            @update:carbs="d.carbs = $event"
-            @update:fat="d.fat = $event"
-            @update:sodium="d.sodium = $event"
+            @save="handleDishSave(i, $event)"
           />
         </div>
 
@@ -233,14 +306,16 @@ async function confirmMeal() {
             <div class="flex-1 min-w-0">
               <p class="text-[13px] font-semibold text-black">Nhận xét bữa ăn từ AI</p>
               <p v-if="advice" class="text-[13px] text-ios-gray mt-1 leading-relaxed whitespace-pre-wrap">{{ advice }}</p>
-              <p v-else-if="!adviceStreaming" class="text-[12px] text-ios-gray mt-0.5">Xem AI đánh giá cân bằng dinh dưỡng của bữa này.</p>
+              <p v-else-if="!adviceStreaming" class="text-[12px] text-ios-gray mt-0.5">
+                {{ pickCount === 0 ? 'Chọn ít nhất 1 món để AI đánh giá bữa ăn.' : 'AI đang chuẩn bị nhận xét cho bữa này…' }}
+              </p>
+              <p class="mt-1.5 text-[11px] text-ios-gray3">Nhận xét tự cập nhật mỗi khi bạn sửa món hoặc đổi số lượng.</p>
               <button
-                v-if="!advice || !adviceStreaming"
-                class="mt-2 text-[13px] text-ios-blue font-medium ios-press disabled:opacity-50"
+                class="mt-1.5 text-[13px] text-ios-blue font-medium ios-press disabled:opacity-50"
                 :disabled="adviceStreaming || pickCount === 0"
                 @click="askMealAdvice"
               >
-                {{ adviceStreaming ? 'Đang phân tích…' : (advice ? 'Phân tích lại' : 'Xem nhận xét') }}
+                {{ adviceStreaming ? 'Đang phân tích…' : 'Phân tích lại' }}
               </button>
             </div>
           </div>

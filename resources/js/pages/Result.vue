@@ -6,6 +6,7 @@ import type { FoodEditValues } from '@/components/food/FoodEditSheet.vue'
 import ShareMealSheet from '@/components/share/ShareMealSheet.vue'
 import type { ShareMealData } from '@/types/share'
 import { useFoodAnalysis } from '@/composables/useFoodAnalysis'
+import { useFoodEstimate } from '@/composables/useFoodEstimate'
 import { useGuestQuota } from '@/composables/useGuestQuota'
 import { useMealLog } from '@/composables/useMealLog'
 import { useAuthStore } from '@/stores/auth'
@@ -19,6 +20,7 @@ const gateOpen = ref(false)
 const isManual = computed(() => !!route.query.food)
 
 const { result, streamingText, streamDone, loading, error, analyze, refetchAdvice } = useFoodAnalysis()
+const { estimating, estimate } = useFoodEstimate()
 const { todayStats, fetchTodayStats, logMeal } = useMealLog()
 
 const todayConsumed = computed(() => todayStats.value?.total_calories ?? 0)
@@ -35,19 +37,55 @@ const editFat      = ref(0)
 const editSodium   = ref(0)
 const editSheetOpen = ref(false)
 
-watch(result, (r) => {
-  if (r && !editName.value) {
-    editName.value     = r.food_name
-    editServing.value  = r.serving
-    editCalories.value = r.calories
-    editProtein.value  = r.protein
-    editCarbs.value    = r.carbs
-    editFat.value      = r.fat
-    editSodium.value   = r.sodium
-  }
-}, { immediate: true })
+/**
+ * Bản dữ liệu mà lời khuyên ĐANG hiển thị được sinh ra từ đó.
+ *
+ * Trước đây so sánh trực tiếp với `result` (bản AI đoán lần đầu) nên sửa đi rồi sửa quay lại
+ * giá trị gốc sẽ không refetch, trong khi lời khuyên trên màn vẫn là của lần sửa giữa chừng.
+ * Giữ snapshot riêng thì mọi thay đổi so với thứ user đang ĐỌC đều kích hoạt cập nhật.
+ */
+const advised = ref<FoodEditValues | null>(null)
 
-const displayCalories = computed(() => editCalories.value || (result.value?.calories ?? 0))
+function currentValues(): FoodEditValues {
+  return {
+    food_name: editName.value,
+    serving:   editServing.value,
+    calories:  editCalories.value,
+    protein:   editProtein.value,
+    carbs:     editCarbs.value,
+    fat:       editFat.value,
+    sodium:    editSodium.value,
+  }
+}
+
+function applyValues(v: FoodEditValues) {
+  editName.value     = v.food_name
+  editServing.value  = v.serving
+  editCalories.value = v.calories
+  editProtein.value  = v.protein
+  editCarbs.value    = v.carbs
+  editFat.value      = v.fat
+  editSodium.value   = v.sodium
+}
+
+// flush sync: template đọc thẳng editCalories (không còn fallback `|| result.calories`, vốn
+// hiển thị sai khi user cố ý đặt 0 kcal) nên state phải sẵn sàng ngay khi result về.
+watch(result, (r) => {
+  if (!r) return
+  const v: FoodEditValues = {
+    food_name: r.food_name,
+    serving:   r.serving,
+    calories:  r.calories,
+    protein:   r.protein,
+    carbs:     r.carbs,
+    fat:       r.fat,
+    sodium:    r.sodium,
+  }
+  applyValues(v)
+  advised.value = { ...v }
+}, { immediate: true, flush: 'sync' })
+
+const displayCalories = computed(() => result.value ? editCalories.value : 0)
 const afterEating     = computed(() => todayConsumed.value + displayCalories.value)
 
 const macros = computed(() => result.value ? [
@@ -91,35 +129,76 @@ function buildContext() {
 }
 
 const refetchingAdvice = ref(false)
+const busy = computed(() => estimating.value || refetchingAdvice.value)
+
+// Lần lưu mới nhất thắng: nếu user kịp lưu lần nữa khi lần trước còn đang chạy, lần cũ phải
+// bỏ kết quả của mình thay vì ghi đè `advised` bằng dữ liệu đã lỗi thời.
+let saveSeq = 0
 
 function openEditSheet() {
   editSheetOpen.value = true
 }
 
-// Lưu từ popup sửa món → nếu tên/calo khác với AI đoán ban đầu, sinh lại lời khuyên cho đúng
-// dữ liệu đã sửa. Trước đây sửa tên chỉ update state ở FE, lời khuyên hiển thị vẫn "đóng băng"
-// theo món AI đoán sai (bug đã báo) — chỉ refetch khi user bấm "Lưu thay đổi", không theo
-// từng phím gõ để tránh spam API.
+/**
+ * Lưu từ popup sửa món → tự động đồng bộ lại MỌI thứ phụ thuộc vào món:
+ *
+ * 1. Đổi tên/khẩu phần mà KHÔNG tự chỉnh số  → gọi AI ước tính lại calo + macro. Sửa
+ *    "Phở bò" thành "Bánh xèo tôm thịt" mà vẫn giữ 450 kcal của phở là số liệu sai, và số
+ *    sai đó sẽ đi thẳng vào nhật ký khi bấm Xác nhận.
+ * 2. Tự chỉnh số                              → tôn trọng số user gõ, không ghi đè.
+ * 3. Bất kỳ thay đổi nào                      → sinh lại lời khuyên AI theo dữ liệu cuối cùng.
+ *
+ * Chỉ chạy khi bấm "Lưu thay đổi", không theo từng phím gõ, để khỏi spam API.
+ */
 async function handleEditSave(values: FoodEditValues) {
-  editName.value     = values.food_name
-  editServing.value  = values.serving
-  editCalories.value = values.calories
-  editProtein.value  = values.protein
-  editCarbs.value    = values.carbs
-  editFat.value      = values.fat
-  editSodium.value   = values.sodium
+  applyValues(values)
 
-  if (!result.value) return
-  const nameChanged     = values.food_name !== result.value.food_name
-  const caloriesChanged = values.calories !== result.value.calories
+  const base = advised.value
+  if (!base) return
 
-  if (nameChanged || caloriesChanged) {
-    refetchingAdvice.value = true
-    displayedText.value    = ''
-    pendingChars           = ''
-    await refetchAdvice(values.food_name, values.calories, buildContext())
-    refetchingAdvice.value = false
+  const seq = ++saveSeq
+
+  const identityChanged = values.food_name !== base.food_name
+                       || values.serving   !== base.serving
+  const numbersChanged  = values.calories !== base.calories
+                       || values.protein  !== base.protein
+                       || values.carbs    !== base.carbs
+                       || values.fat      !== base.fat
+                       || values.sodium   !== base.sodium
+
+  if (!identityChanged && !numbersChanged) return
+
+  let next: FoodEditValues = { ...values }
+
+  if (identityChanged && !numbersChanged) {
+    const est = await estimate(values.food_name, values.serving)
+    if (seq !== saveSeq) return
+    if (!est) {
+      toast.error('Chưa tính lại được calo cho món này — bạn có thể nhập tay trong ô Sửa.')
+    } else {
+      next = {
+        ...values,
+        serving:  est.serving || values.serving,
+        calories: est.calories,
+        protein:  est.protein,
+        carbs:    est.carbs,
+        fat:      est.fat,
+        sodium:   est.sodium,
+      }
+      applyValues(next)
+      if (est.calories !== base.calories) {
+        toast.success(`Đã tính lại: ${est.calories.toLocaleString('vi')} kcal`)
+      }
+    }
   }
+
+  refetchingAdvice.value = true
+  displayedText.value    = ''
+  pendingChars           = ''
+  await refetchAdvice(next, buildContext())
+  if (seq !== saveSeq) return
+  refetchingAdvice.value = false
+  advised.value          = { ...next }
 }
 
 // Nhận diện có kiểm soát quota cho khách. Chỉ trừ lượt khi nhận diện thành công.
@@ -136,15 +215,8 @@ onMounted(async () => {
   const barcodeRaw = sessionStorage.getItem('barcode_result')
   if (barcodeRaw) {
     sessionStorage.removeItem('barcode_result')
-    const br        = JSON.parse(barcodeRaw) as FoodAnalysisResult
-    result.value    = br
-    editName.value     = br.food_name
-    editServing.value  = br.serving
-    editCalories.value = br.calories
-    editProtein.value  = br.protein
-    editCarbs.value    = br.carbs
-    editFat.value      = br.fat
-    editSodium.value   = br.sodium
+    const br     = JSON.parse(barcodeRaw) as FoodAnalysisResult
+    result.value = br            // watcher phía trên tự nạp edit* + snapshot `advised`
     streamDone.value = true
     if (store.token) await fetchTodayStats()
     return
@@ -163,16 +235,7 @@ async function confirmMeal() {
   // Guard: prevent double-tap duplicate
   if (!result.value || confirmed.value) return
   confirmed.value = true
-  const mealToLog: FoodAnalysisResult = {
-    ...result.value,
-    food_name: editName.value || result.value.food_name,
-    serving:   editServing.value || result.value.serving,
-    calories:  editCalories.value || result.value.calories,
-    protein:   editProtein.value,
-    carbs:     editCarbs.value,
-    fat:       editFat.value,
-    sodium:    editSodium.value,
-  }
+  const mealToLog: FoodAnalysisResult = { ...result.value, ...currentValues() }
   // Lưu kèm lời khuyên AI (bản đầy đủ đã stream) để xem lại phần phân tích trong Lịch sử
   const advice = (streamingText.value || displayedText.value || '').trim() || null
   const ok = await logMeal(mealToLog, savedImage.value, advice)
@@ -190,8 +253,8 @@ const toast     = useToast()
 const shareOpen = ref(false)
 
 const shareMeal = computed<ShareMealData | null>(() => result.value ? {
-  food_name: editName.value || result.value.food_name,
-  serving:   editServing.value || result.value.serving,
+  food_name: editName.value,
+  serving:   editServing.value,
   calories:  displayCalories.value,
   protein:   editProtein.value,
   carbs:     editCarbs.value,
@@ -202,13 +265,8 @@ const shareMeal = computed<ShareMealData | null>(() => result.value ? {
 } : null)
 
 async function retry() {
-  editName.value     = ''
-  editServing.value  = ''
-  editCalories.value = 0
-  editProtein.value  = 0
-  editCarbs.value    = 0
-  editFat.value      = 0
-  editSodium.value   = 0
+  applyValues({ food_name: '', serving: '', calories: 0, protein: 0, carbs: 0, fat: 0, sodium: 0 })
+  advised.value       = null
   editSheetOpen.value = false
   displayedText.value = ''
   pendingChars        = ''
@@ -326,7 +384,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         type="button"
         class="block w-full text-left mx-5 bg-white rounded-[18px] px-5 py-4 mb-4 shadow-sm animate-fadeInUp ios-press disabled:opacity-60"
         style="width: calc(100% - 40px); opacity:0"
-        :disabled="refetchingAdvice"
+        :disabled="busy"
         @click="openEditSheet"
       >
         <div class="flex items-center justify-between mb-3">
@@ -335,17 +393,17 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor">
               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             </svg>
-            {{ refetchingAdvice ? 'Đang cập nhật...' : 'Sửa' }}
+            {{ estimating ? 'Đang tính lại...' : refetchingAdvice ? 'Đang cập nhật...' : 'Sửa' }}
           </span>
         </div>
 
         <div class="flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
-            <h2 class="text-[22px] font-bold text-black">{{ editName || result.food_name }}</h2>
-            <p class="text-[13px] text-ios-gray mt-1">{{ editServing || result.serving }}</p>
+            <h2 class="text-[22px] font-bold text-black">{{ editName }}</h2>
+            <p class="text-[13px] text-ios-gray mt-1">{{ editServing }}</p>
           </div>
           <div class="text-right flex-shrink-0">
-            <p class="text-[36px] font-bold text-ios-blue leading-none">{{ editCalories || result.calories }}</p>
+            <p class="text-[36px] font-bold text-ios-blue leading-none">{{ displayCalories }}</p>
             <p class="text-[13px] text-ios-gray">kcal</p>
           </div>
         </div>
@@ -438,7 +496,8 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
           </div>
           <p class="text-[13px] font-semibold text-black">Lời khuyên từ AI</p>
           <!-- Streaming dots -->
-          <div v-if="!streamDone || displayedText.length < streamingText.length" class="ml-auto flex gap-1">
+          <div v-if="busy || !streamDone || displayedText.length < streamingText.length" class="ml-auto flex items-center gap-1">
+            <span v-if="estimating" class="text-[11px] text-ios-gray mr-1">Đang tính lại dinh dưỡng…</span>
             <div v-for="i in 3" :key="i" class="w-1 h-1 rounded-full bg-ios-blue" :class="`typing-dot-${i}`"/>
           </div>
           <span v-else class="ml-auto text-[11px] text-ios-green font-medium">✓ Hoàn tất</span>
@@ -501,9 +560,9 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
   <FoodEditSheet
     v-model:open="editSheetOpen"
     :initial="{
-      food_name: editName || result?.food_name || '',
-      serving:   editServing || result?.serving || '',
-      calories:  editCalories || result?.calories || 0,
+      food_name: editName,
+      serving:   editServing,
+      calories:  editCalories,
       protein:   editProtein,
       carbs:     editCarbs,
       fat:       editFat,

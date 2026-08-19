@@ -5,17 +5,17 @@ import QuantityStepper from '@/components/food/QuantityStepper.vue'
 import { dishCalories, stepFor, minFor } from '@/utils/nutrition'
 import type { DishPick } from '@/types/food'
 
-const props = defineProps<{ dish: DishPick }>()
+const props = defineProps<{
+  dish: DishPick
+  /** Đang gọi AI ước tính lại dinh dưỡng cho món này sau khi user sửa tên */
+  estimating?: boolean
+}>()
 const emit = defineEmits<{
   'update:selected': [boolean]
   'update:quantity': [number]
-  'update:calories': [number]
-  'update:food_name': [string]
-  'update:serving': [string]
-  'update:protein': [number]
-  'update:carbs': [number]
-  'update:fat': [number]
-  'update:sodium': [number]
+  /** Toàn bộ giá trị đã sửa — cha xử lý một lần (ước tính lại + sinh lại nhận xét bữa ăn),
+   *  thay vì 7 emit rời rạc khiến cha không biết user đã đổi những gì trong cùng một lần lưu. */
+  save: [FoodEditValues]
 }>()
 
 const lowConfidence = computed(() => props.dish.confidence < 0.5)
@@ -24,16 +24,6 @@ const lowConfidence = computed(() => props.dish.confidence < 0.5)
 // trên di động, và trước đây không sửa được khẩu phần/macro). Số lượng vẫn dùng stepper +/-
 // bên ngoài popup vì đã là UX tốt sẵn, không phải phần user phàn nàn khó thao tác.
 const sheetOpen = ref(false)
-
-function handleSave(values: FoodEditValues) {
-  if (values.food_name !== props.dish.food_name) emit('update:food_name', values.food_name)
-  if (values.serving !== props.dish.serving) emit('update:serving', values.serving)
-  if (values.calories !== props.dish.calories) emit('update:calories', values.calories)
-  if (values.protein !== props.dish.protein) emit('update:protein', values.protein)
-  if (values.carbs !== props.dish.carbs) emit('update:carbs', values.carbs)
-  if (values.fat !== props.dish.fat) emit('update:fat', values.fat)
-  if (values.sodium !== props.dish.sodium) emit('update:sodium', values.sodium)
-}
 </script>
 
 <template>
@@ -71,7 +61,8 @@ function handleSave(values: FoodEditValues) {
           class="flex-shrink-0 text-[10px] text-ios-orange bg-ios-orange/10 px-1.5 py-0.5 rounded-full font-medium"
         >AI chưa chắc</span>
       </div>
-      <span class="block text-[12px] text-ios-gray mt-0.5">{{ dish.serving }} · {{ dishCalories(dish, dish.quantity) }} kcal</span>
+      <span v-if="estimating" class="block text-[12px] text-ios-blue mt-0.5">Đang tính lại dinh dưỡng…</span>
+      <span v-else class="block text-[12px] text-ios-gray mt-0.5">{{ dish.serving }} · {{ dishCalories(dish, dish.quantity) }} kcal</span>
     </button>
 
     <!-- Quantity -->
@@ -97,6 +88,6 @@ function handleSave(values: FoodEditValues) {
       sodium:    dish.sodium,
     }"
     calories-label="Calo / 1 đơn vị (kcal) — số lượng chỉnh bằng nút +/- ngoài popup"
-    @save="handleSave"
+    @save="emit('save', $event)"
   />
 </template>

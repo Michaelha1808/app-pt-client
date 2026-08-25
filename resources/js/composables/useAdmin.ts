@@ -5,6 +5,7 @@ import type {
   SystemInfo, SystemLogs, CacheTarget, FailedJobRow,
   NotificationSegment, NotificationPreview, NotificationCampaign,
   DishRow, DishInput, DatasetStats, DatasetRow, DatasetDetail,
+  DatasetAccuracy, SampleAccuracy,
   ChatLogRow, ChatLogDetail,
 } from '@/types/admin'
 
@@ -117,6 +118,13 @@ export function useAdmin() {
   const deleteDatasetSample = (id: number) =>
     apiFetch<{ message: string }>(`/admin/dataset/${id}`, { method: 'DELETE' })
 
+  // Đo % chính xác nhận diện AI so với chuẩn VDD — dùng cho khối "Chất lượng model"
+  const fetchDatasetAccuracy = (params: { days?: number; limit?: number } = {}) =>
+    apiFetch<DatasetAccuracy>(`/admin/dataset/accuracy${qs(params as Record<string, unknown>)}`)
+
+  const fetchSampleAccuracy = (id: number) =>
+    apiFetch<SampleAccuracy>(`/admin/dataset/${id}/accuracy`)
+
   // ── Nhật ký prompt chatbot tư vấn ──
   const fetchChatLogs = (params: Record<string, unknown> = {}) =>
     apiFetch<Paginated<ChatLogRow>>(`/admin/chat-logs${qs(params)}`)
@@ -132,6 +140,7 @@ export function useAdmin() {
     previewNotification, sendNotification, fetchCampaigns,
     fetchDishes, createDish, updateDish, deleteDish,
     fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample,
+    fetchDatasetAccuracy, fetchSampleAccuracy,
     fetchChatLogs, fetchChatLog,
   }
 }

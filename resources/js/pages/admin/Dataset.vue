@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAdmin } from '@/composables/useAdmin'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
-import type { DatasetStats, DatasetRow, DatasetDetail } from '@/types/admin'
+import type { DatasetStats, DatasetRow, DatasetDetail, DatasetAccuracy, SampleAccuracy } from '@/types/admin'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,7 +21,7 @@ import EmptyState from '@/components/admin/EmptyState.vue'
 import IconAction from '@/components/admin/IconAction.vue'
 import { ChevronLeft, ChevronRight, Eye, Trash2, Database, Loader2, Image as ImageIcon, PenLine } from 'lucide-vue-next'
 
-const { fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample } = useAdmin()
+const { fetchDatasetStats, fetchDataset, fetchDatasetSample, deleteDatasetSample, fetchDatasetAccuracy, fetchSampleAccuracy } = useAdmin()
 const { extractError } = useAuth()
 const toast = useToast()
 
@@ -33,6 +33,14 @@ const onlyCorrections = ref(false)
 
 const detail = ref<DatasetDetail | null>(null)
 const detailLoading = ref(false)
+
+// Đo chất lượng nhận diện AI so với VDD — cửa sổ 30 ngày mặc định
+const accuracy = ref<DatasetAccuracy | null>(null)
+const accuracyLoading = ref(false)
+const accuracyDays = ref(30)
+
+// Per-sample accuracy khi mở dialog xem chi tiết
+const sampleAccuracy = ref<SampleAccuracy | null>(null)
 
 const dialogOpen = computed({
   get: () => detailLoading.value || !!detail.value,
@@ -56,11 +64,29 @@ async function load(page = 1) {
   }
 }
 
+async function loadAccuracy() {
+  accuracyLoading.value = true
+  try {
+    accuracy.value = await fetchDatasetAccuracy({ days: accuracyDays.value, limit: 200 })
+  } catch (e) {
+    toast.error(extractError(e) || 'Không tải được thống kê chất lượng')
+  } finally {
+    accuracyLoading.value = false
+  }
+}
+
 async function openDetail(id: number) {
   detailLoading.value = true
   detail.value = null
+  sampleAccuracy.value = null
   try {
-    detail.value = await fetchDatasetSample(id)
+    // Song song: chi tiết + accuracy chấm điểm — 1 dialog show cả 2
+    const [d, a] = await Promise.all([
+      fetchDatasetSample(id),
+      fetchSampleAccuracy(id).catch(() => null),
+    ])
+    detail.value = d
+    sampleAccuracy.value = a
   } catch (e) {
     toast.error(extractError(e) || 'Không tải được chi tiết')
   } finally {
@@ -99,7 +125,7 @@ const statCards = computed(() => {
   ]
 })
 
-onMounted(() => load())
+onMounted(() => { load(); loadAccuracy() })
 </script>
 
 <template>
@@ -120,6 +146,75 @@ onMounted(() => load())
         </CardContent>
       </Card>
     </div>
+
+    <!-- Chất lượng model — so calo AI đoán với chuẩn VDD -->
+    <Card class="mb-4">
+      <CardContent class="px-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="text-sm font-semibold">Chất lượng nhận diện AI</div>
+            <p class="text-xs text-muted-foreground">
+              So calo AI ước tính với chuẩn Bảng Nhu cầu & Bảng Thành phần Thực phẩm VDD.
+              Ngưỡng "đúng" ± {{ accuracy?.aggregate.tolerance_pct ?? 20 }}%.
+            </p>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="text-muted-foreground">Cửa sổ:</span>
+            <select v-model="accuracyDays" @change="loadAccuracy" class="text-xs border rounded px-1.5 py-1 bg-transparent">
+              <option :value="7">7 ngày</option>
+              <option :value="30">30 ngày</option>
+              <option :value="90">90 ngày</option>
+              <option :value="365">1 năm</option>
+            </select>
+            <Button variant="outline" size="sm" class="h-7 text-xs" :disabled="accuracyLoading" @click="loadAccuracy">
+              <Loader2 v-if="accuracyLoading" class="w-3 h-3 animate-spin" /> Làm mới
+            </Button>
+          </div>
+        </div>
+
+        <div v-if="accuracy" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="rounded-lg bg-muted/50 p-3">
+            <div class="text-xs text-muted-foreground">Coverage</div>
+            <div class="text-2xl font-bold text-blue-600">{{ accuracy.aggregate.coverage_pct }}%</div>
+            <div class="text-xs text-muted-foreground mt-0.5">{{ accuracy.aggregate.matched }}/{{ accuracy.aggregate.total_dishes }} món xác định được VDD</div>
+          </div>
+          <div class="rounded-lg bg-muted/50 p-3">
+            <div class="text-xs text-muted-foreground">Accuracy</div>
+            <div class="text-2xl font-bold" :class="accuracy.aggregate.accuracy_pct >= 70 ? 'text-calor-green' : accuracy.aggregate.accuracy_pct >= 50 ? 'text-amber-600' : 'text-red-600'">
+              {{ accuracy.aggregate.accuracy_pct }}%
+            </div>
+            <div class="text-xs text-muted-foreground mt-0.5">{{ accuracy.aggregate.correct }}/{{ accuracy.aggregate.matched }} món trong ±{{ accuracy.aggregate.tolerance_pct }}%</div>
+          </div>
+          <div class="rounded-lg bg-muted/50 p-3">
+            <div class="text-xs text-muted-foreground">MAPE</div>
+            <div class="text-2xl font-bold" :class="accuracy.aggregate.mape_pct <= 20 ? 'text-calor-green' : accuracy.aggregate.mape_pct <= 40 ? 'text-amber-600' : 'text-red-600'">
+              {{ accuracy.aggregate.mape_pct }}%
+            </div>
+            <div class="text-xs text-muted-foreground mt-0.5">Sai số kcal trung bình</div>
+          </div>
+          <div class="rounded-lg bg-muted/50 p-3">
+            <div class="text-xs text-muted-foreground">Mẫu phân tích</div>
+            <div class="text-2xl font-bold">{{ accuracy.window.sample_count }}</div>
+            <div class="text-xs text-muted-foreground mt-0.5">Trong {{ accuracy.window.days }} ngày qua</div>
+          </div>
+        </div>
+
+        <div v-if="accuracy && Object.keys(accuracy.aggregate.by_group).length" class="mt-4">
+          <div class="text-xs font-semibold text-muted-foreground uppercase mb-2">Chi tiết theo nhóm thực phẩm</div>
+          <div class="space-y-1.5">
+            <div v-for="(g, name) in accuracy.aggregate.by_group" :key="name" class="flex items-center gap-2 text-sm">
+              <span class="flex-1 truncate">{{ name }}</span>
+              <span class="text-xs text-muted-foreground">{{ g.correct }}/{{ g.matched }}</span>
+              <span class="text-xs font-medium w-14 text-right" :class="g.accuracy_pct >= 70 ? 'text-calor-green' : g.accuracy_pct >= 50 ? 'text-amber-600' : 'text-red-600'">{{ g.accuracy_pct }}%</span>
+              <span class="text-xs text-muted-foreground w-16 text-right">MAPE {{ g.mape_pct }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="accuracyLoading" class="text-sm text-muted-foreground">Đang tính…</div>
+        <div v-else class="text-sm text-muted-foreground">Chưa có mẫu nào để đánh giá.</div>
+      </CardContent>
+    </Card>
 
     <label class="inline-flex items-center gap-2 text-sm text-muted-foreground mb-3 cursor-pointer">
       <Switch v-model="onlyCorrections" @update:model-value="load(1)" />
@@ -235,6 +330,30 @@ onMounted(() => load())
               </ul>
               <p v-else class="text-sm text-muted-foreground">Chưa có phản hồi (user chưa chốt).</p>
             </div>
+          </div>
+
+          <!-- Đối chiếu với VDD — chỉ show nếu tính được accuracy -->
+          <div v-if="sampleAccuracy && sampleAccuracy.dishes.length" class="border-t pt-3">
+            <div class="text-xs font-semibold text-muted-foreground uppercase mb-2">
+              Đối chiếu chuẩn VDD ({{ sampleAccuracy.correct }}/{{ sampleAccuracy.matched }} đúng)
+            </div>
+            <ul class="space-y-1.5">
+              <li v-for="(d, i) in sampleAccuracy.dishes" :key="i" class="text-xs bg-muted/50 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2">
+                  <Badge v-if="d.source === 'unmatched'" variant="secondary" class="text-[10px]">Chưa xác định</Badge>
+                  <Badge v-else-if="d.is_correct" class="bg-calor-green/15 text-calor-green text-[10px]">✓ Trong ±20%</Badge>
+                  <Badge v-else variant="destructive" class="text-[10px]">Sai {{ d.error_pct > 0 ? '+' : '' }}{{ d.error_pct }}%</Badge>
+                  <span class="text-[10px] text-muted-foreground">nguồn: {{ d.source === 'catalog' ? 'Catalog món' : d.source === 'fct' ? 'FCT VDD' : '—' }}</span>
+                </div>
+                <div class="mt-1">
+                  <span class="font-medium">{{ d.ai_name }}</span>
+                  <span class="text-muted-foreground"> AI = {{ d.ai_kcal }} kcal</span>
+                </div>
+                <div v-if="d.vdd_name" class="text-muted-foreground">
+                  ↔ VDD "{{ d.vdd_name }}" = {{ d.vdd_kcal }} kcal ({{ d.reference_unit }})
+                </div>
+              </li>
+            </ul>
           </div>
 
           <div class="flex justify-end">

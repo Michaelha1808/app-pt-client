@@ -274,6 +274,50 @@ export interface DatasetDetail {
   image: string | null   // data URI base64
 }
 
+// ── Chất lượng nhận diện: so AI với chuẩn VDD ──
+export interface DatasetAccuracyGroup {
+  matched: number
+  correct: number
+  accuracy_pct: number
+  mape_pct: number
+}
+
+export interface DatasetAccuracy {
+  window: { days: number; limit: number; sample_count: number }
+  aggregate: {
+    sample_count: number
+    total_dishes: number
+    matched: number
+    correct: number
+    coverage_pct: number   // % món xác định được VDD
+    accuracy_pct: number   // % món "đúng" trong tolerance
+    mape_pct: number       // sai số trung bình
+    tolerance_pct: number
+    by_group: Record<string, DatasetAccuracyGroup>
+  }
+}
+
+export interface SampleAccuracyDish {
+  ai_name: string
+  ai_kcal: number
+  source: 'catalog' | 'fct' | 'unmatched'
+  vdd_name: string | null
+  vdd_kcal: number | null
+  reference_unit: string | null
+  error_pct: number
+  error_kcal: number
+  is_correct: boolean
+  group: string | null
+}
+
+export interface SampleAccuracy {
+  sample_id: number
+  total: number
+  matched: number
+  correct: number
+  dishes: SampleAccuracyDish[]
+}
+
 // ── Nhật ký prompt chatbot tư vấn ──
 export interface ChatLogRow {
   id: number

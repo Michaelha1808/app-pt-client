@@ -35,9 +35,13 @@ function validate(): boolean {
   errors.email = ''
   errors.password = ''
   let ok = true
+  // DEFENSE: text lỗi email trống (FE) — Login
   if (!email.value) { errors.email = 'Vui lòng nhập email'; ok = false }
+  // DEFENSE: text lỗi email format (FE) — Login
   else if (!emailRe.test(email.value)) { errors.email = 'Email không hợp lệ'; ok = false }
+  // DEFENSE: text lỗi password trống (FE) — Login
   if (!password.value) { errors.password = 'Vui lòng nhập mật khẩu'; ok = false }
+  // DEFENSE: mật khẩu tối thiểu FE — Login (đồng bộ với BE min:8 trong AuthController::register)
   else if (password.value.length < 6) { errors.password = 'Mật khẩu tối thiểu 6 ký tự'; ok = false }
   return ok
 }

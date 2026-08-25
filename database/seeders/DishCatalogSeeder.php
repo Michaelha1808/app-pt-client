@@ -30,8 +30,11 @@ class DishCatalogSeeder extends Seeder
     private function dishes(): array
     {
         // [name, aliases, unit_type, unit_label, serving, calories, protein, carbs, fat, sodium]
+        // DEFENSE: bộ món chuẩn — sửa calo/macro; chạy `php artisan db:seed --class=DishCatalogSeeder --force` sau khi sửa
         $rows = [
+            // DEFENSE: calo phở bò — 450 kcal / 1 tô
             ['Phở bò', ['pho', 'pho bo tai', 'pho bo chin'], 'portion', 'tô', '1 tô (~500ml)', 450, 25, 55, 12, 1500],
+            // DEFENSE: calo phở gà — 400 kcal / 1 tô
             ['Phở gà', ['pho ga'], 'portion', 'tô', '1 tô (~500ml)', 400, 28, 50, 8, 1400],
             ['Bún bò Huế', ['bun bo', 'bun bo hue'], 'portion', 'tô', '1 tô (~500ml)', 500, 28, 55, 16, 1700],
             ['Bún chả', ['bun cha'], 'portion', 'phần', '1 phần (bún + chả)', 500, 30, 60, 14, 1200],
@@ -40,10 +43,12 @@ class DishCatalogSeeder extends Seeder
             ['Bún đậu mắm tôm', ['bun dau', 'bun dau mam tom'], 'portion', 'phần', '1 mẹt', 600, 24, 55, 30, 1500],
             ['Hủ tiếu', ['hu tieu', 'hu tieu nam vang'], 'portion', 'tô', '1 tô', 400, 22, 50, 10, 1300],
             ['Mì Quảng', ['mi quang'], 'portion', 'tô', '1 tô', 450, 24, 52, 14, 1200],
+            // DEFENSE: calo cơm trắng — 200 kcal / 1 chén
             ['Cơm trắng', ['com', 'com trang'], 'portion', 'chén', '1 chén (~200ml)', 200, 4, 44, 0, 5],
             ['Cơm tấm sườn', ['com tam', 'com tam suon', 'com suon'], 'portion', 'đĩa', '1 đĩa', 650, 30, 70, 25, 1200],
             ['Cơm gà', ['com ga', 'com ga xoi mo'], 'portion', 'đĩa', '1 đĩa', 550, 32, 65, 16, 1000],
             ['Cơm chiên Dương Châu', ['com chien', 'com rang', 'com chien duong chau'], 'portion', 'đĩa', '1 đĩa', 600, 18, 75, 22, 1100],
+            // DEFENSE: calo bánh mì — 400 kcal / 1 ổ
             ['Bánh mì thịt', ['banh mi', 'banh mi thit', 'banh my'], 'countable', 'ổ', '1 ổ', 400, 16, 50, 14, 900],
             ['Bánh xèo', ['banh xeo'], 'countable', 'cái', '1 cái', 300, 10, 30, 16, 600],
             ['Gỏi cuốn', ['goi cuon', 'nem cuon'], 'countable', 'cuốn', '1 cuốn', 80, 5, 10, 2, 250],

@@ -60,6 +60,7 @@ const goalType = ref<'lose' | 'maintain' | 'gain'>('maintain')
 const calorieGoal = ref('2000')
 const suggestedCitations = ref<Citation[]>([])
 const suggested = ref<{ bmr: number; tdee: number; calorie_goal: number; target_macros: { protein: number; carbs: number; fat: number }; water_target_ml: number } | null>(null)
+// DEFENSE: giờ nhắc mặc định — sáng/tối khi user đăng ký (default runtime có thể ghi đè qua Admin/Settings)
 const morningTime = ref('07:00')
 const eveningTime = ref('21:00')
 
@@ -70,6 +71,7 @@ const errors = reactive({
   name: '', birthYear: '', gender: '', height: '', weight: '',
 })
 
+// DEFENSE: tiêu đề các bước đăng ký — text 4 step Register wizard
 const stepTitles = ['Tạo tài khoản', 'Thông tin cá nhân', 'Mục tiêu của bạn', 'Sở thích ăn uống']
 const stepSubtitles = [
   'Nhập email và mật khẩu để bắt đầu',
@@ -253,6 +255,7 @@ function prevStep() {
   else navigateTo('/auth/login')
 }
 
+// DEFENSE: lựa chọn giới tính — thêm/bớt Nam/Nữ/Khác (nhớ đồng bộ với BE validate `gender` in:...)
 const genders = [
   { value: 'male', label: 'Nam', icon: '👨' },
   { value: 'female', label: 'Nữ', icon: '👩' },
@@ -262,6 +265,7 @@ const genders = [
 // Preset mục tiêu — con số kcal được TÍNH từ TDEE (backend /nutrition/calculate),
 // không hardcode. User chọn ý định (giảm/duy trì/tăng), số kcal tự cập nhật theo
 // mức vận động + hồ sơ.
+// DEFENSE: preset mục tiêu đăng ký — label/icon/desc cho 3 preset lose/maintain/gain
 const goalOptions = [
   { value: 'lose'     as const, label: 'Giảm cân', icon: '🏃', desc: 'TDEE − 500 kcal (giảm ~0.5 kg/tuần)' },
   { value: 'maintain' as const, label: 'Duy trì', icon: '⚖️', desc: 'Bằng đúng TDEE' },

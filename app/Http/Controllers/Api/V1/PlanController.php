@@ -56,14 +56,17 @@ class PlanController extends Controller
      * dùng: user xem trước rồi bấm "Áp dụng" (apply()) mới lưu. Nhờ vậy tạo lại mà chưa ưng
      * thì kế hoạch cũ vẫn còn nguyên.
      */
+    // DEFENSE: endpoint sinh kế hoạch AI — SSE 2 phase (plan JSON + lý do stream); scope daily/weekly/monthly; rate limit plan-generate
     public function generate(Request $request, MealPlanService $service): StreamedResponse
     {
+        // DEFENSE: scope kế hoạch — daily/weekly/monthly (default daily nếu null)
         $request->validate(['scope' => 'nullable|in:daily,weekly,monthly']);
         $scope      = $this->normalizeScope($request->input('scope'));
         $targetDate = $this->targetDate($scope);
         $user       = $request->user();
 
         try {
+            // DEFENSE: build context kế hoạch — profile + 7 ngày qua + preferences + weight trend
             $context = $service->buildContext($user, $scope);
         } catch (\Throwable $e) {
             return response()->stream(function () use ($e) {
@@ -78,12 +81,14 @@ class PlanController extends Controller
                     ob_end_clean();
                 }
                 try {
+                    // DEFENSE: gọi Gemini sinh plan JSON — theo schema meals/workouts/tips
                     $plan = $service->getStructuredPlan($context, $scope);
                     echo 'data: ' . json_encode(['type' => 'plan', 'data' => $plan]) . "\n\n";
                     flush();
 
                     // Lưu nháp ngay sau khi có plan: nếu phần diễn giải bên dưới lỗi/đứt mạng
                     // thì user vẫn áp dụng được kế hoạch đã xem.
+                    // DEFENSE: lưu nháp plan vào cache — user chưa áp dụng nên chưa ghi DB
                     $this->putDraft($user->id, $scope, $targetDate, $plan, $context, null);
 
                     $reasoning = '';
@@ -117,6 +122,7 @@ class PlanController extends Controller
      * Nháp lấy từ cache server (không nhận plan do client gửi lên) để nội dung đúng
      * nguyên bản AI đã sinh và user đã xem.
      */
+    // DEFENSE: endpoint áp dụng kế hoạch — lấy draft từ cache, upsert vào meal_plans (unique theo scope+target_date)
     public function apply(Request $request): JsonResponse
     {
         $request->validate(['scope' => 'nullable|in:daily,weekly,monthly']);
@@ -126,6 +132,7 @@ class PlanController extends Controller
         $draft = Cache::pull($this->draftKey($user->id, $scope));
 
         if (!$draft) {
+            // DEFENSE: text lỗi kế hoạch hết hạn — draft không còn trong cache
             return response()->json([
                 'message' => 'Bản kế hoạch đã hết hạn. Bạn hãy tạo lại rồi áp dụng nhé.',
             ], 422);

@@ -34,18 +34,21 @@ class FoodController extends Controller
         return null;
     }
 
+    // DEFENSE: endpoint phân tích 1 món — SSE stream Phase A (calo) + Phase B (lời khuyên); toggle qua ai.food_analysis_enabled
     public function analyze(Request $request, FoodAnalysisService $service, PreferenceService $preferences, DishCatalogService $catalog): StreamedResponse|JsonResponse
     {
         if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
 
         $request->validate([
             'image'                  => 'nullable|string',
+            // DEFENSE: giới hạn text phân tích món — min 3 / max 500 ký tự
             'text'                   => 'nullable|string|min:3|max:500',
             'context.today_calories' => 'nullable|integer|min:0|max:10000',
             'context.goal'           => 'nullable|integer|between:1000,5000',
         ]);
 
         if (!$request->filled('image') && !$request->filled('text')) {
+            // DEFENSE: text lỗi thiếu input analyze — cần ảnh hoặc mô tả
             return response()->stream(function () {
                 echo "data: " . json_encode([
                     'type'    => 'error',
@@ -77,11 +80,13 @@ class FoodController extends Controller
 
                 try {
                     // Phase A: structured data ngay lập tức
+                    // DEFENSE: gọi Gemini phân tích món — trả JSON calo/macro/confidence
                     $result = $service->getStructuredData($image, $text, $context);
 
                     // Grounding: nếu tên món khớp thư viện `dishes`, thay calo/macro/tên
                     // bằng giá trị chuẩn thay vì để AI tự đoán. Bỏ qua nhánh "Không phải món ăn"
                     // (đã xử lý riêng ở dưới).
+                    // DEFENSE: grounding calo — thay số AI đoán bằng số chuẩn từ bảng `dishes` nếu khớp
                     if (($result['food_name'] ?? '') !== 'Không phải món ăn') {
                         $result = $catalog->groundOne($result);
                     } else {
@@ -101,6 +106,7 @@ class FoodController extends Controller
                     flush();
 
                     // Không phải món ăn → không stream lời khuyên dinh dưỡng
+                    // DEFENSE: text từ chối không phải món ăn — hiển thị khi AI nhận ra ảnh không có món
                     if ($result['food_name'] === 'Không phải món ăn' || $result['confidence'] <= 0) {
                         echo "data: " . json_encode([
                             'type'  => 'text',
@@ -109,12 +115,14 @@ class FoodController extends Controller
                         flush();
                     } else {
                         // Phase B: stream lời khuyên
+                        // DEFENSE: stream lời khuyên món — gọi Gemini SSE trả từng chunk text
                         foreach ($service->streamAdvice($result['food_name'], $result['calories'], $context, $result) as $delta) {
                             echo "data: " . json_encode(['type' => 'text', 'delta' => $delta]) . "\n\n";
                             flush();
                         }
                     }
                 } catch (\Throwable $e) {
+                    // DEFENSE: text lỗi phân tích món — hiển thị khi Gemini fail hoặc timeout
                     echo "data: " . json_encode([
                         'type'    => 'error',
                         'message' => 'Không thể phân tích món ăn. Vui lòng thử lại.',
@@ -258,6 +266,7 @@ class FoodController extends Controller
         }
     }
 
+    // DEFENSE: endpoint nhận diện nhiều món — trả mảng dishes, kèm detection_id để feedback dataset
     public function detect(
         Request $request,
         FoodAnalysisService $service,
@@ -268,6 +277,7 @@ class FoodController extends Controller
 
         $request->validate([
             'image' => 'nullable|string',
+            // DEFENSE: giới hạn text detect — max 500 ký tự mô tả bữa ăn
             'text'  => 'nullable|string|max:500',
         ]);
 
@@ -281,6 +291,7 @@ class FoodController extends Controller
             $image    = $request->input('image');
             $text     = $request->input('text');
             // Gợi ý tên: danh sách món chuẩn + cặp dễ nhầm học từ dataset → tăng tỉ lệ khớp thư viện.
+            // DEFENSE: gọi Gemini detect nhiều món — kèm hint tên từ catalog + correction từ dataset
             $aiDishes = $service->detectDishes(
                 $image,
                 $text,
@@ -289,6 +300,7 @@ class FoodController extends Controller
             );
 
             // Thu thập mẫu (AI đoán RAW) để cải thiện model — best-effort, không chặn luồng chính.
+            // DEFENSE: lưu sample dataset — dùng để cải thiện model (Admin/Dataset xem sample)
             $sample = $samples->capture(
                 $image,
                 $text,
@@ -298,6 +310,7 @@ class FoodController extends Controller
             );
 
             // Grounding: thay calo/macro/tên bằng giá trị chuẩn từ thư viện nutrition (nếu khớp).
+            // DEFENSE: grounding nhiều món — mỗi món khớp catalog thì dùng số chuẩn
             $dishes = $catalog->ground($aiDishes);
 
             return response()->json([
@@ -381,17 +394,21 @@ class FoodController extends Controller
         );
     }
 
+    // DEFENSE: endpoint lưu 1 bữa ăn — INSERT vào `meal_logs` + cập nhật streak
     public function log(Request $request, StreakService $streakService): JsonResponse
     {
         $data = $request->validate([
+            // DEFENSE: giới hạn tên món khi log — max 200 ký tự
             'food_name' => 'required|string|max:200',
             'serving'   => 'nullable|string|max:100',
+            // DEFENSE: giới hạn calo khi log 1 bữa — max 10000 kcal/bữa
             'calories'  => 'required|integer|min:0|max:10000',
             'protein'   => 'required|integer|min:0',
             'carbs'     => 'required|integer|min:0',
             'fat'       => 'required|integer|min:0',
             'sodium'    => 'required|integer|min:0',
             'ai_advice' => 'nullable|string|max:5000',       // lời khuyên AI để xem lại trong lịch sử
+            // DEFENSE: giới hạn kích thước ảnh — 8MB base64 (~6MB nhị phân)
             'image'     => 'nullable|string|max:8000000',   // data URL base64 ảnh đã chụp
         ]);
 
@@ -401,10 +418,13 @@ class FoodController extends Controller
         $user = $request->user();
         $log  = $user->mealLogs()->create([...$data, 'image_path' => $imagePath]);
 
+        // DEFENSE: xoá cache habit sau khi log — để lần chat sau AI thấy thói quen mới
         app(PreferenceService::class)->bustHabitCache($user->id);
 
+        // DEFENSE: cập nhật streak sau khi log — +1 nếu hôm qua có log, reset nếu quá 2 ngày
         $streak = $streakService->recordMealActivity($user->load('streakMilestones', 'notificationSubscriptions'));
 
+        // DEFENSE: text lưu bữa ăn thành công — hiển thị toast sau khi log
         return response()->json([
             'message' => 'Đã lưu bữa ăn',
             'id'      => $log->id,

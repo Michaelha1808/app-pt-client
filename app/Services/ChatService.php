@@ -303,6 +303,7 @@ CTX;
      * Build prompt hệ thống cuối cùng (rules + few-shot + ngữ cảnh cá nhân hóa của user)
      * — đây chính là nội dung gửi vào `systemInstruction` của Gemini.
      */
+    // DEFENSE: prompt chat AI — heredoc SYS dài, chứa toàn bộ vai trò/quy tắc chat; sửa ở đây để đổi hành vi chat
     public function buildSystemPrompt(?User $user): string
     {
         $context = $user

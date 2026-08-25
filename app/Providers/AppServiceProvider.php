@@ -59,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->user('sanctum')?->id ?: $request->ip());
         };
 
+        // DEFENSE: rate limit AI — số 10/15/5 là default req/phút; runtime ghi đè qua /admin/settings
         RateLimiter::for('food-analyze', fn (Request $r) => $perMinute('rate_limit.food_analyze_per_min', 10, $r));
         RateLimiter::for('chat', fn (Request $r) => $perMinute('rate_limit.chat_per_min', 15, $r));
         RateLimiter::for('plan-generate', fn (Request $r) => $perMinute('rate_limit.plan_generate_per_min', 5, $r));

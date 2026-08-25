@@ -11,6 +11,7 @@ class StreakController extends Controller
 {
     public function __construct(private StreakService $streakService) {}
 
+    // DEFENSE: endpoint show streak — current_streak + best_streak + milestone đạt được + freeze tokens
     public function show(Request $request): JsonResponse
     {
         $data = $this->streakService->getStreakData($request->user()->load('streakMilestones'));
@@ -18,11 +19,13 @@ class StreakController extends Controller
         return response()->json($data);
     }
 
+    // DEFENSE: endpoint dùng freeze token — bảo vệ streak khi lỡ 1 ngày (nếu có token)
     public function useFreeze(Request $request): JsonResponse
     {
         try {
             $streak = $this->streakService->useFreeze($request->user());
 
+            // DEFENSE: text dùng freeze thành công — "Đã dùng Freeze Token để bảo vệ chuỗi ❄️"
             return response()->json([
                 'message'               => 'Đã dùng Freeze Token để bảo vệ chuỗi! ❄️',
                 'freeze_tokens'         => $streak->freeze_tokens,

@@ -8,6 +8,7 @@ use App\Models\UserStreak;
 
 class StreakService
 {
+    // DEFENSE: mốc streak — các mốc ngày để hiển thị badge "3 ngày liên tiếp", "7 ngày"...
     private const MILESTONES = [3, 7, 14, 30, 60, 100];
 
     private const MILESTONE_META = [
@@ -148,6 +149,7 @@ class StreakService
 
     private function awardFreezeToken(UserStreak $streak): void
     {
+        // DEFENSE: freeze token — mỗi 7 ngày streak tặng 1 token bảo vệ (đổi số 7 hoặc quota)
         if ($streak->current_streak > 0
             && $streak->current_streak % 7 === 0
             && $streak->freeze_tokens < 3

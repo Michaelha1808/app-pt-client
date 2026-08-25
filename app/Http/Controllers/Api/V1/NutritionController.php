@@ -32,9 +32,11 @@ class NutritionController extends Controller
      * POST /api/v1/nutrition/calculate
      * Nhận profile + mức vận động + mục tiêu → trả BMR/TDEE/goal/macros/nước.
      */
+    // DEFENSE: endpoint tính BMR/TDEE/target — public dùng ở Register step 3 auto-suggest calo goal
     public function calculate(Request $request): JsonResponse
     {
         $data = $request->validate([
+            // DEFENSE: input validate calculate — cùng khoảng với register (đồng bộ khi đổi)
             'birth_year'     => 'required|integer|between:1900,2015',
             'gender'         => 'required|in:male,female,other',
             'height_cm'      => 'required|numeric|between:50,300',

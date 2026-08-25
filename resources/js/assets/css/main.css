@@ -58,6 +58,7 @@
   --font-display: 'Quicksand', 'Be Vietnam Pro', ui-sans-serif, sans-serif;
 
   /* ── CaloEye Brand → matcha ── */
+  /* DEFENSE: màu chủ đạo light — đổi hex ở đây sẽ đổi toàn bộ nút/badge/background của app */
   --color-calor-green:  #7c9a70;   /* primary action  (matcha) */
   --color-calor-dark:   #5e7a54;   /* hover / pressed  (matcha đậm) */
   --color-calor-deep:   #2c3a2b;   /* text on light bg (ink) */

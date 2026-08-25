@@ -17,9 +17,11 @@ class UserController extends Controller
         ]);
     }
 
+    // DEFENSE: endpoint cập nhật hồ sơ — sửa profile fields, tự ghi WeightLog nếu đổi cân nặng
     public function updateProfile(Request $request, WeightService $weightService)
     {
         $data = $request->validate([
+            // DEFENSE: validate profile edit — cùng khoảng với register (nới/siết ở đây và AuthController::register)
             'name'           => 'sometimes|string|min:2|max:100',
             'birth_year'     => 'sometimes|integer|between:1900,2015',
             'gender'         => 'sometimes|in:male,female,other',
@@ -36,6 +38,7 @@ class UserController extends Controller
             'calorie_goal', 'morning_notify', 'evening_notify',
         ]));
 
+        // DEFENSE: đổi cân nặng → tự log WeightLog — giữ nhật ký cân theo profile edit
         if (array_key_exists('weight_kg', $data)) {
             $weightService->logWeight($user, (float) $data['weight_kg']);
         }
@@ -45,9 +48,11 @@ class UserController extends Controller
         ]);
     }
 
+    // DEFENSE: endpoint upload avatar — lưu file vào Storage disk 'public', xoá file cũ nếu có
     public function uploadAvatar(Request $request)
     {
         $request->validate([
+            // DEFENSE: giới hạn avatar — jpeg/png/webp, tối đa 5MB (max:5120 KB)
             'avatar' => 'required|image|mimes:jpeg,png,webp|max:5120',
         ]);
 
@@ -69,21 +74,25 @@ class UserController extends Controller
         return response()->json(['avatar_url' => $url]);
     }
 
+    // DEFENSE: endpoint đổi mật khẩu — check current_password, hash new_password rồi update
     public function changePassword(Request $request)
     {
         $request->validate([
             'current_password' => 'required',
+            // DEFENSE: mật khẩu mới tối thiểu — min:8 khi đổi password (đồng bộ với register)
             'new_password'     => 'required|min:8',
         ]);
 
         $user = $request->user();
 
         if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+            // DEFENSE: text lỗi password hiện tại sai — hiển thị khi Hash::check fail
             return response()->json(['detail' => 'Mật khẩu hiện tại không đúng'], 422);
         }
 
         $user->update(['password' => \Illuminate\Support\Facades\Hash::make($request->new_password)]);
 
+        // DEFENSE: text đổi mật khẩu thành công
         return response()->json(['message' => 'Đã đổi mật khẩu thành công']);
     }
 

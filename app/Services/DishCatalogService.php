@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 class DishCatalogService
 {
     /** Ngưỡng similar_text (%) để chấp nhận khớp mờ — đặt cao để tránh khớp sai. */
+    // DEFENSE: ngưỡng fuzzy match — % khớp tối thiểu để dùng calo từ thư viện thay vì AI
     private const FUZZY_THRESHOLD = 88.0;
 
     private ?Collection $catalog = null;

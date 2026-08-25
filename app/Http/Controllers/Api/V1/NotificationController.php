@@ -10,10 +10,13 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    // DEFENSE: endpoint subscribe push — lưu FCM token để backend gửi notification
     public function subscribe(Request $request)
     {
         $request->validate([
+            // DEFENSE: FCM token — max 500 ký tự, đổi khi Firebase yêu cầu format khác
             'fcm_token'   => 'required|string|max:500',
+            // DEFENSE: loại thiết bị push — ios/android/web
             'device_type' => 'sometimes|in:ios,android,web',
         ]);
 
@@ -67,9 +70,11 @@ class NotificationController extends Controller
         ]);
     }
 
+    // DEFENSE: endpoint sửa cài đặt thông báo — bật/tắt từng loại (sáng/trưa/tối/email/cân nặng)
     public function updateSettings(Request $request)
     {
         $request->validate([
+            // DEFENSE: 5 loại notification — morning/midday/evening/email_reengagement/weigh_in_reminder
             'morning.enabled'             => 'sometimes|boolean',
             'morning.time'                => 'sometimes|date_format:H:i',
             'midday.enabled'              => 'sometimes|boolean',

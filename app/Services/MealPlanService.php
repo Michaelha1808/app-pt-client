@@ -175,6 +175,7 @@ class MealPlanService
                 "{$this->baseUrl}{$this->model}:generateContent?key={$this->apiKey}",
                 [
                     'json' => [
+                        // DEFENSE: system instruction kế hoạch — vai trò AI khi sinh meal plan JSON có schema
                         'systemInstruction' => [
                             'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. Ưu tiên món Việt phổ biến, dễ mua/dễ nấu. KHÔNG chẩn đoán bệnh hay kê đơn thuốc — chỉ lập kế hoạch ăn uống/tập luyện thông thường.' . "\n\n" . \App\Support\NutritionStandard::promptStandardsBlock()]],
                         ],
@@ -236,6 +237,7 @@ PROMPT;
                 [
                     'stream' => true,
                     'json'   => [
+                        // DEFENSE: system instruction lý do kế hoạch — vai trò AI khi giải thích "vì sao plan này"
                         'systemInstruction' => [
                             'parts' => [['text' => 'Bạn là trợ lý dinh dưỡng thân thiện của app CaloEye. Trả lời tiếng Việt, ngắn gọn, tự nhiên. KHÔNG chẩn đoán bệnh hay kê đơn thuốc.']],
                         ],

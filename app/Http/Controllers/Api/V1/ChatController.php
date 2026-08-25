@@ -22,16 +22,19 @@ class ChatController extends Controller
      * Tư vấn dinh dưỡng & kế hoạch ăn uống/tập luyện — SSE streaming.
      * Mỗi request rebuild ngữ cảnh từ DB → luôn dựa trên dữ liệu mới nhất.
      */
+    // DEFENSE: endpoint chat AI — SSE stream, toggle qua ai.chat_enabled trong Admin/Settings
     public function send(Request $request, ChatService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
     {
         if ($disabled = $this->chatDisabled()) return $disabled;
 
         $request->validate([
+            // DEFENSE: giới hạn số message chat — max 30 tin/lượt gửi (context window)
             'messages'          => 'required|array|min:1|max:30',
             'messages.*.role'   => 'required|string|in:user,ai,model',
             // 2000 ký tự đủ cho tin nhắn user, nhưng câu trả lời AI (được gửi lại nguyên vẹn trong
             // history ở lượt sau) thường dài hơn nhiều — vd kế hoạch ăn/tập chi tiết. Giới hạn quá
             // chặt khiến lượt gửi kế tiếp bị 422 ngay ở validate, chưa kịp vào code xử lý/log.
+            // DEFENSE: giới hạn độ dài 1 tin nhắn — 8000 ký tự (để AI reply dài về sau vẫn gửi lại được)
             'messages.*.text'   => 'required|string|max:8000',
             'conversation_id'   => 'nullable|integer',
         ]);
@@ -78,8 +81,10 @@ class ChatController extends Controller
 
                 try {
                     // Cổng phân loại: chặn sớm yêu cầu ngoài phạm vi dinh dưỡng/tập luyện
+                    // DEFENSE: chặn chat ngoài phạm vi — gọi isInScope trước để lọc câu không phải dinh dưỡng
                     if (!$service->isInScope($messages)) {
                         $inScope = false;
+                        // DEFENSE: text từ chối chat ngoài phạm vi — hiển thị khi user hỏi câu không phải ăn uống
                         $reply   = 'Mình là trợ lý dinh dưỡng của CaloEye nên chỉ hỗ trợ về ăn uống, dinh dưỡng và tập luyện thôi nhé 🥗 Bạn muốn mình gợi ý kế hoạch ăn uống cho ngày mai không?';
                         echo 'data: ' . json_encode(['type' => 'text', 'delta' => $reply]) . "\n\n";
                         flush();

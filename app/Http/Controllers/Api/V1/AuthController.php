@@ -26,17 +26,25 @@ class AuthController extends Controller
 
         $request->validate([
             'email'          => 'required|email',
+            // DEFENSE: mật khẩu tối thiểu đăng ký — đổi min:8 sang giá trị khác
             'password'       => 'required|min:8',
+            // DEFENSE: độ dài tên đăng ký — min 2, max 100 ký tự
             'name'           => 'required|min:2|max:100',
+            // DEFENSE: tuổi đăng ký — birth_year giới hạn, đổi năm để nới/siết độ tuổi
             'birth_year'     => 'required|integer|between:1900,2015',
+            // DEFENSE: giới tính đăng ký — sửa in:... để thêm/bớt lựa chọn (nhớ đồng bộ Register.vue)
             'gender'         => 'required|in:male,female,other',
             'activity_level' => 'nullable|in:sedentary,light,moderate,active,very_active',
+            // DEFENSE: chiều cao min/max — cm
             'height_cm'      => 'required|numeric|between:50,300',
+            // DEFENSE: cân nặng min/max — kg
             'weight_kg'      => 'required|numeric|between:20,500',
+            // DEFENSE: khoảng calo mục tiêu — 1000-5000 kcal/ngày
             'calorie_goal'   => 'required|integer|between:1000,5000',
         ]);
 
         if (User::where('email', $request->email)->exists()) {
+            // DEFENSE: text lỗi email trùng — hiện khi email đã có trong DB
             return response()->json(['detail' => 'Email này đã được đăng ký'], 409);
         }
 
@@ -77,6 +85,7 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($request->only('email', 'password'))) {
+            // DEFENSE: text lỗi đăng nhập sai — hiển thị khi email/password không khớp
             return response()->json(['detail' => 'Email hoặc mật khẩu không đúng'], 401);
         }
 

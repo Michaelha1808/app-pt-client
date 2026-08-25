@@ -20,16 +20,20 @@ class PreferenceController extends Controller
         ]);
     }
 
+    // DEFENSE: endpoint thêm sở thích/dị ứng — 5 kind (allergy/dislike/like/diet/habit), giới hạn MAX_PREFERENCES
     public function store(Request $request, PreferenceService $service): JsonResponse
     {
         $data = $request->validate([
+            // DEFENSE: loại sở thích — allergy/dislike/like/diet/habit (5 kind)
             'kind'  => 'required|string|in:allergy,dislike,like,diet,habit',
+            // DEFENSE: độ dài nhãn preference — max 100 ký tự
             'label' => 'required|string|max:100',
         ]);
 
         try {
             $pref = $service->add($request->user(), $data['kind'], $data['label'], 'manual');
         } catch (\RuntimeException $e) {
+            // DEFENSE: text lỗi vượt giới hạn preference — hiện khi >= MAX_PREFERENCES
             return response()->json([
                 'message' => 'Đã đạt giới hạn ' . PreferenceService::MAX_PREFERENCES . ' mục ghi nhớ.',
             ], 422);

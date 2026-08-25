@@ -155,12 +155,14 @@ class WeightService
 
         $currentGoal = (int) $user->calorie_goal;
 
+        // DEFENSE: công thức gợi ý calo mới theo cân nặng — offset 300 kcal khi lệch >50 khỏi TDEE
         $suggested = match (true) {
             $currentGoal < $tdee - 50 => $tdee - 300,   // đang theo hướng giảm cân
             $currentGoal > $tdee + 50 => $tdee + 300,   // đang theo hướng tăng cân
             default                   => $tdee,          // duy trì
         };
 
+        // DEFENSE: khoảng calo hợp lệ WeightService — chặn suggest goal ngoài 1200-4000 kcal
         $suggested = (int) (round($suggested / 50) * 50);
         $suggested = max(1200, min(4000, $suggested));
 

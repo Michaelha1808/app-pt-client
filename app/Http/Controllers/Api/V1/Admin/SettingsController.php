@@ -19,16 +19,20 @@ class SettingsController extends Controller
         return response()->json($this->settings->all(maskSecrets: true));
     }
 
+    // DEFENSE: endpoint Admin update settings runtime — validate 23 setting keys, save qua SettingsService (bảng settings)
     public function update(Request $request): JsonResponse
     {
+        // DEFENSE: whitelist setting keys — thêm/bớt key ở đây để mở rộng Admin/Settings
         $rules = [
             'ai.provider'                  => 'sometimes|string|in:gemini',
             'ai.model'                     => 'sometimes|string|max:60',
             'ai.api_key'                   => 'sometimes|nullable|string|max:200',
+            // DEFENSE: khoảng temperature AI — 0-2 (0 chính xác, 2 sáng tạo)
             'ai.temperature'               => 'sometimes|numeric|between:0,2',
             'ai.max_tokens'                => 'sometimes|integer|between:256,8192',
             'ai.food_analysis_enabled'     => 'sometimes|boolean',
             'ai.chat_enabled'              => 'sometimes|boolean',
+            // DEFENSE: khoảng rate limit AI Admin có thể set — 1-120 (food/chat) hoặc 1-60 (plan)
             'rate_limit.food_analyze_per_min'  => 'sometimes|integer|between:1,120',
             'rate_limit.chat_per_min'          => 'sometimes|integer|between:1,120',
             'rate_limit.plan_generate_per_min' => 'sometimes|integer|between:1,60',

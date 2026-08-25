@@ -18,6 +18,7 @@ namespace App\Support;
 class NutritionStandard
 {
     /** PAL — Physical Activity Level (WHO/FAO 2001, VDD adopt) */
+    // DEFENSE: hệ số PAL — đổi hệ số nhân TDEE theo mức vận động
     public const PAL = [
         'sedentary'   => 1.2,
         'light'       => 1.375,
@@ -36,6 +37,7 @@ class NutritionStandard
     ];
 
     /** Điều chỉnh calo theo mục tiêu (an toàn theo VDD & WHO) */
+    // DEFENSE: điều chỉnh calo mục tiêu — đổi số kcal giảm/duy trì/tăng cân
     public const GOAL_ADJUSTMENT = [
         'lose'     => -500,  // ~0.5 kg/tuần
         'maintain' => 0,
@@ -43,6 +45,7 @@ class NutritionStandard
     ];
 
     /** Sàn calo/ngày để không thiếu vi chất (VDD 2016) */
+    // DEFENSE: sàn calo tối thiểu — chặn giảm cân quá đà (nam 1500, nữ 1200)
     public const MIN_CALORIES = [
         'male'   => 1500,
         'female' => 1200,
@@ -50,6 +53,7 @@ class NutritionStandard
     ];
 
     /** Tỉ lệ macro khuyến nghị (%) — VDD 2016 (AMDR trung tâm khoảng cho phép) */
+    // DEFENSE: tỉ lệ macro — đổi tỉ lệ protein/carbs/fat trong tổng năng lượng (tổng phải = 1.0)
     public const MACRO_RATIO = [
         'protein_pct' => 0.15,   // 13–20%
         'carbs_pct'   => 0.55,   // 50–65%
@@ -57,6 +61,7 @@ class NutritionStandard
     ];
 
     /** Nước: ml × kg cân nặng (VDD) */
+    // DEFENSE: nước ml per kg — đổi hệ số nhân với cân nặng để ra target nước/ngày
     public const WATER_ML_PER_KG = 35;
 
     public static function pal(?string $activityLevel): float
@@ -65,6 +70,7 @@ class NutritionStandard
     }
 
     /** BMR — Mifflin-St Jeor 1990 (VDD 2016 công nhận) */
+    // DEFENSE: công thức BMR — Mifflin-St Jeor, hệ số 10/6.25/5 và +5 nam / −161 nữ
     public static function bmr(float $weightKg, float $heightCm, int $age, string $gender): float
     {
         return 10 * $weightKg + 6.25 * $heightCm - 5 * $age + ($gender === 'male' ? 5 : -161);

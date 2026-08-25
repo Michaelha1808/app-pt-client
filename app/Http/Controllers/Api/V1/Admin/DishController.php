@@ -77,15 +77,18 @@ class DishController extends Controller
     /**
      * @return array<string,mixed>
      */
+    // DEFENSE: validate Admin thêm/sửa món chuẩn — giới hạn calo/macro cho từng dish
     private function validated(Request $request): array
     {
         return $request->validate([
             'name'       => 'required|string|max:150',
             'aliases'    => 'nullable|array',
             'aliases.*'  => 'string|max:100',
+            // DEFENSE: unit_type món chuẩn — countable (cái/miếng) | portion (tô/đĩa/chén)
             'unit_type'  => 'required|in:countable,portion',
             'unit_label' => 'required|string|max:30',
             'serving'    => 'required|string|max:100',
+            // DEFENSE: khoảng calo món chuẩn — 0-10000 kcal/đơn vị
             'calories'   => 'required|integer|min:0|max:10000',
             'protein'    => 'required|integer|min:0|max:1000',
             'carbs'      => 'required|integer|min:0|max:1000',

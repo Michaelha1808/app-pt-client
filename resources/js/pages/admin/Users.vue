@@ -106,6 +106,7 @@ const suspendReason = ref('')
 const suspendBusy = ref(false)
 const resetTarget = ref<AdminUserRow | null>(null)
 const deleteTarget = ref<AdminUserRow | null>(null)
+const deleteOpen   = ref(false)
 
 function askSuspend(u: AdminUserRow) {
   suspendReason.value = ''
@@ -145,13 +146,19 @@ async function confirmReset() {
   } catch (e) { toast.error(extractError(e)) }
 }
 
+// Trước đây dùng chung 1 ref `deleteTarget` cho cả display + open flag → reka-ui
+// AlertDialogAction emit `update:open(false)` NGAY khi bấm, cascade set
+// deleteTarget=null TRƯỚC khi @click chạy → confirmDelete return sớm, không xoá.
+// Fix: tách deleteOpen (bool điều khiển dialog) khỏi deleteTarget (user đang chờ xoá).
 async function confirmDelete() {
   const u = deleteTarget.value
   if (!u) return
-  deleteTarget.value = null
+  deleteOpen.value = false
   try {
     await deleteUser(u.id)
-    toast.success('Đã xoá tài khoản'); load()
+    toast.success('Đã xoá tài khoản')
+    deleteTarget.value = null
+    load()
   } catch (e) { toast.error(extractError(e)) }
 }
 
@@ -284,7 +291,7 @@ onMounted(load)
                   </template>
                   <IconAction v-else label="Mở khoá" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
                   <IconAction label="Gửi email đặt lại mật khẩu" tone="edit" @click="resetTarget = u"><KeyRound /></IconAction>
-                  <IconAction v-if="!isSelf(u)" label="Xoá tài khoản" tone="delete" @click="deleteTarget = u"><Trash2 /></IconAction>
+                  <IconAction v-if="!isSelf(u)" label="Xoá tài khoản" tone="delete" @click="() => { deleteTarget = u; deleteOpen = true }"><Trash2 /></IconAction>
                 </div>
               </TableCell>
             </TableRow>
@@ -344,8 +351,8 @@ onMounted(load)
       </AlertDialogContent>
     </AlertDialog>
 
-    <!-- Confirm xoá -->
-    <AlertDialog :open="!!deleteTarget" @update:open="(v: boolean) => { if (!v) deleteTarget = null }">
+    <!-- Confirm xoá — tách deleteOpen khỏi deleteTarget để reka-ui không reset target trước khi confirmDelete kịp đọc -->
+    <AlertDialog v-model:open="deleteOpen">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle class="flex items-center gap-2"><Trash2 class="w-4 h-4 text-destructive" /> Xoá tài khoản?</AlertDialogTitle>

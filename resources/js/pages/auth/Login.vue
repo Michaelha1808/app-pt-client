@@ -16,9 +16,17 @@ const guestEnabled = computed(() => flag(c => c.features.guest_mode_enabled))
 
 onMounted(() => {
   loadPublicConfig()
-  if (route.query.error === 'oauth_disabled') {
-    formError.value = 'Phương thức đăng nhập này đang tạm tắt. Vui lòng dùng email hoặc cách khác.'
+  // Query ?error=... đặt bởi BE khi OAuth callback / middleware chuyển hướng về login
+  // với lý do cụ thể. Show message ngay lần load thay vì để user tự mò.
+  const errMap: Record<string, string> = {
+    oauth_disabled:    'Phương thức đăng nhập này đang tạm tắt. Vui lòng dùng email hoặc cách khác.',
+    google_failed:     'Đăng nhập Google thất bại. Vui lòng thử lại.',
+    facebook_failed:   'Đăng nhập Facebook thất bại. Vui lòng thử lại.',
+    account_suspended: 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
+    session_expired:   'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   }
+  const err = route.query.error as string | undefined
+  if (err && errMap[err]) formError.value = errMap[err]
 })
 
 const email = ref('')

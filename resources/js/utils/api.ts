@@ -25,6 +25,15 @@ export async function apiFetch<T>(path: string, init: FetchOptions = {}): Promis
     return await $fetch<T>(`${API_URL}${path}`, { ...init, headers: buildHeaders(store.token), credentials: 'include' })
   } catch (err: unknown) {
     const status = (err as any)?.response?.status ?? (err as any)?.statusCode
+    // Tài khoản bị khoá giữa phiên (admin suspend) → BE trả 403 code=account_suspended
+    // → dọn phiên + đá về login kèm lý do; không chờ user tự mò.
+    const code = (err as any)?.data?.code
+    if (status === 403 && code === 'account_suspended') {
+      store.token = null
+      store.user  = null
+      router.push('/auth/login?error=account_suspended')
+      throw new Error('auth:account_suspended')
+    }
     if (status === 401 && store.token) {
       try {
         if (!_refreshPromise) _refreshPromise = _doRefresh().finally(() => { _refreshPromise = null })

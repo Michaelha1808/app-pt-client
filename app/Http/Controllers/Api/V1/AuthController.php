@@ -90,6 +90,19 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        // Tài khoản bị khoá → chặn ngay tại login, không cấp token. Trước đây login vẫn
+        // thành công (có token) rồi middleware CheckAccountStatus mới 403 ở request kế
+        // → FE thấy "silent redirect về login" không kèm lý do.
+        // DEFENSE: text lỗi đăng nhập tài khoản bị khoá — hiển thị khi user.status='suspended'
+        if ($user->isSuspended()) {
+            Auth::logout();
+            $detail = $user->suspend_reason
+                ? "Tài khoản của bạn đã bị khoá. Lý do: {$user->suspend_reason}"
+                : 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.';
+            return response()->json(['detail' => $detail, 'code' => 'account_suspended'], 403);
+        }
+
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         return response()->json([
@@ -212,6 +225,12 @@ class AuthController extends Controller
             ]);
         }
 
+        // Tài khoản bị khoá → không cấp token qua OAuth, quay lại trang login kèm mã lỗi.
+        if ($user->isSuspended()) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=account_suspended');
+        }
+
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
 
         // Decode the redirect_uri from state param
@@ -273,6 +292,11 @@ class AuthController extends Controller
                 'avatar_url'  => $fbUser->getAvatar(),
                 'password'    => null,
             ]);
+        }
+
+        if ($user->isSuspended()) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=account_suspended');
         }
 
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;

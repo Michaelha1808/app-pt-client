@@ -8,6 +8,9 @@ export interface FoodAnalysisResult {
   sodium: number
   confidence: number
   advice_short: string
+  source?: 'catalog' | 'ai'    // 'catalog' = calo lấy từ thư viện chuẩn; 'ai' = AI ước tính
+  dish_id?: number | null      // id món trong thư viện nếu khớp
+  warning?: string | null      // cảnh báo khi macro/kcal không cân đối
 }
 
 /** Kết quả POST /food/estimate — ước tính lại dinh dưỡng theo tên món user đã sửa */
@@ -18,6 +21,9 @@ export interface NutritionEstimate {
   carbs: number
   fat: number
   sodium: number
+  source?: 'catalog' | 'ai'
+  dish_id?: number | null
+  warning?: string | null
 }
 
 export interface FoodAnalysisContext {

@@ -34,7 +34,7 @@ class FoodController extends Controller
         return null;
     }
 
-    public function analyze(Request $request, FoodAnalysisService $service, PreferenceService $preferences): StreamedResponse|JsonResponse
+    public function analyze(Request $request, FoodAnalysisService $service, PreferenceService $preferences, DishCatalogService $catalog): StreamedResponse|JsonResponse
     {
         if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
 
@@ -70,7 +70,7 @@ class FoodController extends Controller
         }
 
         return response()->stream(
-            function () use ($service, $image, $text, $context) {
+            function () use ($service, $catalog, $image, $text, $context) {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
@@ -78,6 +78,25 @@ class FoodController extends Controller
                 try {
                     // Phase A: structured data ngay lập tức
                     $result = $service->getStructuredData($image, $text, $context);
+
+                    // Grounding: nếu tên món khớp thư viện `dishes`, thay calo/macro/tên
+                    // bằng giá trị chuẩn thay vì để AI tự đoán. Bỏ qua nhánh "Không phải món ăn"
+                    // (đã xử lý riêng ở dưới).
+                    if (($result['food_name'] ?? '') !== 'Không phải món ăn') {
+                        $result = $catalog->groundOne($result);
+                    } else {
+                        $result['source']  = 'ai';
+                        $result['dish_id'] = null;
+                    }
+
+                    // Sanity check Atwater: cảnh báo user khi macro/kcal không cân đối.
+                    $result['warning'] = \App\Support\NutritionValidator::warning(
+                        (int) $result['calories'],
+                        (int) $result['protein'],
+                        (int) $result['carbs'],
+                        (int) $result['fat'],
+                    );
+
                     echo "data: " . json_encode(['type' => 'result', 'data' => $result]) . "\n\n";
                     flush();
 
@@ -187,7 +206,7 @@ class FoodController extends Controller
      * (không stream) để FE áp số mới vào form trước, rồi mới gọi advise() sinh lời khuyên
      * khớp với số đó.
      */
-    public function estimate(Request $request, FoodAnalysisService $service): JsonResponse
+    public function estimate(Request $request, FoodAnalysisService $service, DishCatalogService $catalog): JsonResponse
     {
         if ($disabled = $this->foodAnalysisDisabled()) return $disabled;
 
@@ -199,12 +218,39 @@ class FoodController extends Controller
 
         UsageTracker::record('food_estimate', $request->user('sanctum')?->id);
 
+        $foodName  = (string) $request->input('food_name');
+        $serving   = $request->input('serving') ?: null;
+        $unitLabel = $request->input('unit_label') ?: null;
+
+        // Grounding: nếu khớp thư viện và user không đổi sang đơn vị khác → trả thẳng
+        // số chuẩn, khỏi gọi AI. Đổi đơn vị (vd catalog "tô" → user "chén") thì để AI
+        // tính lại vì tỉ lệ không đơn giản.
+        $match = $catalog->match($foodName);
+        if ($match && (!$unitLabel || $unitLabel === $match->unit_label)) {
+            return response()->json([
+                'serving'  => $match->serving,
+                'calories' => $match->calories,
+                'protein'  => $match->protein,
+                'carbs'    => $match->carbs,
+                'fat'      => $match->fat,
+                'sodium'   => $match->sodium,
+                'source'   => 'catalog',
+                'dish_id'  => $match->id,
+                'warning'  => null,
+            ]);
+        }
+
         try {
-            return response()->json($service->estimateNutrition(
-                (string) $request->input('food_name'),
-                $request->input('serving') ?: null,
-                $request->input('unit_label') ?: null,
-            ));
+            $data = $service->estimateNutrition($foodName, $serving, $unitLabel);
+            $data['source']  = 'ai';
+            $data['dish_id'] = null;
+            $data['warning'] = \App\Support\NutritionValidator::warning(
+                (int) $data['calories'],
+                (int) $data['protein'],
+                (int) $data['carbs'],
+                (int) $data['fat'],
+            );
+            return response()->json($data);
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Không ước tính được dinh dưỡng cho món này. Bạn có thể nhập tay.',

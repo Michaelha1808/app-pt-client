@@ -27,36 +27,47 @@ class DishCatalogService
      */
     public function ground(array $dishes): array
     {
-        return array_map(function (array $d) {
-            $match = $this->match((string) ($d['food_name'] ?? ''));
+        return array_map(fn (array $d) => $this->groundOne($d), $dishes);
+    }
 
-            if (!$match) {
-                $d['source']  = 'ai';
-                $d['dish_id'] = null;
-                return $d;
-            }
+    /**
+     * Ground 1 món riêng lẻ — dùng cho flow `analyze` (chụp/mô tả 1 món)
+     * và `estimate` (user sửa tên món). Tách khỏi ground() để cả 2 flow
+     * đều dùng cùng logic khớp catalog thay vì để AI tự đoán số.
+     *
+     * @param  array<string,mixed> $d
+     * @return array<string,mixed>
+     */
+    public function groundOne(array $d): array
+    {
+        $match = $this->match((string) ($d['food_name'] ?? ''));
 
-            $d['food_name']  = $match->name;
-            $d['unit_type']  = $match->unit_type;
-            $d['unit_label'] = $match->unit_label;
-            $d['serving']    = $match->serving;
-            $d['calories']   = $match->calories;
-            $d['protein']    = $match->protein;
-            $d['carbs']      = $match->carbs;
-            $d['fat']        = $match->fat;
-            $d['sodium']     = $match->sodium;
-            $d['source']     = 'catalog';
-            $d['dish_id']    = $match->id;
-            // Có nguồn chuẩn → tin cậy cao
-            $d['confidence'] = max((float) ($d['confidence'] ?? 0), 0.9);
-
-            // portion luôn quy về 1 đơn vị chuẩn; countable giữ số lượng AI đếm
-            if ($match->unit_type === 'portion') {
-                $d['quantity_default'] = 1;
-            }
-
+        if (!$match) {
+            $d['source']  = 'ai';
+            $d['dish_id'] = null;
             return $d;
-        }, $dishes);
+        }
+
+        $d['food_name']  = $match->name;
+        $d['unit_type']  = $match->unit_type;
+        $d['unit_label'] = $match->unit_label;
+        $d['serving']    = $match->serving;
+        $d['calories']   = $match->calories;
+        $d['protein']    = $match->protein;
+        $d['carbs']      = $match->carbs;
+        $d['fat']        = $match->fat;
+        $d['sodium']     = $match->sodium;
+        $d['source']     = 'catalog';
+        $d['dish_id']    = $match->id;
+        // Có nguồn chuẩn → tin cậy cao
+        $d['confidence'] = max((float) ($d['confidence'] ?? 0), 0.9);
+
+        // portion luôn quy về 1 đơn vị chuẩn; countable giữ số lượng AI đếm
+        if ($match->unit_type === 'portion') {
+            $d['quantity_default'] = 1;
+        }
+
+        return $d;
     }
 
     /**

@@ -186,6 +186,12 @@ async function handleEditSave(values: FoodEditValues) {
         sodium:   est.sodium,
       }
       applyValues(next)
+      // Đồng bộ badge nguồn (Thư viện/AI) + cảnh báo macro theo tên mới,
+      // nếu không giữ nguyên nhãn cũ sẽ gây hiểu nhầm về mức tin cậy.
+      if (result.value) {
+        result.value.source  = est.source
+        result.value.warning = est.warning ?? null
+      }
       if (est.calories !== base.calories) {
         toast.success(`Đã tính lại: ${est.calories.toLocaleString('vi')} kcal`)
       }
@@ -378,6 +384,16 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         </p>
       </div>
 
+      <!-- ── Macro / kcal sanity warning (Atwater) ── -->
+      <div
+        v-if="result?.warning"
+        class="mx-5 mb-3 bg-ios-orange/10 border border-ios-orange/30 rounded-[14px] px-4 py-3 flex items-center gap-3 animate-fadeInUp"
+        style="opacity:0"
+      >
+        <span class="text-xl flex-shrink-0">⚖️</span>
+        <p class="text-[13px] text-ios-orange leading-snug">{{ result.warning }}</p>
+      </div>
+
       <!-- ── Food name + calories (hiện khi result về) — bấm để mở popup sửa ── -->
       <button
         v-if="result"
@@ -399,7 +415,17 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
 
         <div class="flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
-            <h2 class="text-[22px] font-bold text-black">{{ editName }}</h2>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h2 class="text-[22px] font-bold text-black">{{ editName }}</h2>
+              <span
+                v-if="result?.source === 'catalog'"
+                class="flex-shrink-0 text-[10px] text-calor-green bg-calor-green/10 px-1.5 py-0.5 rounded-full font-medium"
+              >📚 Thư viện</span>
+              <span
+                v-else-if="result?.source === 'ai'"
+                class="flex-shrink-0 text-[10px] text-ios-gray bg-ios-gray/10 px-1.5 py-0.5 rounded-full font-medium"
+              >🤖 AI ước tính</span>
+            </div>
             <p class="text-[13px] text-ios-gray mt-1">{{ editServing }}</p>
           </div>
           <div class="text-right flex-shrink-0">

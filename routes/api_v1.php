@@ -26,6 +26,9 @@ Route::get('/config', [\App\Http\Controllers\Api\V1\AppConfigController::class, 
 // Public — dùng cho register flow để gợi ý calorie_goal cá nhân hoá.
 Route::get('/nutrition/standards',   [\App\Http\Controllers\Api\V1\NutritionController::class, 'standards']);
 Route::post('/nutrition/calculate',  [\App\Http\Controllers\Api\V1\NutritionController::class, 'calculate']);
+// Tra cứu bảng Thành phần Thực phẩm VDD 2007/2017 — public để cả FE và AI có thể tham chiếu.
+Route::get('/nutrition/lookup',      [\App\Http\Controllers\Api\V1\NutritionController::class, 'lookup']);
+Route::get('/nutrition/dish-composition/{dish}', [\App\Http\Controllers\Api\V1\NutritionController::class, 'dishComposition']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

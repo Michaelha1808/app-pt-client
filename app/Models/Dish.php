@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Dish extends Model
 {
@@ -28,4 +29,9 @@ class Dish extends Model
         'fat'      => 'integer',
         'sodium'   => 'integer',
     ];
+
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(DishRecipe::class)->orderBy('order');
+    }
 }

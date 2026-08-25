@@ -124,6 +124,14 @@ class NutritionStandard
                 'url'    => 'https://viendinhduong.vn/vi/cong-cu-va-tien-ich/nhu-cau-dinh-duong',
             ],
             [
+                'id'     => 'vdd-fct-2007',
+                'title'  => 'Bảng Thành phần Thực phẩm Việt Nam (Food Composition Table)',
+                'author' => 'Viện Dinh dưỡng Quốc gia — Bộ Y tế',
+                'year'   => 2007,
+                // DEFENSE: link tham chiếu FCT — bảng thành phần thực phẩm cho từng nguyên liệu 100g
+                'url'    => 'https://viendinhduong.vn/vi/cong-cu-va-tien-ich/gia-tri-dinh-duong',
+            ],
+            [
                 'id'     => 'who-fao-2001',
                 'title'  => 'Human Energy Requirements — FAO/WHO/UNU Expert Consultation',
                 'author' => 'WHO / FAO / UNU',
@@ -152,6 +160,7 @@ class NutritionStandard
             . "- Natri < 2000 mg/ngày (WHO); nếu buộc phải cao hơn thì cảnh báo.\n"
             . "- Chất xơ 20–25 g/ngày; đường tự do < 10% năng lượng.\n"
             . "- Nước 35 ml × kg cân nặng.\n"
+            . "- Calo/vi chất của nguyên liệu Việt Nam bám sát Bảng Thành phần Thực phẩm VDD 2007/2017 (100g phần ăn được).\n"
             . "- Ưu tiên nguyên liệu Việt Nam, phổ biến, dễ mua.\n";
     }
 }

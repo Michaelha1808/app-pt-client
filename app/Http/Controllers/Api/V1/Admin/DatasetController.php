@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\FoodDetectionSample;
+use App\Services\DetectionAccuracyService;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -82,6 +83,45 @@ class DatasetController extends Controller
             // Ảnh nhúng base64 (đã downscale) — tránh phải gửi Bearer token trên thẻ <img>.
             'image'            => $this->imageDataUri($sample),
         ]);
+    }
+
+    /**
+     * GET /admin/dataset/accuracy
+     * Thống kê % đúng của nhận diện + ước lượng calo AI, so với VDD.
+     * Chỉ tính trên sample có thể match catalog/FCT (unmatched loại khỏi mẫu số accuracy).
+     */
+    // DEFENSE: endpoint accuracy dataset — % chính xác AI vs VDD, breakdown theo nhóm thực phẩm
+    public function accuracy(Request $request, DetectionAccuracyService $service): JsonResponse
+    {
+        $request->validate([
+            'days'  => 'nullable|integer|between:1,365',
+            'limit' => 'nullable|integer|between:10,500',
+        ]);
+
+        // Mặc định lấy 200 sample gần nhất trong 30 ngày (đủ để có tín hiệu, đủ nhanh).
+        $days  = (int) ($request->query('days', 30));
+        $limit = (int) ($request->query('limit', 200));
+
+        $samples = FoodDetectionSample::query()
+            ->where('created_at', '>=', now()->subDays($days))
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'window'    => ['days' => $days, 'limit' => $limit, 'sample_count' => $samples->count()],
+            'aggregate' => $service->aggregate($samples),
+        ]);
+    }
+
+    /**
+     * GET /admin/dataset/{sample}/accuracy
+     * Chấm 1 sample cụ thể — chi tiết từng dish AI đoán vs VDD.
+     */
+    // DEFENSE: endpoint per-sample accuracy — breakdown từng dish AI vs VDD cho 1 sample
+    public function sampleAccuracy(FoodDetectionSample $sample, DetectionAccuracyService $service): JsonResponse
+    {
+        return response()->json($service->scoreSample($sample));
     }
 
     public function destroy(FoodDetectionSample $sample): JsonResponse

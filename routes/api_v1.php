@@ -238,7 +238,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
     // Dataset nhận diện (AI đoán vs user sửa) — duyệt + xoá
     Route::get('/dataset/stats', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'stats']);
+    // Accuracy phải khai báo TRƯỚC /{sample} để không bị Route Model Binding nuốt.
+    Route::get('/dataset/accuracy', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'accuracy']);
     Route::get('/dataset', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'index']);
+    Route::get('/dataset/{sample}/accuracy', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'sampleAccuracy']);
     Route::get('/dataset/{sample}', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'show']);
     Route::delete('/dataset/{sample}', [\App\Http\Controllers\Api\V1\Admin\DatasetController::class, 'destroy']);
 

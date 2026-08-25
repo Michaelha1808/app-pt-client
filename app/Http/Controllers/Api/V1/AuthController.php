@@ -173,6 +173,14 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Exception $e) {
+            // Trước đây nuốt exception im lặng nên rất khó debug OAuth trên production.
+            // Log lại full message + trace class để biết vì sao Socialite fail (invalid
+            // client, redirect_uri mismatch, network...). Không log token/secret.
+            Log::error('Google OAuth callback thất bại', [
+                'error_class' => get_class($e),
+                'message'     => $e->getMessage(),
+                'query'       => $request->query(),
+            ]);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
             return redirect($frontendUrl . '/auth/login?error=google_failed');
         }
@@ -233,6 +241,11 @@ class AuthController extends Controller
         try {
             $fbUser = Socialite::driver('facebook')->stateless()->user();
         } catch (\Exception $e) {
+            Log::error('Facebook OAuth callback thất bại', [
+                'error_class' => get_class($e),
+                'message'     => $e->getMessage(),
+                'query'       => $request->query(),
+            ]);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
             return redirect($frontendUrl . '/auth/login?error=facebook_failed');
         }

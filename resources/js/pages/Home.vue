@@ -303,6 +303,7 @@ onMounted(() => {
     <DailyTasksCard
       :meal-logged="streak?.is_logged_today ?? false"
       :streak-at-risk="showRiskBanner"
+      @logged="fetchTodayStats"
     />
 
     <!-- Hoạt động hôm nay -->

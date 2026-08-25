@@ -10,6 +10,10 @@ const props = defineProps<{
   streakAtRisk?: boolean
 }>()
 
+// Notify parent (Home.vue) sau khi ghi bữa/tập → parent refetch todayStats để vòng
+// tròn kcal cập nhật ngay, không phải đợi user điều hướng đi rồi quay lại.
+const emit = defineEmits<{ (e: 'logged'): void }>()
+
 const { totalMl, isCompleted: waterCompleted, percentage: waterPct, logWater } = useWater()
 const { onMealLogged } = useStreak()
 const { success, error: toastError } = useToast()
@@ -64,6 +68,7 @@ async function completeMeal(m: MealTask) {
     })
     m.done = true
     onMealLogged(res.streak)
+    emit('logged')
     success(`Đã ghi ${SLOT_LABEL[m.slot] ?? m.name}`)
   } catch (e: any) {
     toastError(e?.data?.message ?? 'Không thể ghi lại bữa ăn này.')
@@ -82,6 +87,7 @@ async function completeWorkoutTask() {
     })
     workout.value.done = true
     onMealLogged(res.streak)
+    emit('logged')
     success('Đã ghi buổi tập')
   } catch (e: any) {
     toastError(e?.data?.message ?? 'Không thể ghi lại buổi tập này.')

@@ -535,7 +535,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
         /></div>
         <!-- Nguồn tham chiếu — user click để xem chi tiết citations -->
         <div v-if="streamDone && displayedText.length >= streamingText.length" class="mt-3 pt-3 border-t-hairline border-ios-gray5">
-          <AdvisorySource compact />
+          <AdvisorySource compact :only="['vdd-mon-an']" />
         </div>
       </div>
 

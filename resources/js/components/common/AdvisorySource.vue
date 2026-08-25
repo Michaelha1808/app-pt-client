@@ -15,9 +15,12 @@ const props = withDefaults(defineProps<{
   citations?: Citation[] | null
   /** Compact = chỉ 1 dòng gọn, không hiển thị icon lớn. */
   compact?: boolean
+  /** Chỉ giữ lại citation có id trong danh sách này (lọc trên chuẩn chung hoặc citations riêng). */
+  only?: string[] | null
 }>(), {
   citations: null,
   compact:   false,
+  only:      null,
 })
 
 const { standards, load } = useNutritionStandards()
@@ -25,9 +28,10 @@ const expanded = ref(false)
 
 onMounted(() => { if (!props.citations) load() })
 
-const list = computed<Citation[]>(() =>
-  props.citations && props.citations.length ? props.citations : (standards.value?.citations ?? [])
-)
+const list = computed<Citation[]>(() => {
+  const base = props.citations && props.citations.length ? props.citations : (standards.value?.citations ?? [])
+  return props.only ? base.filter(c => props.only!.includes(c.id)) : base
+})
 
 const shortLine = computed(() => {
   if (!list.value.length) return ''

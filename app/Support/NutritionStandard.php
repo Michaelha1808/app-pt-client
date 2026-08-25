@@ -132,6 +132,14 @@ class NutritionStandard
                 'url'    => 'https://viendinhduong.vn/vi/cong-cu-va-tien-ich/gia-tri-dinh-duong',
             ],
             [
+                'id'     => 'vdd-mon-an',
+                'title'  => 'Giá trị dinh dưỡng món ăn',
+                'author' => 'Viện Dinh dưỡng Quốc gia — Bộ Y tế',
+                'year'   => 2026,
+                // DEFENSE: link tham chiếu món ăn — nguồn kcal/macro cho thư viện `dishes` (VddDishSeeder)
+                'url'    => 'https://viendinhduong.vn/vi/cong-cu-va-tien-ich/gia-tri-dinh-duong-mon-an',
+            ],
+            [
                 'id'     => 'who-fao-2001',
                 'title'  => 'Human Energy Requirements — FAO/WHO/UNU Expert Consultation',
                 'author' => 'WHO / FAO / UNU',

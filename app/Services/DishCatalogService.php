@@ -49,17 +49,31 @@ class DishCatalogService
             return $d;
         }
 
+        // Hệ số khẩu phần: nhân vào số chuẩn từ DB thay vì luôn trả đúng 1 khẩu phần cố định.
+        // Ưu tiên gram thật (estimated_grams AI ước từ ảnh ÷ reference_grams đọc từ ảnh VDD qua
+        // dishes:backfill-grams) — chính xác hơn vì so theo khối lượng tuyệt đối. Món chưa có
+        // reference_grams (ảnh VDD không có bảng thành phần) → fallback portion_ratio (AI tự so
+        // sánh tương đối với khẩu phần thường). Mặc định 1.0 nếu AI không ước tính được gì (vd
+        // input chỉ có text).
+        if ($match->reference_grams && !empty($d['estimated_grams'])) {
+            $ratio = (float) $d['estimated_grams'] / (float) $match->reference_grams;
+        } else {
+            $ratio = (float) ($d['portion_ratio'] ?? 1.0);
+        }
+        $ratio = max(0.3, min(3.0, $ratio));
+
         $d['food_name']  = $match->name;
         $d['unit_type']  = $match->unit_type;
         $d['unit_label'] = $match->unit_label;
-        $d['serving']    = $match->serving;
-        $d['calories']   = $match->calories;
-        $d['protein']    = $match->protein;
-        $d['carbs']      = $match->carbs;
-        $d['fat']        = $match->fat;
-        $d['sodium']     = $match->sodium;
+        $d['serving']    = $match->serving . ($ratio < 0.85 || $ratio > 1.15 ? sprintf(' (~%.1fx khẩu phần chuẩn)', $ratio) : '');
+        $d['calories']   = round($match->calories * $ratio, 1);
+        $d['protein']    = (int) round($match->protein * $ratio);
+        $d['carbs']      = (int) round($match->carbs   * $ratio);
+        $d['fat']        = (int) round($match->fat     * $ratio);
+        $d['sodium']     = (int) round($match->sodium  * $ratio);
         $d['source']     = 'catalog';
         $d['dish_id']    = $match->id;
+        $d['portion_ratio'] = $ratio;
         // Có nguồn chuẩn → tin cậy cao
         $d['confidence'] = max((float) ($d['confidence'] ?? 0), 0.9);
 

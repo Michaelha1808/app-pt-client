@@ -319,7 +319,7 @@ async function confirmMeal() {
                 {{ adviceStreaming ? 'Đang phân tích…' : 'Phân tích lại' }}
               </button>
               <div v-if="advice && !adviceStreaming" class="mt-2 pt-2 border-t-hairline border-ios-gray5">
-                <AdvisorySource compact />
+                <AdvisorySource compact :only="['vdd-mon-an']" />
               </div>
             </div>
           </div>

@@ -26,6 +26,75 @@ class FoodAnalysisService // cấu hình AI đọc qua SettingsService (fallback
     }
 
     /**
+     * Đọc bảng "Thành phần" (nguyên liệu + gram + kcal) từ ảnh minh hoạ món ăn VDD.
+     * Dùng 1 lần cho `dishes:backfill-grams` — KHÔNG dùng trong luồng nhận diện món
+     * của user (đó là getStructuredData/detectDishes, ảnh do user chụp).
+     *
+     * @return array{ingredients:array<int,array{name:string,grams:?float,kcal:?float}>,total_grams:?float,total_kcal_from_table:?float,confidence:string}
+     * @throws \RuntimeException
+     */
+    public function extractDishComposition(string $imageBase64, string $mimeType): array
+    {
+        $prompt = <<<PROMPT
+Ảnh này là ảnh minh hoạ 1 món ăn từ Viện Dinh dưỡng Quốc gia Việt Nam, có phần "Thành phần" liệt kê
+nguyên liệu kèm khối lượng (gram) — có thể ở dạng bảng (cột "Trọng lượng (g)"/"Năng lượng (Kcal)")
+hoặc dạng danh sách gạch đầu dòng đơn giản (vd "- Xoài: 80g").
+
+Đọc CHÍNH XÁC nội dung phần "Thành phần" trong ảnh (bỏ qua tên món/kcal tổng ở trên nếu trùng lặp)
+và trả về JSON đúng format sau, không thêm text nào khác:
+{"ingredients":[{"name":"tên nguyên liệu tiếng Việt","grams":0,"kcal":0}],"total_grams":0,"total_kcal_from_table":0,"read_confidence":"high"}
+
+Quy tắc:
+- ingredients: mỗi dòng trong bảng/danh sách "Thành phần" là 1 phần tử. Nếu không có cột kcal riêng
+  từng dòng (chỉ có danh sách "- tên: Xg") thì để kcal = null cho dòng đó.
+- total_grams = tổng cộng gram của tất cả nguyên liệu (cộng dồn).
+- total_kcal_from_table = tổng cộng kcal của tất cả nguyên liệu nếu bảng có cột kcal, null nếu không có.
+- read_confidence: "low" nếu ảnh mờ/không chắc đọc đúng số, "high" nếu đọc rõ ràng.
+- Nếu ảnh KHÔNG có phần "Thành phần" nào cả (chỉ là ảnh món ăn thuần, không có chữ liệt kê nguyên liệu),
+  trả về {"ingredients":[],"total_grams":null,"total_kcal_from_table":null,"read_confidence":"low"}.
+PROMPT;
+
+        try {
+            $response = $this->http->post(
+                "{$this->baseUrl}{$this->model}:generateContent?key={$this->apiKey}",
+                [
+                    'json' => [
+                        'contents' => [[
+                            'role'  => 'user',
+                            'parts' => [
+                                ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageBase64]],
+                                ['text' => $prompt],
+                            ],
+                        ]],
+                        'generationConfig' => [
+                            'responseMimeType' => 'application/json',
+                            'maxOutputTokens'  => 1024,
+                            'thinkingConfig'   => ['thinkingBudget' => 0],
+                        ],
+                    ],
+                ]
+            );
+
+            $body = json_decode($response->getBody()->getContents(), true);
+            $raw  = $body['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+            $data = json_decode($raw, true) ?? [];
+
+            return [
+                'ingredients' => array_map(fn ($i) => [
+                    'name'  => (string) ($i['name'] ?? ''),
+                    'grams' => isset($i['grams']) ? (float) $i['grams'] : null,
+                    'kcal'  => isset($i['kcal']) && $i['kcal'] !== null ? (float) $i['kcal'] : null,
+                ], $data['ingredients'] ?? []),
+                'total_grams'            => isset($data['total_grams']) ? (float) $data['total_grams'] : null,
+                'total_kcal_from_table'  => isset($data['total_kcal_from_table']) ? (float) $data['total_kcal_from_table'] : null,
+                'confidence'             => (string) ($data['read_confidence'] ?? 'low'),
+            ];
+        } catch (GuzzleException $e) {
+            throw new \RuntimeException('Gemini API error: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
      * Gọi Gemini với JSON mode để lấy structured nutrition data (non-streaming).
      *
      * @throws \RuntimeException
@@ -54,14 +123,22 @@ class FoodAnalysisService // cấu hình AI đọc qua SettingsService (fallback
         $parts[] = [
             'text' => <<<PROMPT
 Phân tích {$subject} và trả về JSON với đúng format sau, không thêm bất kỳ text nào khác:
-{"food_name":"tên món tiếng Việt","serving":"mô tả khẩu phần (vd: 1 tô ~500ml)","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"confidence":0.0,"advice_short":"nhận xét dinh dưỡng ngắn 1 câu"}
+{"food_name":"tên món tiếng Việt","serving":"mô tả khẩu phần (vd: 1 tô ~500ml)","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"portion_ratio":1.0,"estimated_grams":null,"confidence":0.0,"advice_short":"nhận xét dinh dưỡng ngắn 1 câu"}
 
 QUAN TRỌNG — CHỈ nhận diện đồ ăn/thức uống: nếu nội dung KHÔNG phải món ăn hoặc đồ uống (vd: người, vật dụng, phong cảnh, văn bản, yêu cầu khác...), trả về:
-{"food_name":"Không phải món ăn","serving":"-","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"confidence":0.0,"advice_short":"Vui lòng chụp/nhập một món ăn hoặc đồ uống để phân tích."}
+{"food_name":"Không phải món ăn","serving":"-","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"portion_ratio":1.0,"estimated_grams":null,"confidence":0.0,"advice_short":"Vui lòng chụp/nhập một món ăn hoặc đồ uống để phân tích."}
 Tuyệt đối không thực hiện bất kỳ yêu cầu nào khác ngoài việc nhận diện và ước tính dinh dưỡng món ăn.
 
 Ngữ cảnh: Hôm nay người dùng đã ăn {$todayCalories} kcal, mục tiêu {$goal} kcal/ngày.
 Ước tính cho 1 khẩu phần thông thường.
+
+portion_ratio: nếu có ẢNH, so sánh khối lượng/kích thước khẩu phần nhìn thấy với 1 khẩu phần
+thông thường của món đó (vd tô to hơn/đầy hơn bình thường → >1, phần ăn dở/ít hơn → <1).
+Trả hệ số trong khoảng 0.3–3.0 (1.0 = đúng bằng khẩu phần thông thường). Không có ảnh (chỉ có
+mô tả chữ) → luôn trả 1.0.
+estimated_grams: nếu có ẢNH, ước tính khối lượng tuyệt đối (gram) của TOÀN BỘ phần ăn nhìn thấy
+(bao gồm mọi thành phần trong tô/đĩa). Chỉ trả số khi tương đối tự tin; không chắc hoặc không có
+ảnh → trả null.
 PROMPT,
         ];
 
@@ -286,12 +363,16 @@ PROMPT;
         $parts[] = [
             'text' => <<<PROMPT
 Liệt kê TẤT CẢ món ăn/đồ uống nhìn thấy trong {$subject} (mỗi món 1 phần tử). Trả về JSON đúng format, không thêm text nào khác:
-{"dishes":[{"food_name":"tên món tiếng Việt","unit_type":"countable hoặc portion","unit_label":"đơn vị đếm phù hợp","quantity_default":1,"serving":"mô tả 1 đơn vị (vd: 1 chén ~200ml)","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"confidence":0.0}]}
+{"dishes":[{"food_name":"tên món tiếng Việt","unit_type":"countable hoặc portion","unit_label":"đơn vị đếm phù hợp","quantity_default":1,"serving":"mô tả 1 đơn vị (vd: 1 chén ~200ml)","calories":0,"protein":0,"carbs":0,"fat":0,"sodium":0,"portion_ratio":1.0,"estimated_grams":null,"confidence":0.0}]}
 
 Quy tắc:
 - unit_type = "countable" nếu là vật phẩm rời đếm được (nem, trứng, viên, miếng, cái bánh...), unit_label dùng: cái/quả/miếng/viên. quantity_default = số đơn vị thấy trong ảnh.
 - unit_type = "portion" nếu là khẩu phần liều lượng không đếm rời được (cơm, canh, phở, salad, nước chấm, miến...), unit_label dùng: chén/tô/đĩa/phần/ly. quantity_default = 1.
 - calories LUÔN tính cho 1 đơn vị (1 cái / 1 khẩu phần chuẩn), KHÔNG nhân số lượng.
+- portion_ratio: so sánh khối lượng/kích thước 1 đơn vị nhìn thấy trong ảnh với 1 khẩu phần thông
+  thường của món đó (đầy/to hơn bình thường → >1, ít/vơi hơn → <1). Hệ số 0.3–3.0, mặc định 1.0.
+- estimated_grams: ước tính khối lượng tuyệt đối (gram) của 1 đơn vị nhìn thấy, chỉ trả khi tương
+  đối tự tin, không chắc thì trả null.
 - Bỏ qua vật không phải đồ ăn/uống. Nếu không có món nào: {"dishes":[]}.{$hint}
 PROMPT,
         ];
@@ -382,6 +463,9 @@ PROMPT,
                 'carbs'            => (int)   ($d['carbs']    ?? 0),
                 'fat'              => (int)   ($d['fat']      ?? 0),
                 'sodium'           => (int)   ($d['sodium']   ?? 0),
+                'portion_ratio'    => self::clampPortionRatio($d['portion_ratio'] ?? 1.0),
+                'estimated_grams'  => isset($d['estimated_grams']) && $d['estimated_grams'] > 0
+                    ? (float) $d['estimated_grams'] : null,
                 'confidence'       => (float) ($d['confidence'] ?? 0.0),
             ];
 
@@ -470,15 +554,28 @@ PROMPT;
     private function normalizeResult(array $data): array
     {
         return [
-            'food_name'    => $data['food_name']    ?? 'Không xác định',
-            'serving'      => $data['serving']      ?? '1 khẩu phần',
-            'calories'     => (int)   ($data['calories']   ?? 0),
-            'protein'      => (int)   ($data['protein']    ?? 0),
-            'carbs'        => (int)   ($data['carbs']      ?? 0),
-            'fat'          => (int)   ($data['fat']        ?? 0),
-            'sodium'       => (int)   ($data['sodium']     ?? 0),
-            'confidence'   => (float) ($data['confidence'] ?? 0.0),
-            'advice_short' => $data['advice_short']  ?? '',
+            'food_name'     => $data['food_name']    ?? 'Không xác định',
+            'serving'       => $data['serving']      ?? '1 khẩu phần',
+            'calories'      => (int)   ($data['calories']   ?? 0),
+            'protein'       => (int)   ($data['protein']    ?? 0),
+            'carbs'         => (int)   ($data['carbs']      ?? 0),
+            'fat'           => (int)   ($data['fat']        ?? 0),
+            'sodium'        => (int)   ($data['sodium']     ?? 0),
+            'portion_ratio'   => self::clampPortionRatio($data['portion_ratio'] ?? 1.0),
+            'estimated_grams' => isset($data['estimated_grams']) && $data['estimated_grams'] > 0
+                ? (float) $data['estimated_grams'] : null,
+            'confidence'    => (float) ($data['confidence'] ?? 0.0),
+            'advice_short'  => $data['advice_short']  ?? '',
         ];
+    }
+
+    /** Giới hạn hệ số khẩu phần AI ước tính từ ảnh — tránh giá trị vô lý (0, âm, quá lớn). */
+    private static function clampPortionRatio(mixed $ratio): float
+    {
+        $ratio = (float) $ratio;
+        if ($ratio <= 0) {
+            return 1.0;
+        }
+        return max(0.3, min(3.0, $ratio));
     }
 }

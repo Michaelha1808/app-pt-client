@@ -151,7 +151,8 @@ class FoodController extends Controller
 
         $request->validate([
             'food_name'               => 'required|string|max:200',
-            'calories'                => 'required|integer|min:0|max:10000',
+            // numeric (không phải integer): calo có thể là số lẻ khi khớp thư viện + hệ số khẩu phần
+            'calories'                => 'required|numeric|min:0|max:10000',
             'serving'                 => 'nullable|string|max:200',
             'protein'                 => 'nullable|integer|min:0|max:1000',
             'carbs'                   => 'nullable|integer|min:0|max:2000',
@@ -332,7 +333,7 @@ class FoodController extends Controller
             'saved'               => 'nullable|boolean',
             'dishes'              => 'required|array|max:30',
             'dishes.*.food_name'  => 'required|string|max:200',
-            'dishes.*.calories'   => 'required|integer|min:0|max:10000',
+            'dishes.*.calories'   => 'required|numeric|min:0|max:10000',
             'dishes.*.quantity'   => 'required|numeric|min:0|max:99',
             'dishes.*.selected'   => 'required|boolean',
         ]);
@@ -349,8 +350,8 @@ class FoodController extends Controller
         $request->validate([
             'dishes'            => 'required|array|min:1|max:30',
             'dishes.*.name'     => 'required|string|max:200',
-            'dishes.*.calories' => 'required|integer|min:0|max:10000',
-            'total_calories'    => 'nullable|integer|min:0',
+            'dishes.*.calories' => 'required|numeric|min:0|max:10000',
+            'total_calories'    => 'nullable|numeric|min:0',
             'context.today_calories' => 'nullable|integer|min:0|max:10000',
             'context.goal'           => 'nullable|integer|between:1000,5000',
         ]);
@@ -402,7 +403,9 @@ class FoodController extends Controller
             'food_name' => 'required|string|max:200',
             'serving'   => 'nullable|string|max:100',
             // DEFENSE: giới hạn calo khi log 1 bữa — max 10000 kcal/bữa
-            'calories'  => 'required|integer|min:0|max:10000',
+            // numeric (không phải integer): calo có thể là số lẻ khi khớp thư viện + hệ số khẩu phần —
+            // meal_logs.calories vẫn là cột integer nên ép tròn ngay dưới đây trước khi lưu.
+            'calories'  => 'required|numeric|min:0|max:10000',
             'protein'   => 'required|integer|min:0',
             'carbs'     => 'required|integer|min:0',
             'fat'       => 'required|integer|min:0',
@@ -411,6 +414,8 @@ class FoodController extends Controller
             // DEFENSE: giới hạn kích thước ảnh — 8MB base64 (~6MB nhị phân)
             'image'     => 'nullable|string|max:8000000',   // data URL base64 ảnh đã chụp
         ]);
+
+        $data['calories'] = (int) round($data['calories']);
 
         $imagePath = $this->storeMealImage($data['image'] ?? null);
         unset($data['image']);

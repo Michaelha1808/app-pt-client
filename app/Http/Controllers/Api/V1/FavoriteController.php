@@ -50,12 +50,15 @@ class FavoriteController extends Controller
             $payload = $request->validate([
                 'food_name' => 'required|string|max:200',
                 'serving'   => 'nullable|string|max:100',
-                'calories'  => 'required|integer|min:0|max:10000',
+                // numeric: calo có thể là số lẻ khi khớp thư viện + hệ số khẩu phần — favorite_meals.calories
+                // vẫn là cột integer nên ép tròn ngay dưới đây trước khi lưu.
+                'calories'  => 'required|numeric|min:0|max:10000',
                 'protein'   => 'required|integer|min:0',
                 'carbs'     => 'required|integer|min:0',
                 'fat'       => 'required|integer|min:0',
                 'sodium'    => 'required|integer|min:0',
             ]);
+            $payload['calories'] = (int) round($payload['calories']);
         }
 
         $exists = $user->favoriteMeals()

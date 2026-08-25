@@ -11,6 +11,8 @@ export interface FoodAnalysisResult {
   source?: 'catalog' | 'ai'    // 'catalog' = calo lấy từ thư viện chuẩn; 'ai' = AI ước tính
   dish_id?: number | null      // id món trong thư viện nếu khớp
   warning?: string | null      // cảnh báo khi macro/kcal không cân đối
+  portion_ratio?: number       // hệ số khẩu phần AI ước từ ảnh so với khẩu phần chuẩn (1.0 = bằng)
+  estimated_grams?: number | null // khối lượng tuyệt đối (g) AI ước từ ảnh, null nếu không ước được
 }
 
 /** Kết quả POST /food/estimate — ước tính lại dinh dưỡng theo tên món user đã sửa */

@@ -46,7 +46,9 @@ const shortLine = computed(() => {
       <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 flex-shrink-0 opacity-70" fill="currentColor">
         <path d="M11 7h2v2h-2V7zm0 4h2v6h-2v-6zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
       </svg>
-      <span class="flex-1 min-w-0 truncate">
+      <!-- Khi expanded chỉ hiển thị label (không truncate short line trùng lặp với danh sách chi tiết ở dưới) -->
+      <span v-if="expanded" class="flex-1 min-w-0 font-medium">Cơ sở tham chiếu:</span>
+      <span v-else class="flex-1 min-w-0 truncate">
         <span class="font-medium">Cơ sở tham chiếu:</span> {{ shortLine }}
       </span>
       <svg viewBox="0 0 24 24" class="w-3 h-3 flex-shrink-0 opacity-60 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="currentColor">

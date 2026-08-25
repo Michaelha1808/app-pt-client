@@ -120,7 +120,8 @@ class NutritionStandard
                 'title'  => 'Bảng Nhu cầu Dinh dưỡng Khuyến nghị cho người Việt Nam',
                 'author' => 'Viện Dinh dưỡng Quốc gia — Bộ Y tế',
                 'year'   => 2016,
-                'url'    => 'https://viendinhduong.vn/vi/nhu-cau-dinh-duong-khuyen-nghi.html',
+                // DEFENSE: link tham chiếu VDD — công cụ tra cứu RNI chính chủ trên viendinhduong.vn
+                'url'    => 'https://viendinhduong.vn/vi/cong-cu-va-tien-ich/nhu-cau-dinh-duong',
             ],
             [
                 'id'     => 'who-fao-2001',
@@ -134,7 +135,8 @@ class NutritionStandard
                 'title'  => 'A new predictive equation for resting energy expenditure in healthy individuals',
                 'author' => 'Mifflin MD, St Jeor ST et al.',
                 'year'   => 1990,
-                'url'    => 'https://pubmed.ncbi.nlm.nih.gov/2305711/',
+                // DEFENSE: link tham chiếu Mifflin — DOI ổn định hơn PubMed URL (redirect sang AJCN)
+                'url'    => 'https://doi.org/10.1093/ajcn/51.2.241',
             ],
         ];
     }

@@ -23,7 +23,7 @@ class Dish extends Model
 
     protected $casts = [
         'aliases'  => 'array',
-        'calories' => 'integer',
+        'calories' => 'float',
         'protein'  => 'integer',
         'carbs'    => 'integer',
         'fat'      => 'integer',

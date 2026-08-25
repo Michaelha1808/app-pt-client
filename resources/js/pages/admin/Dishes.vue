@@ -236,7 +236,7 @@ onMounted(() => load())
             </div>
           </div>
           <div class="grid grid-cols-5 gap-2">
-            <div class="space-y-1.5"><Label>Calo</Label><Input v-model.number="form.calories" type="number" class="tabular-nums" /></div>
+            <div class="space-y-1.5"><Label>Calo</Label><Input v-model.number="form.calories" type="number" step="0.1" class="tabular-nums" /></div>
             <div class="space-y-1.5"><Label>Đạm</Label><Input v-model.number="form.protein" type="number" class="tabular-nums" /></div>
             <div class="space-y-1.5"><Label>Tinh bột</Label><Input v-model.number="form.carbs" type="number" class="tabular-nums" /></div>
             <div class="space-y-1.5"><Label>Béo</Label><Input v-model.number="form.fat" type="number" class="tabular-nums" /></div>

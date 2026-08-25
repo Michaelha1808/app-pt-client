@@ -88,8 +88,8 @@ class DishController extends Controller
             'unit_type'  => 'required|in:countable,portion',
             'unit_label' => 'required|string|max:30',
             'serving'    => 'required|string|max:100',
-            // DEFENSE: khoảng calo món chuẩn — 0-10000 kcal/đơn vị
-            'calories'   => 'required|integer|min:0|max:10000',
+            // DEFENSE: khoảng calo món chuẩn — 0-10000 kcal/đơn vị (numeric để giữ số lẻ từ VDD, vd 420.5)
+            'calories'   => 'required|numeric|min:0|max:10000',
             'protein'    => 'required|integer|min:0|max:1000',
             'carbs'      => 'required|integer|min:0|max:1000',
             'fat'        => 'required|integer|min:0|max:1000',

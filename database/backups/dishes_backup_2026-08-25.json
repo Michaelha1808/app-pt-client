@@ -1,0 +1,655 @@
+[
+    {
+        "id": 1,
+        "name": "Phở bò",
+        "name_normalized": "pho bo",
+        "aliases": [
+            "pho",
+            "pho bo tai",
+            "pho bo chin"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô (~500ml)",
+        "calories": 450,
+        "protein": 25,
+        "carbs": 55,
+        "fat": 12,
+        "sodium": 1500,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 2,
+        "name": "Phở gà",
+        "name_normalized": "pho ga",
+        "aliases": [
+            "pho ga"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô (~500ml)",
+        "calories": 400,
+        "protein": 28,
+        "carbs": 50,
+        "fat": 8,
+        "sodium": 1400,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 3,
+        "name": "Bún bò Huế",
+        "name_normalized": "bun bo hue",
+        "aliases": [
+            "bun bo",
+            "bun bo hue"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô (~500ml)",
+        "calories": 500,
+        "protein": 28,
+        "carbs": 55,
+        "fat": 16,
+        "sodium": 1700,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 4,
+        "name": "Bún chả",
+        "name_normalized": "bun cha",
+        "aliases": [
+            "bun cha"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần (bún + chả)",
+        "calories": 500,
+        "protein": 30,
+        "carbs": 60,
+        "fat": 14,
+        "sodium": 1200,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 5,
+        "name": "Bún riêu",
+        "name_normalized": "bun rieu",
+        "aliases": [
+            "bun rieu",
+            "bun rieu cua"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô (~500ml)",
+        "calories": 400,
+        "protein": 18,
+        "carbs": 50,
+        "fat": 12,
+        "sodium": 1300,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 6,
+        "name": "Bún thịt nướng",
+        "name_normalized": "bun thit nuong",
+        "aliases": [
+            "bun thit nuong"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô",
+        "calories": 480,
+        "protein": 26,
+        "carbs": 58,
+        "fat": 14,
+        "sodium": 900,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 7,
+        "name": "Bún đậu mắm tôm",
+        "name_normalized": "bun dau mam tom",
+        "aliases": [
+            "bun dau",
+            "bun dau mam tom"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 mẹt",
+        "calories": 600,
+        "protein": 24,
+        "carbs": 55,
+        "fat": 30,
+        "sodium": 1500,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 8,
+        "name": "Hủ tiếu",
+        "name_normalized": "hu tieu",
+        "aliases": [
+            "hu tieu",
+            "hu tieu nam vang"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô",
+        "calories": 400,
+        "protein": 22,
+        "carbs": 50,
+        "fat": 10,
+        "sodium": 1300,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 9,
+        "name": "Mì Quảng",
+        "name_normalized": "mi quang",
+        "aliases": [
+            "mi quang"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô",
+        "calories": 450,
+        "protein": 24,
+        "carbs": 52,
+        "fat": 14,
+        "sodium": 1200,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 10,
+        "name": "Cơm trắng",
+        "name_normalized": "com trang",
+        "aliases": [
+            "com",
+            "com trang"
+        ],
+        "unit_type": "portion",
+        "unit_label": "chén",
+        "serving": "1 chén (~200ml)",
+        "calories": 200,
+        "protein": 4,
+        "carbs": 44,
+        "fat": 0,
+        "sodium": 5,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 11,
+        "name": "Cơm tấm sườn",
+        "name_normalized": "com tam suon",
+        "aliases": [
+            "com tam",
+            "com tam suon",
+            "com suon"
+        ],
+        "unit_type": "portion",
+        "unit_label": "đĩa",
+        "serving": "1 đĩa",
+        "calories": 650,
+        "protein": 30,
+        "carbs": 70,
+        "fat": 25,
+        "sodium": 1200,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 12,
+        "name": "Cơm gà",
+        "name_normalized": "com ga",
+        "aliases": [
+            "com ga",
+            "com ga xoi mo"
+        ],
+        "unit_type": "portion",
+        "unit_label": "đĩa",
+        "serving": "1 đĩa",
+        "calories": 550,
+        "protein": 32,
+        "carbs": 65,
+        "fat": 16,
+        "sodium": 1000,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 13,
+        "name": "Cơm chiên Dương Châu",
+        "name_normalized": "com chien duong chau",
+        "aliases": [
+            "com chien",
+            "com rang",
+            "com chien duong chau"
+        ],
+        "unit_type": "portion",
+        "unit_label": "đĩa",
+        "serving": "1 đĩa",
+        "calories": 600,
+        "protein": 18,
+        "carbs": 75,
+        "fat": 22,
+        "sodium": 1100,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 14,
+        "name": "Bánh mì thịt",
+        "name_normalized": "banh mi thit",
+        "aliases": [
+            "banh mi",
+            "banh mi thit",
+            "banh my"
+        ],
+        "unit_type": "countable",
+        "unit_label": "ổ",
+        "serving": "1 ổ",
+        "calories": 400,
+        "protein": 16,
+        "carbs": 50,
+        "fat": 14,
+        "sodium": 900,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 15,
+        "name": "Bánh xèo",
+        "name_normalized": "banh xeo",
+        "aliases": [
+            "banh xeo"
+        ],
+        "unit_type": "countable",
+        "unit_label": "cái",
+        "serving": "1 cái",
+        "calories": 300,
+        "protein": 10,
+        "carbs": 30,
+        "fat": 16,
+        "sodium": 600,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 16,
+        "name": "Gỏi cuốn",
+        "name_normalized": "goi cuon",
+        "aliases": [
+            "goi cuon",
+            "nem cuon"
+        ],
+        "unit_type": "countable",
+        "unit_label": "cuốn",
+        "serving": "1 cuốn",
+        "calories": 80,
+        "protein": 5,
+        "carbs": 10,
+        "fat": 2,
+        "sodium": 250,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 17,
+        "name": "Chả giò",
+        "name_normalized": "cha gio",
+        "aliases": [
+            "cha gio",
+            "nem ran",
+            "nem",
+            "cha gio ran"
+        ],
+        "unit_type": "countable",
+        "unit_label": "cái",
+        "serving": "1 cái",
+        "calories": 90,
+        "protein": 4,
+        "carbs": 8,
+        "fat": 5,
+        "sodium": 200,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 18,
+        "name": "Xôi",
+        "name_normalized": "xoi",
+        "aliases": [
+            "xoi",
+            "xoi man",
+            "xoi xeo"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần",
+        "calories": 350,
+        "protein": 8,
+        "carbs": 60,
+        "fat": 8,
+        "sodium": 400,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 19,
+        "name": "Cháo",
+        "name_normalized": "chao",
+        "aliases": [
+            "chao",
+            "chao thit"
+        ],
+        "unit_type": "portion",
+        "unit_label": "tô",
+        "serving": "1 tô",
+        "calories": 250,
+        "protein": 10,
+        "carbs": 40,
+        "fat": 5,
+        "sodium": 800,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 20,
+        "name": "Bánh cuốn",
+        "name_normalized": "banh cuon",
+        "aliases": [
+            "banh cuon"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần",
+        "calories": 300,
+        "protein": 12,
+        "carbs": 45,
+        "fat": 8,
+        "sodium": 900,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 21,
+        "name": "Canh chua",
+        "name_normalized": "canh chua",
+        "aliases": [
+            "canh chua",
+            "canh chua ca"
+        ],
+        "unit_type": "portion",
+        "unit_label": "chén",
+        "serving": "1 chén",
+        "calories": 150,
+        "protein": 10,
+        "carbs": 15,
+        "fat": 5,
+        "sodium": 800,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 22,
+        "name": "Rau muống xào",
+        "name_normalized": "rau muong xao",
+        "aliases": [
+            "rau muong xao",
+            "rau xao"
+        ],
+        "unit_type": "portion",
+        "unit_label": "đĩa",
+        "serving": "1 đĩa",
+        "calories": 120,
+        "protein": 4,
+        "carbs": 10,
+        "fat": 8,
+        "sodium": 500,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 23,
+        "name": "Thịt kho tàu",
+        "name_normalized": "thit kho tau",
+        "aliases": [
+            "thit kho",
+            "thit kho tau",
+            "thit kho trung"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần",
+        "calories": 350,
+        "protein": 22,
+        "carbs": 8,
+        "fat": 26,
+        "sodium": 1100,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 24,
+        "name": "Cá kho",
+        "name_normalized": "ca kho",
+        "aliases": [
+            "ca kho",
+            "ca kho to"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần",
+        "calories": 250,
+        "protein": 24,
+        "carbs": 6,
+        "fat": 14,
+        "sodium": 1000,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 25,
+        "name": "Gà rán",
+        "name_normalized": "ga ran",
+        "aliases": [
+            "ga ran",
+            "ga chien"
+        ],
+        "unit_type": "countable",
+        "unit_label": "miếng",
+        "serving": "1 miếng",
+        "calories": 250,
+        "protein": 18,
+        "carbs": 12,
+        "fat": 15,
+        "sodium": 600,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 26,
+        "name": "Trứng chiên",
+        "name_normalized": "trung chien",
+        "aliases": [
+            "trung chien",
+            "trung op la",
+            "trung ran"
+        ],
+        "unit_type": "countable",
+        "unit_label": "quả",
+        "serving": "1 quả",
+        "calories": 90,
+        "protein": 6,
+        "carbs": 1,
+        "fat": 7,
+        "sodium": 150,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 27,
+        "name": "Đậu hũ sốt cà",
+        "name_normalized": "dau hu sot ca",
+        "aliases": [
+            "dau hu",
+            "dau hu sot ca",
+            "dau phu"
+        ],
+        "unit_type": "portion",
+        "unit_label": "phần",
+        "serving": "1 phần",
+        "calories": 180,
+        "protein": 12,
+        "carbs": 12,
+        "fat": 9,
+        "sodium": 600,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 28,
+        "name": "Salad",
+        "name_normalized": "salad",
+        "aliases": [
+            "salad",
+            "rau tron",
+            "salad rau"
+        ],
+        "unit_type": "portion",
+        "unit_label": "đĩa",
+        "serving": "1 đĩa",
+        "calories": 150,
+        "protein": 5,
+        "carbs": 12,
+        "fat": 9,
+        "sodium": 400,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 29,
+        "name": "Chè",
+        "name_normalized": "che",
+        "aliases": [
+            "che",
+            "che dau"
+        ],
+        "unit_type": "portion",
+        "unit_label": "chén",
+        "serving": "1 chén",
+        "calories": 250,
+        "protein": 4,
+        "carbs": 50,
+        "fat": 4,
+        "sodium": 50,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 30,
+        "name": "Trà sữa",
+        "name_normalized": "tra sua",
+        "aliases": [
+            "tra sua",
+            "tra sua tran chau"
+        ],
+        "unit_type": "portion",
+        "unit_label": "ly",
+        "serving": "1 ly (~500ml)",
+        "calories": 350,
+        "protein": 4,
+        "carbs": 60,
+        "fat": 10,
+        "sodium": 100,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 31,
+        "name": "Cà phê sữa",
+        "name_normalized": "ca phe sua",
+        "aliases": [
+            "ca phe sua",
+            "cafe sua",
+            "bac xiu"
+        ],
+        "unit_type": "portion",
+        "unit_label": "ly",
+        "serving": "1 ly",
+        "calories": 120,
+        "protein": 3,
+        "carbs": 18,
+        "fat": 4,
+        "sodium": 60,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 32,
+        "name": "Nước ngọt",
+        "name_normalized": "nuoc ngot",
+        "aliases": [
+            "nuoc ngot",
+            "coca",
+            "pepsi",
+            "soda"
+        ],
+        "unit_type": "portion",
+        "unit_label": "lon",
+        "serving": "1 lon (~330ml)",
+        "calories": 140,
+        "protein": 0,
+        "carbs": 35,
+        "fat": 0,
+        "sodium": 30,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 33,
+        "name": "Sinh tố bơ",
+        "name_normalized": "sinh to bo",
+        "aliases": [
+            "sinh to bo",
+            "sinh to"
+        ],
+        "unit_type": "portion",
+        "unit_label": "ly",
+        "serving": "1 ly",
+        "calories": 300,
+        "protein": 5,
+        "carbs": 35,
+        "fat": 16,
+        "sodium": 60,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    },
+    {
+        "id": 34,
+        "name": "Bánh chưng",
+        "name_normalized": "banh chung",
+        "aliases": [
+            "banh chung"
+        ],
+        "unit_type": "countable",
+        "unit_label": "miếng",
+        "serving": "1 miếng",
+        "calories": 300,
+        "protein": 8,
+        "carbs": 45,
+        "fat": 10,
+        "sodium": 500,
+        "created_at": "2026-08-17T15:23:08.000000Z",
+        "updated_at": "2026-08-17T15:23:08.000000Z"
+    }
+]

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdvisorySource from '@/components/common/AdvisorySource.vue'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
 import FoodEditSheet from '@/components/food/FoodEditSheet.vue'
@@ -532,6 +533,10 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
           v-if="!streamDone || displayedText.length < streamingText.length"
           class="inline-block w-[2px] h-[1em] bg-calor-green animate-pulse ml-[1px] align-middle"
         /></div>
+        <!-- Nguồn tham chiếu — user click để xem chi tiết citations -->
+        <div v-if="streamDone && displayedText.length >= streamingText.length" class="mt-3 pt-3 border-t-hairline border-ios-gray5">
+          <AdvisorySource compact />
+        </div>
       </div>
 
       <div class="h-2"/>

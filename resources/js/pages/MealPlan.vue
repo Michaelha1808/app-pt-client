@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdvisorySource from '@/components/common/AdvisorySource.vue'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import { useMealPlan } from '@/composables/useMealPlan'
 import type { DailyPlan, MonthlyPlan, PlanScope, WeeklyPlan } from '@/types/plan'
@@ -287,6 +288,11 @@ onMounted(() => fetchPlan('daily'))
             <p class="text-[13px] text-ios-gray mt-0.5 leading-relaxed whitespace-pre-wrap">{{ reasoning }}</p>
           </div>
         </div>
+      </div>
+
+      <!-- Nguồn tham chiếu cho toàn bộ kế hoạch — click để xem full citations -->
+      <div v-if="plan" class="bg-white rounded-[14px] px-4 py-2.5">
+        <AdvisorySource />
       </div>
 
       <!-- Áp dụng (bản nháp) / Tạo lại -->

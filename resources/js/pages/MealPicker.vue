@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdvisorySource from '@/components/common/AdvisorySource.vue'
 import CaloeyeCharacter from '@/components/caloeye/Character.vue'
 import DishPickRow from '@/components/food/DishPickRow.vue'
 import GuestGateModal from '@/components/common/GuestGateModal.vue'
@@ -317,6 +318,9 @@ async function confirmMeal() {
               >
                 {{ adviceStreaming ? 'Đang phân tích…' : 'Phân tích lại' }}
               </button>
+              <div v-if="advice && !adviceStreaming" class="mt-2 pt-2 border-t-hairline border-ios-gray5">
+                <AdvisorySource compact />
+              </div>
             </div>
           </div>
         </div>

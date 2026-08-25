@@ -149,8 +149,9 @@ class WeightService
 
         $age    = (int) date('Y') - (int) $user->birth_year;
         $height = (float) $user->height_cm;
-        $bmr    = 10 * $current + 6.25 * $height - 5 * $age + ($user->gender === 'male' ? 5 : -161);
-        $tdee   = $bmr * 1.375;
+        // BMR Mifflin-St Jeor + TDEE theo PAL user chọn (thay vì cứng 1.375).
+        $bmr    = \App\Support\NutritionStandard::bmr($current, $height, $age, $user->gender ?? 'other');
+        $tdee   = \App\Support\NutritionStandard::tdee($bmr, $user->activity_level);
 
         $currentGoal = (int) $user->calorie_goal;
 

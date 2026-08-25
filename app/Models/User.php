@@ -16,7 +16,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name', 'email', 'password', 'email_verified_at', 'google_id', 'facebook_id', 'provider',
-    'avatar_url', 'birth_year', 'gender', 'height_cm', 'weight_kg',
+    'avatar_url', 'birth_year', 'gender', 'activity_level', 'height_cm', 'weight_kg',
     'calorie_goal', 'morning_notify', 'evening_notify', 'calorie_streak',
     'morning_notify_enabled', 'midday_notify_enabled', 'evening_notify_enabled',
     'email_reengagement_enabled', 'weigh_in_reminder_enabled', 'last_seen_at', 'reengagement_sent_at',

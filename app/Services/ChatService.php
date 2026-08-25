@@ -37,12 +37,14 @@ class ChatService
         $gender   = $user->gender ?? 'other';
         $goal     = (int) ($user->calorie_goal ?? 2000);
 
-        // BMR (Mifflin-St Jeor) + TDEE
+        // BMR (Mifflin-St Jeor 1990) + TDEE theo PAL WHO/FAO 2001 — dùng mức vận
+        // động user chọn thay vì mặc định "nhẹ" cho mọi người.
         $bmrLine = 'chưa đủ dữ liệu (thiếu chiều cao/cân nặng/năm sinh)';
         if ($age && $weight && $height) {
-            $bmr  = 10 * $weight + 6.25 * $height - 5 * $age + ($gender === 'male' ? 5 : -161);
-            $tdee = (int) round($bmr * 1.375);
-            $bmrLine = sprintf('BMR ≈ %d kcal, TDEE ≈ %d kcal/ngày (vận động nhẹ)', (int) round($bmr), $tdee);
+            $bmr   = \App\Support\NutritionStandard::bmr($weight, $height, $age, $gender);
+            $tdee  = \App\Support\NutritionStandard::tdee($bmr, $user->activity_level);
+            $level = \App\Support\NutritionStandard::ACTIVITY_LABELS[$user->activity_level ?? 'light']['label'] ?? 'vận động nhẹ';
+            $bmrLine = sprintf('BMR ≈ %d kcal, TDEE ≈ %d kcal/ngày (%s)', (int) round($bmr), $tdee, mb_strtolower($level));
         }
 
         // Thống kê hôm nay

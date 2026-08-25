@@ -22,6 +22,11 @@ Route::get('/health', [HealthController::class, 'index']);
 // Feature flags public cho FE (ẩn/hiện OAuth, guest mode, đăng ký…) — không lộ secret
 Route::get('/config', [\App\Http\Controllers\Api\V1\AppConfigController::class, 'index']);
 
+// Chuẩn dinh dưỡng: BMR/TDEE/goal/macros/citations (VDD 2016 + WHO/FAO 2001).
+// Public — dùng cho register flow để gợi ý calorie_goal cá nhân hoá.
+Route::get('/nutrition/standards',   [\App\Http\Controllers\Api\V1\NutritionController::class, 'standards']);
+Route::post('/nutrition/calculate',  [\App\Http\Controllers\Api\V1\NutritionController::class, 'calculate']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);

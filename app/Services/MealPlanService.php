@@ -63,8 +63,10 @@ class MealPlanService
 
         $gender = $user->gender ?? 'other';
         $goal   = (int) ($user->calorie_goal ?? 2000);
-        $bmr    = 10 * $weight + 6.25 * $height - 5 * $age + ($gender === 'male' ? 5 : -161);
-        $tdee   = (int) round($bmr * 1.375);
+        // BMR Mifflin-St Jeor + TDEE theo PAL user chọn (WHO/FAO 2001) — trước
+        // đây cứng 1.375 nên VĐV nhận TDEE tính như dân văn phòng.
+        $bmr    = \App\Support\NutritionStandard::bmr($weight, $height, $age, $gender);
+        $tdee   = \App\Support\NutritionStandard::tdee($bmr, $user->activity_level);
 
         $windowDays = $scope === 'monthly' ? 30 : 7;
         $logs = $user->mealLogs()
@@ -108,6 +110,11 @@ class MealPlanService
             )
             : 'Xu hướng cân nặng: chưa có đủ lịch sử ghi cân để xác định.';
 
+        // Target macro/nước theo chuẩn VDD 2016 — tính từ goal calo user chọn
+        // để AI có số cụ thể tuân theo, không tự đoán tỉ lệ.
+        $macroTargets = \App\Support\NutritionStandard::macroTargets($goal);
+        $waterTarget  = \App\Support\NutritionStandard::waterTargetMl($weight);
+
         $ctx = [
             'gender'        => $gender,
             'age'           => $age,
@@ -116,6 +123,10 @@ class MealPlanService
             'calorie_goal'  => $goal,
             'bmr'           => (int) round($bmr),
             'tdee'          => $tdee,
+            'target_protein_g' => $macroTargets['protein'],
+            'target_carbs_g'   => $macroTargets['carbs'],
+            'target_fat_g'     => $macroTargets['fat'],
+            'target_water_ml'  => $waterTarget,
             'days_logged'   => $daysLogged,
             'avg_calories'  => $avgCalories,
             'avg_protein'   => $avgProtein,
@@ -165,7 +176,7 @@ class MealPlanService
                 [
                     'json' => [
                         'systemInstruction' => [
-                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. Ưu tiên món Việt phổ biến, dễ mua/dễ nấu. KHÔNG chẩn đoán bệnh hay kê đơn thuốc — chỉ lập kế hoạch ăn uống/tập luyện thông thường.']],
+                            'parts' => [['text' => 'Bạn là chuyên gia dinh dưỡng kiêm huấn luyện viên thể hình, am hiểu ẩm thực Việt Nam. CHỈ trả về JSON hợp lệ đúng schema, không giải thích thêm. Ưu tiên món Việt phổ biến, dễ mua/dễ nấu. KHÔNG chẩn đoán bệnh hay kê đơn thuốc — chỉ lập kế hoạch ăn uống/tập luyện thông thường.' . "\n\n" . \App\Support\NutritionStandard::promptStandardsBlock()]],
                         ],
                         'contents' => [
                             ['role' => 'user', 'parts' => [['text' => $prompt]]],
@@ -442,6 +453,7 @@ PROMPT;
 
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+Mục tiêu macro theo VDD 2016: đạm {$c['target_protein_g']}g, tinh bột {$c['target_carbs_g']}g, chất béo {$c['target_fat_g']}g. Nước: {$c['target_water_ml']} ml.
 {$c['weight_trend_line']}
 {$history}
 
@@ -467,6 +479,7 @@ PROMPT;
 
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+Mục tiêu macro theo VDD 2016: đạm {$c['target_protein_g']}g, tinh bột {$c['target_carbs_g']}g, chất béo {$c['target_fat_g']}g. Nước: {$c['target_water_ml']} ml.
 {$c['weight_trend_line']}
 {$history}
 
@@ -485,6 +498,7 @@ PROMPT;
         $genderVi = $c['gender'] === 'male' ? 'Nam' : ($c['gender'] === 'female' ? 'Nữ' : 'Khác');
         return <<<PROMPT
 Hồ sơ: {$genderVi}, {$c['age']} tuổi, {$c['height_cm']}cm, {$c['weight_kg']}kg. BMR {$c['bmr']} kcal, TDEE {$c['tdee']} kcal, mục tiêu {$c['calorie_goal']} kcal/ngày.
+Mục tiêu macro theo VDD 2016: đạm {$c['target_protein_g']}g, tinh bột {$c['target_carbs_g']}g, chất béo {$c['target_fat_g']}g. Nước: {$c['target_water_ml']} ml.
 {$c['weight_trend_line']}
 30 ngày qua: calo TB {$c['avg_calories']} kcal/ngày (xu hướng {$c['trend']}), tuân thủ {$c['adherence']}%.
 

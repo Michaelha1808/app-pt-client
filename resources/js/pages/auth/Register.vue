@@ -1,16 +1,42 @@
 <script setup lang="ts">
+import AdvisorySource from '@/components/common/AdvisorySource.vue'
 import { usePublicConfig } from '@/composables/usePublicConfig'
+import { useNutritionStandards, calculateNutrition, type Citation } from '@/composables/useNutritionStandards'
 import type { PreferenceKind } from '@/types/preference'
 
 const { register, loginWithGoogle, loginWithFacebook, extractError } = useAuth()
 const { config, loadPublicConfig, flag } = usePublicConfig()
+const { standards: nutritionStandards, load: loadStandards } = useNutritionStandards()
 
 // Feature flags admin cấu hình runtime
 const googleEnabled = computed(() => flag(c => c.oauth.google_enabled))
 const facebookEnabled = computed(() => flag(c => c.oauth.facebook_enabled))
 const registrationClosed = computed(() => config.value?.features.registration_open === false)
 
-onMounted(loadPublicConfig)
+onMounted(() => { loadPublicConfig(); loadStandards() })
+
+// Khi hồ sơ đủ dữ liệu → gọi backend tính BMR/TDEE/goal đề xuất theo mục tiêu
+// user chọn. Chạy mỗi khi user đổi mức vận động hoặc mục tiêu → số hiển thị
+// luôn khớp lựa chọn hiện tại, không cần bấm gì thêm.
+async function refreshSuggestion() {
+  if (!birthYear.value || !gender.value || !height.value || !weight.value) return
+  const res = await calculateNutrition({
+    birth_year:     Number(birthYear.value),
+    gender:         gender.value as 'male' | 'female' | 'other',
+    height_cm:      Number(height.value),
+    weight_kg:      Number(weight.value),
+    activity_level: activityLevel.value,
+    goal:           goalType.value,
+  })
+  if (!res) return
+  suggested.value          = res
+  suggestedCitations.value = res.citations
+  calorieGoal.value        = String(res.calorie_goal)
+}
+
+watch([birthYear, gender, height, weight, activityLevel, goalType], () => {
+  if (step.value >= 2) refreshSuggestion()
+})
 
 const step = ref(1)
 const totalSteps = 4
@@ -27,9 +53,13 @@ const birthYear = ref('')
 const gender = ref<'male' | 'female' | 'other' | ''>('')
 const height = ref('')
 const weight = ref('')
+const activityLevel = ref<'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'>('light')
 
 // Step 3
+const goalType = ref<'lose' | 'maintain' | 'gain'>('maintain')
 const calorieGoal = ref('2000')
+const suggestedCitations = ref<Citation[]>([])
+const suggested = ref<{ bmr: number; tdee: number; calorie_goal: number; target_macros: { protein: number; carbs: number; fat: number }; water_target_ml: number } | null>(null)
 const morningTime = ref('07:00')
 const eveningTime = ref('21:00')
 
@@ -193,6 +223,7 @@ async function nextStep() {
         name: name.value.trim(),
         birth_year: Number(birthYear.value),
         gender: gender.value as 'male' | 'female' | 'other',
+        activity_level: activityLevel.value,
         height_cm: Number(height.value),
         weight_kg: Number(weight.value),
         calorie_goal: Number(calorieGoal.value),
@@ -228,11 +259,22 @@ const genders = [
   { value: 'other', label: 'Khác', icon: '🌈' },
 ]
 
-const caloriePresets = [
-  { label: 'Giảm cân', value: '1500', desc: '1,500 kcal/ngày' },
-  { label: 'Duy trì', value: '2000', desc: '2,000 kcal/ngày' },
-  { label: 'Tăng cơ', value: '2500', desc: '2,500 kcal/ngày' },
+// Preset mục tiêu — con số kcal được TÍNH từ TDEE (backend /nutrition/calculate),
+// không hardcode. User chọn ý định (giảm/duy trì/tăng), số kcal tự cập nhật theo
+// mức vận động + hồ sơ.
+const goalOptions = [
+  { value: 'lose'     as const, label: 'Giảm cân', icon: '🏃', desc: 'TDEE − 500 kcal (giảm ~0.5 kg/tuần)' },
+  { value: 'maintain' as const, label: 'Duy trì', icon: '⚖️', desc: 'Bằng đúng TDEE' },
+  { value: 'gain'     as const, label: 'Tăng cơ', icon: '💪', desc: 'TDEE + 300 kcal (tăng ~0.25 kg/tuần)' },
 ]
+
+// Danh sách mức vận động lấy từ /nutrition/standards (đã cache) — luôn khớp
+// với PAL backend dùng (không đồng bộ tay giữa 2 nơi).
+const activityOptions = computed(() => {
+  const list = nutritionStandards.value?.activity_levels
+  if (!list) return []
+  return Object.entries(list).map(([value, meta]) => ({ value, ...meta }))
+})
 </script>
 
 <template>
@@ -478,6 +520,31 @@ const caloriePresets = [
         </div>
       </div>
 
+      <!-- Mức vận động — quyết định hệ số PAL để tính TDEE đúng cho user
+           (thay vì cứng "vận động nhẹ" cho mọi người) -->
+      <div v-if="activityOptions.length" class="flex flex-col gap-1.5">
+        <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide px-1">Mức vận động</p>
+        <div
+          v-for="opt in activityOptions" :key="opt.value"
+          class="bg-white rounded-[14px] px-4 py-3 flex items-center gap-3 ios-press border transition-colors"
+          :class="activityLevel === opt.value ? 'border-ios-blue' : 'border-transparent'"
+          @click="activityLevel = opt.value as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'"
+        >
+          <div class="flex-1">
+            <p class="text-[14px] font-semibold text-black">{{ opt.label }}</p>
+            <p class="text-[12px] text-ios-gray leading-tight">{{ opt.desc }}</p>
+          </div>
+          <div
+            class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+            :class="activityLevel === opt.value ? 'border-ios-blue bg-ios-blue' : 'border-ios-gray4'"
+          >
+            <svg v-if="activityLevel === opt.value" viewBox="0 0 24 24" class="w-3 h-3" fill="white">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- Skip hint -->
       <p class="text-[12px] text-ios-gray text-center mt-1">
         Bạn có thể cập nhật thông tin này sau trong phần Hồ sơ
@@ -486,36 +553,47 @@ const caloriePresets = [
 
     <!-- Step 3: Goals -->
     <div v-if="step === 3" class="px-6 flex flex-col gap-4 animate-fadeInUp delay-1" style="opacity:0">
-      <!-- Calorie presets -->
+      <!-- Goal picker — số kcal tự tính từ TDEE, không hardcode -->
       <div class="flex flex-col gap-2">
         <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide px-1">Mục tiêu sức khỏe</p>
         <div
-          v-for="preset in caloriePresets" :key="preset.value"
+          v-for="opt in goalOptions" :key="opt.value"
           class="bg-white rounded-[14px] px-4 py-4 flex items-center gap-3 ios-press border-2 transition-colors"
-          :class="calorieGoal === preset.value ? 'border-ios-blue' : 'border-transparent'"
-          @click="calorieGoal = preset.value"
+          :class="goalType === opt.value ? 'border-ios-blue' : 'border-transparent'"
+          @click="goalType = opt.value"
         >
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center"
-            :class="calorieGoal === preset.value ? 'bg-ios-blue/10' : 'bg-ios-gray6'"
+            :class="goalType === opt.value ? 'bg-ios-blue/10' : 'bg-ios-gray6'"
           >
-            <span class="text-xl">
-              {{ preset.label === 'Giảm cân' ? '🏃' : preset.label === 'Duy trì' ? '⚖️' : '💪' }}
-            </span>
+            <span class="text-xl">{{ opt.icon }}</span>
           </div>
           <div class="flex-1">
-            <p class="text-[15px] font-semibold text-black">{{ preset.label }}</p>
-            <p class="text-[13px] text-ios-gray">{{ preset.desc }}</p>
+            <p class="text-[15px] font-semibold text-black">{{ opt.label }}</p>
+            <p class="text-[12px] text-ios-gray leading-tight">{{ opt.desc }}</p>
           </div>
           <div
             class="w-5 h-5 rounded-full border-2 flex items-center justify-center"
-            :class="calorieGoal === preset.value ? 'border-ios-blue bg-ios-blue' : 'border-ios-gray4'"
+            :class="goalType === opt.value ? 'border-ios-blue bg-ios-blue' : 'border-ios-gray4'"
           >
-            <svg v-if="calorieGoal === preset.value" viewBox="0 0 24 24" class="w-3 h-3" fill="white">
+            <svg v-if="goalType === opt.value" viewBox="0 0 24 24" class="w-3 h-3" fill="white">
               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
             </svg>
           </div>
         </div>
+      </div>
+
+      <!-- Số đề xuất từ backend — hiển thị để user tin cậy, không phải AI đoán -->
+      <div v-if="suggested" class="rounded-[14px] bg-calor-light/60 border border-calor-mint/40 px-4 py-3 flex flex-col gap-2">
+        <div class="flex items-baseline justify-between">
+          <span class="text-[13px] text-calor-deep font-semibold">Calo đề xuất</span>
+          <span class="text-[22px] font-bold text-calor-deep">{{ suggested.calorie_goal.toLocaleString('vi') }} <span class="text-[13px] font-medium">kcal/ngày</span></span>
+        </div>
+        <div class="flex justify-between text-[11px] text-ios-gray">
+          <span>BMR {{ suggested.bmr }} · TDEE {{ suggested.tdee }}</span>
+          <span>{{ suggested.target_macros.protein }}P · {{ suggested.target_macros.carbs }}C · {{ suggested.target_macros.fat }}F · {{ suggested.water_target_ml }}ml nước</span>
+        </div>
+        <AdvisorySource :citations="suggestedCitations" compact />
       </div>
 
       <!-- Notification times -->

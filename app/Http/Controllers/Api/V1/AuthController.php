@@ -25,14 +25,15 @@ class AuthController extends Controller
         }
 
         $request->validate([
-            'email'        => 'required|email',
-            'password'     => 'required|min:8',
-            'name'         => 'required|min:2|max:100',
-            'birth_year'   => 'required|integer|between:1900,2015',
-            'gender'       => 'required|in:male,female,other',
-            'height_cm'    => 'required|numeric|between:50,300',
-            'weight_kg'    => 'required|numeric|between:20,500',
-            'calorie_goal' => 'required|integer|between:1000,5000',
+            'email'          => 'required|email',
+            'password'       => 'required|min:8',
+            'name'           => 'required|min:2|max:100',
+            'birth_year'     => 'required|integer|between:1900,2015',
+            'gender'         => 'required|in:male,female,other',
+            'activity_level' => 'nullable|in:sedentary,light,moderate,active,very_active',
+            'height_cm'      => 'required|numeric|between:50,300',
+            'weight_kg'      => 'required|numeric|between:20,500',
+            'calorie_goal'   => 'required|integer|between:1000,5000',
         ]);
 
         if (User::where('email', $request->email)->exists()) {
@@ -40,14 +41,15 @@ class AuthController extends Controller
         }
 
         $user = User::create([
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'password'     => Hash::make($request->password),
-            'birth_year'   => $request->birth_year,
-            'gender'       => $request->gender,
-            'height_cm'    => $request->height_cm,
-            'weight_kg'    => $request->weight_kg,
-            'calorie_goal' => $request->calorie_goal ?? 2000,
+            'name'           => $request->name,
+            'email'          => $request->email,
+            'password'       => Hash::make($request->password),
+            'birth_year'     => $request->birth_year,
+            'gender'         => $request->gender,
+            'activity_level' => $request->activity_level ?? 'light',
+            'height_cm'      => $request->height_cm,
+            'weight_kg'      => $request->weight_kg,
+            'calorie_goal'   => $request->calorie_goal ?? 2000,
         ]);
 
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;

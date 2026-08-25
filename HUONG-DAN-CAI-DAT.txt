@@ -1,0 +1,209 @@
+========================================================================
+  CALOEYE — HƯỚNG DẪN CÀI ĐẶT & CHẠY LOCAL
+========================================================================
+
+Dự án: Laravel 12 (PHP 8.2+) + Vue 3 (Vite) — single-app.
+Bản zip này đã loại trừ vendor/, node_modules/, .git/, .env, storage cache
+và logs để gọn nhẹ. Bạn sẽ cần chạy composer và npm để tải lại dependencies.
+
+Toàn bộ mã nguồn nằm trong thư mục con `app-pt-client/`. Mọi lệnh bên dưới
+đều được chạy trong thư mục `app-pt-client/` (không phải thư mục gốc chứa
+file hướng dẫn này).
+
+------------------------------------------------------------------------
+1) YÊU CẦU HỆ THỐNG
+------------------------------------------------------------------------
+
+Bắt buộc:
+  - PHP >= 8.2 (khuyến nghị 8.4). Các extension cần có:
+      * pdo_sqlite, sqlite3   (mặc định trong bản PHP trên Windows)
+      * mbstring, openssl, tokenizer, xml, ctype, json, curl, fileinfo,
+        bcmath, gd (hoặc imagick)
+  - Composer >= 2.5
+  - Node.js >= 20 (khuyến nghị 22 hoặc 23) + npm >= 9
+
+Kiểm tra nhanh:
+  php -v
+  composer -V
+  node -v
+  npm -v
+
+Nếu bạn dùng Laragon: PHP + Composer + Node đều có sẵn. Bật "Menu > PHP >
+Extensions" và tick pdo_sqlite, sqlite3, gd/imagick.
+
+------------------------------------------------------------------------
+2) CÀI ĐẶT (LẦN ĐẦU)
+------------------------------------------------------------------------
+
+Mở terminal (Git Bash, PowerShell, hoặc CMD) tại thư mục `app-pt-client/`:
+
+  # 1. Cài PHP dependencies
+  composer install
+
+  # 2. Cài Node dependencies
+  npm install
+
+  # 3. Tạo file .env từ template
+  #    (Nếu chưa có sẵn .env — trong bản zip này .env đã bị loại trừ)
+  cp .env.example .env          # Linux/macOS/Git Bash
+  # copy .env.example .env      # CMD trên Windows
+
+  # 4. Sinh APP_KEY
+  php artisan key:generate
+
+  # 5. Chuyển sang SQLite (mặc định của hướng dẫn này)
+  #    Mở .env và sửa:
+  #      DB_CONNECTION=sqlite
+  #    Comment 5 dòng DB_HOST/PORT/DATABASE/USERNAME/PASSWORD.
+  #    Nếu bạn muốn dùng PostgreSQL/MySQL, giữ nguyên DB_CONNECTION và
+  #    điền thông tin kết nối, sau đó bỏ qua bước tạo file sqlite bên dưới.
+
+  # 6. Tạo file SQLite rỗng
+  #    Windows CMD: type nul > database\database.sqlite
+  #    Git Bash / macOS / Linux:
+  touch database/database.sqlite
+
+  # 7. Chạy migration
+  php artisan migrate
+
+  # (Tuỳ chọn) Seed dữ liệu mẫu — nếu dự án có seeder:
+  #   php artisan db:seed
+
+------------------------------------------------------------------------
+3) CHẠY DEV (BACKEND + FRONTEND + QUEUE + LOG)
+------------------------------------------------------------------------
+
+Cách nhanh nhất — chạy tất cả cùng lúc:
+
+  composer run dev
+
+Lệnh này dùng "concurrently" chạy 4 process song song:
+  - php artisan serve       (backend tại http://localhost:8000)
+  - php artisan queue:listen (queue worker)
+  - php artisan pail        (tail log realtime)
+  - npm run dev             (Vite dev server, HMR)
+
+Truy cập ứng dụng tại: http://localhost:8000
+
+Nếu bạn muốn chạy riêng từng process (mỗi cái một terminal):
+
+  # Terminal 1
+  php artisan serve
+
+  # Terminal 2
+  npm run dev
+
+  # Terminal 3 (tuỳ chọn — chỉ cần nếu bạn test job queue)
+  php artisan queue:listen
+
+------------------------------------------------------------------------
+4) CÁC LỆNH HAY DÙNG
+------------------------------------------------------------------------
+
+Backend:
+  php artisan migrate               # chạy migration
+  php artisan migrate:fresh         # xoá toàn bộ bảng + chạy lại
+  php artisan db:seed               # seed dữ liệu
+  php artisan tinker                # REPL
+  php artisan test                  # chạy full test suite (SQLite in-memory)
+  php artisan test --filter=Name    # chạy 1 test theo tên
+  vendor/bin/pint                   # format code PHP (Laravel Pint / PSR-12)
+
+Frontend:
+  npm run dev            # Vite dev server
+  npm run type-check     # vue-tsc kiểm tra type
+  npm run build:dev      # build development
+  npm run prod           # build production
+
+Makefile (nếu bạn có "make" — Laragon có kèm):
+  make serve             # php artisan serve
+  make migrate
+  make migrate-fresh
+  make seed
+  make tinker
+  make fe-dev
+  make fe-build
+  make test
+
+------------------------------------------------------------------------
+5) CẤU HÌNH TÍCH HỢP BÊN NGOÀI (KHÔNG BẮT BUỘC ĐỂ CHẠY)
+------------------------------------------------------------------------
+
+Ứng dụng có thể chạy và login được mà không cần các key bên dưới, nhưng
+một số tính năng sẽ không hoạt động. Các key này đặt trong .env:
+
+  GEMINI_API_KEY              # AI phân tích ảnh món ăn và chat
+    -> Lấy miễn phí tại https://aistudio.google.com/
+    -> Không có key thì tính năng "chụp ảnh phân tích món ăn" và "chat
+       với AI dinh dưỡng" sẽ lỗi.
+
+  GOOGLE_CLIENT_ID / SECRET   # Đăng nhập Google
+  FACEBOOK_CLIENT_ID / SECRET # Đăng nhập Facebook
+    -> Nếu bỏ trống, đăng nhập OAuth không hoạt động nhưng đăng ký bằng
+       email + mật khẩu vẫn chạy bình thường.
+
+  VITE_FIREBASE_* + FIREBASE_CREDENTIALS  # Push notification
+    -> Bỏ trống -> không nhận được push, mọi thứ khác vẫn chạy.
+
+  STRAVA_CLIENT_ID / SECRET / REDIRECT_URI  # Tích hợp Strava
+    -> Bỏ trống -> menu tích hợp Strava sẽ báo chưa cấu hình.
+
+------------------------------------------------------------------------
+6) LỖI THƯỜNG GẶP
+------------------------------------------------------------------------
+
+* "could not find driver" khi migrate
+  -> Chưa bật extension pdo_sqlite. Vào php.ini, uncomment
+     "extension=pdo_sqlite" và "extension=sqlite3", restart PHP.
+
+* "SQLSTATE ... no such table"
+  -> Chưa chạy "php artisan migrate", hoặc file database.sqlite không tồn
+     tại. Tạo lại bằng: touch database/database.sqlite rồi migrate.
+
+* Port 8000 đã bị chiếm
+  -> php artisan serve --port=8001
+
+* Vite không load được asset trong browser
+  -> Đảm bảo cả "php artisan serve" và "npm run dev" cùng đang chạy.
+     Truy cập qua http://localhost:8000 (không phải cổng 5173 của Vite).
+
+* Lỗi "Please provide a valid cache path" khi lần đầu chạy
+  -> Chạy: php artisan storage:link
+     Rồi tạo thư mục: mkdir -p storage/framework/{cache,sessions,views}
+
+* npm install chậm/lỗi trên Windows
+  -> Xoá node_modules và package-lock.json, chạy lại. Nếu vẫn lỗi,
+     thử thêm: npm config set fetch-timeout 600000
+
+* Sau khi kéo code mới mà app không nhận config mới
+  -> php artisan config:clear && php artisan cache:clear
+
+------------------------------------------------------------------------
+7) CẤU TRÚC THƯ MỤC (NGẮN GỌN)
+------------------------------------------------------------------------
+
+  app/            Backend Laravel (Controllers, Services, Models)
+  routes/         Định nghĩa route (api_v1.php là file chính)
+  resources/js/   Vue 3 SPA (pages, components, composables, stores)
+  resources/css/  Tailwind CSS
+  database/       Migrations, factories, seeders, file database.sqlite
+  public/         Web root (index.php + asset build)
+  config/         Config Laravel
+  tests/          PHPUnit tests
+  docs/           Spec chi tiết từng tính năng (nên đọc trước khi sửa)
+  CLAUDE.md       Guide dành cho Claude Code, chứa nhiều context hữu ích
+
+------------------------------------------------------------------------
+8) TÀI LIỆU THAM KHẢO TRONG DỰ ÁN
+------------------------------------------------------------------------
+
+  README.md                    - Overview
+  CLAUDE.md                    - Kiến trúc + command reference
+  DEPLOY.md                    - Triển khai production
+  CICD-DEPLOY-FLOW-BASED.md    - CI/CD flow
+  docs/spec-*.md               - Spec chi tiết cho từng tính năng
+  docs/ai-architecture.md      - Hệ thống AI chat/memory/prompt
+
+========================================================================
+  Chúc bạn setup thành công! Nếu vướng bất cứ bước nào, đọc mục 6 trước.
+========================================================================

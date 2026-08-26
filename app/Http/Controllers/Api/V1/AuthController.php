@@ -167,6 +167,76 @@ class AuthController extends Controller
         return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=oauth_disabled');
     }
 
+    /**
+     * Tìm hoặc tạo user cho callback OAuth (Google/Facebook).
+     *
+     * Trước đây gộp cả 2 điều kiện vào 1 query `where(providerId)->orWhere('email', $email)`,
+     * nhưng gặp lỗi thật ở production: user đăng ký bằng Google trước với
+     * "fboyquangninh@gmail.com" rồi login Facebook cùng email → INSERT nổ unique violation
+     * trên cột email. Nguyên nhân là email so sánh phân biệt hoa/thường ở Postgres (Facebook
+     * và Google có thể trả về case khác nhau), còn nhánh `create()` thì không có tầng phòng
+     * thủ nào cho race hay khớp email lệch case.
+     *
+     * Fix: tách 2 bước lookup, dùng LOWER() cho email, và bọc create() bằng try/catch. Nếu
+     * unique violation xảy ra thì query lại theo email và link thay vì crash.
+     *
+     * @param  'google'|'facebook'  $provider
+     * @param  string  $idColumn  Tên cột lưu provider id (google_id / facebook_id)
+     */
+    private function findOrCreateSocialUser(
+        string $provider,
+        string $idColumn,
+        string $providerId,
+        string $email,
+        string $name,
+        ?string $avatar,
+    ): User {
+        $user = User::where($idColumn, $providerId)->first()
+            ?? User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+
+        if ($user) {
+            if (!$user->{$idColumn}) {
+                $user->update([
+                    $idColumn           => $providerId,
+                    'provider'          => $provider,
+                    'avatar_url'        => $user->avatar_url ?? $avatar,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                ]);
+            }
+            return $user;
+        }
+
+        try {
+            return User::create([
+                'name'              => $name,
+                'email'             => $email,
+                $idColumn           => $providerId,
+                'provider'          => $provider,
+                'avatar_url'        => $avatar,
+                'password'          => null,
+                'email_verified_at' => now(),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Race giữa 2 request OAuth song song, hoặc email khớp một bản ghi mà bước tra
+            // cứu ở trên bỏ sót (vd trigger/scope lạ). Query lại theo cả provider_id lẫn
+            // email rồi link — nếu vẫn không thấy thì đúng là lỗi khác, đẩy tiếp cho handler
+            // gốc log lại.
+            $user = User::where($idColumn, $providerId)->first()
+                ?? User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            if (!$user) throw $e;
+
+            if (!$user->{$idColumn}) {
+                $user->update([
+                    $idColumn           => $providerId,
+                    'provider'          => $provider,
+                    'avatar_url'        => $user->avatar_url ?? $avatar,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                ]);
+            }
+            return $user;
+        }
+    }
+
     public function googleRedirect(Request $request)
     {
         if ($blocked = $this->oauthDisabledRedirect('google')) return $blocked;
@@ -198,32 +268,14 @@ class AuthController extends Controller
             return redirect($frontendUrl . '/auth/login?error=google_failed');
         }
 
-        $user = User::where('google_id', $googleUser->getId())
-            ->orWhere('email', $googleUser->getEmail())
-            ->first();
-
-        if ($user) {
-            // Link Google account if not already linked
-            if (!$user->google_id) {
-                $user->update([
-                    'google_id'         => $googleUser->getId(),
-                    'provider'          => 'google',
-                    'avatar_url'        => $user->avatar_url ?? $googleUser->getAvatar(),
-                    // Email khớp Google → coi như đã xác thực (Google đã xác minh hộ)
-                    'email_verified_at' => $user->email_verified_at ?? now(),
-                ]);
-            }
-        } else {
-            $user = User::create([
-                'name'              => $googleUser->getName(),
-                'email'             => $googleUser->getEmail(),
-                'google_id'         => $googleUser->getId(),
-                'provider'          => 'google',
-                'avatar_url'        => $googleUser->getAvatar(),
-                'password'          => null,
-                'email_verified_at' => now(), // Google đã xác thực email hộ
-            ]);
-        }
+        $user = $this->findOrCreateSocialUser(
+            'google',
+            'google_id',
+            $googleUser->getId(),
+            $googleUser->getEmail(),
+            $googleUser->getName(),
+            $googleUser->getAvatar(),
+        );
 
         // Tài khoản bị khoá → không cấp token qua OAuth, quay lại trang login kèm mã lỗi.
         if ($user->isSuspended()) {
@@ -269,30 +321,21 @@ class AuthController extends Controller
             return redirect($frontendUrl . '/auth/login?error=facebook_failed');
         }
 
-        $user = User::where('facebook_id', $fbUser->getId())
-            ->orWhere('email', $fbUser->getEmail())
-            ->first();
-
-        if ($user) {
-            if (!$user->facebook_id) {
-                $user->update([
-                    'facebook_id'       => $fbUser->getId(),
-                    'provider'          => 'facebook',
-                    'avatar_url'        => $user->avatar_url ?? $fbUser->getAvatar(),
-                    'email_verified_at' => $user->email_verified_at ?? now(),
-                ]);
-            }
-        } else {
-            $user = User::create([
-                'name'              => $fbUser->getName(),
-                'email'             => $fbUser->getEmail(),
-                'facebook_id'       => $fbUser->getId(),
-                'provider'          => 'facebook',
-                'email_verified_at' => now(),
-                'avatar_url'  => $fbUser->getAvatar(),
-                'password'    => null,
-            ]);
+        // Facebook có thể không trả email nếu user từ chối quyền — không có email thì không
+        // thể match với tài khoản Google trước đó, redirect về login kèm hướng dẫn.
+        if (!$fbUser->getEmail()) {
+            Log::warning('Facebook OAuth callback không trả email', ['facebook_id' => $fbUser->getId()]);
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/auth/login?error=facebook_no_email');
         }
+
+        $user = $this->findOrCreateSocialUser(
+            'facebook',
+            'facebook_id',
+            $fbUser->getId(),
+            $fbUser->getEmail(),
+            $fbUser->getName(),
+            $fbUser->getAvatar(),
+        );
 
         if ($user->isSuspended()) {
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');

@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     command: >
       postgres
       -c shared_buffers=64MB
@@ -28,7 +28,7 @@ services:
     # Image được build bởi GitHub Actions và push lên Docker Hub
     image: ${DOCKER_IMAGE}
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     volumes:
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
       - app_storage:/var/www/storage
@@ -143,7 +143,7 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
-    mem_limit: 64m
+    mem_limit: 128m
     ports:
       - "80:80"
       - "443:443"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProfileAvatarPicker from '@/components/profile/AvatarPicker.vue'
+import { calculateNutrition } from '@/composables/useNutritionStandards'
 
 const { user } = useAuth()
 const { saving, error: profileError, saveProfile, uploadAvatar, deleteAvatar } = useProfile()
@@ -11,12 +12,51 @@ const form = reactive({
   name:           user.value?.name ?? '',
   birth_year:     user.value?.birth_year ?? new Date().getFullYear() - 25,
   gender:         (user.value?.gender ?? 'male') as 'male' | 'female' | 'other',
+  activity_level: (user.value?.activity_level ?? 'light') as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active',
+  goal:           (user.value?.goal ?? 'maintain') as 'lose' | 'maintain' | 'gain',
   height_cm:      user.value?.height_cm ?? 170,
   weight_kg:      user.value?.weight_kg ?? 65,
   calorie_goal:   user.value?.calorie_goal ?? 2000,
+  // Đánh dấu user đã chốt tay calorie_goal → chặn WeightService auto-recompute khi log cân mới.
+  calorie_goal_manual: user.value?.calorie_goal_manual ?? false,
   morning_notify: user.value?.morning_notify ?? '07:00',
   evening_notify: user.value?.evening_notify ?? '21:00',
 })
+
+const recomputing = ref(false)
+
+/** Bấm nút "Tính theo VDD" → gọi /nutrition/calculate với dữ liệu form hiện tại, điền calorie_goal
+ *  và bật cờ auto (calorie_goal_manual=false) để lần sau đổi cân mình còn tự đồng bộ được. */
+async function recomputeCalorieGoal() {
+  const yr = Number(form.birth_year), h = Number(form.height_cm), w = Number(form.weight_kg)
+  if (!yr || !h || !w) return
+  recomputing.value = true
+  try {
+    const res = await calculateNutrition({
+      birth_year:     yr,
+      gender:         form.gender,
+      height_cm:      h,
+      weight_kg:      w,
+      activity_level: form.activity_level,
+      goal:           form.goal,
+    })
+    if (res) {
+      form.calorie_goal = res.calorie_goal
+      form.calorie_goal_manual = false
+      success('Đã tính lại theo chuẩn VDD')
+    } else {
+      toastError('Không tính được — vui lòng thử lại sau')
+    }
+  } finally {
+    recomputing.value = false
+  }
+}
+
+/** ± 100 kcal thủ công → đánh dấu manual. */
+function bumpCalorieGoal(delta: number) {
+  form.calorie_goal = Math.max(1000, Math.min(5000, form.calorie_goal + delta))
+  form.calorie_goal_manual = true
+}
 
 const errors = reactive({
   name: '',
@@ -33,9 +73,12 @@ const isDirty = computed(() => {
     form.name           !== u.name            ||
     form.birth_year     !== (u.birth_year ?? form.birth_year)   ||
     form.gender         !== (u.gender ?? form.gender)            ||
+    form.activity_level !== (u.activity_level ?? form.activity_level) ||
+    form.goal           !== (u.goal ?? form.goal)                ||
     form.height_cm      !== (u.height_cm ?? form.height_cm)     ||
     form.weight_kg      !== (u.weight_kg ?? form.weight_kg)      ||
     form.calorie_goal   !== (u.calorie_goal ?? form.calorie_goal)||
+    form.calorie_goal_manual !== (u.calorie_goal_manual ?? form.calorie_goal_manual) ||
     form.morning_notify !== (u.morning_notify ?? form.morning_notify) ||
     form.evening_notify !== (u.evening_notify ?? form.evening_notify)
   )
@@ -117,9 +160,12 @@ async function handleSave() {
     name:           form.name.trim(),
     birth_year:     Number(form.birth_year),
     gender:         form.gender,
+    activity_level: form.activity_level,
+    goal:           form.goal,
     height_cm:      Number(form.height_cm),
     weight_kg:      Number(form.weight_kg),
     calorie_goal:   form.calorie_goal,
+    calorie_goal_manual: form.calorie_goal_manual,
     morning_notify: form.morning_notify,
     evening_notify: form.evening_notify,
   })
@@ -134,6 +180,12 @@ const genderOptions = [
   { value: 'male',   label: 'Nam',  icon: '👨' },
   { value: 'female', label: 'Nữ',   icon: '👩' },
   { value: 'other',  label: 'Khác', icon: '🌈' },
+]
+
+const goalOptions = [
+  { value: 'lose',     label: 'Giảm',    icon: '📉' },
+  { value: 'maintain', label: 'Duy trì', icon: '⚖️' },
+  { value: 'gain',     label: 'Tăng',    icon: '📈' },
 ]
 </script>
 
@@ -326,26 +378,84 @@ const genderOptions = [
     <div class="px-5 mb-4">
       <p class="text-[13px] font-semibold text-ios-gray uppercase tracking-wide mb-2 px-1">Mục tiêu</p>
       <div class="bg-white rounded-[16px] overflow-hidden shadow-sm">
-        <div class="flex items-center gap-3 px-4 py-3.5">
-          <div class="w-8 h-8 rounded-[8px] bg-ios-orange/15 flex items-center justify-center">
-            <span class="text-lg">🎯</span>
-          </div>
-          <p class="flex-1 text-[15px] text-black">Calo mục tiêu / ngày</p>
-          <div class="flex items-center gap-1.5">
+        <!-- Kiểu mục tiêu: giảm / duy trì / tăng -->
+        <div class="px-4 py-3.5">
+          <label class="text-[11px] font-semibold text-ios-gray uppercase tracking-wide block mb-2">Hướng cân nặng</label>
+          <div class="flex gap-2">
             <button
-              class="w-7 h-7 rounded-full bg-ios-gray5 flex items-center justify-center ios-press"
-              @click="form.calorie_goal = Math.max(1000, form.calorie_goal - 100)"
+              v-for="opt in goalOptions"
+              :key="opt.value"
+              class="flex-1 py-2 rounded-[10px] text-[13px] font-semibold transition-colors ios-press"
+              :class="form.goal === opt.value
+                ? 'bg-calor-green text-white'
+                : 'bg-ios-gray5 text-ios-gray'"
+              @click="form.goal = opt.value as 'lose' | 'maintain' | 'gain'"
             >
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 13H5v-2h14v2z"/></svg>
-            </button>
-            <span class="text-[15px] font-semibold text-ios-blue w-16 text-center">{{ form.calorie_goal.toLocaleString('vi') }}</span>
-            <button
-              class="w-7 h-7 rounded-full bg-ios-gray5 flex items-center justify-center ios-press"
-              @click="form.calorie_goal = Math.min(5000, form.calorie_goal + 100)"
-            >
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              <span class="mr-1">{{ opt.icon }}</span>{{ opt.label }}
             </button>
           </div>
+        </div>
+        <div class="ios-separator mx-4"/>
+
+        <!-- Mức vận động -->
+        <div class="px-4 py-3.5">
+          <label class="text-[11px] font-semibold text-ios-gray uppercase tracking-wide block mb-2">Mức vận động</label>
+          <select
+            v-model="form.activity_level"
+            class="w-full bg-ios-gray5 rounded-[10px] px-3 py-2 text-[14px] text-black outline-none"
+          >
+            <option value="sedentary">Ít vận động (ngồi cả ngày)</option>
+            <option value="light">Vận động nhẹ (1–3 buổi/tuần)</option>
+            <option value="moderate">Vận động vừa (3–5 buổi/tuần)</option>
+            <option value="active">Vận động nhiều (6–7 buổi/tuần)</option>
+            <option value="very_active">Rất nhiều (2 lần/ngày hoặc lao động nặng)</option>
+          </select>
+        </div>
+        <div class="ios-separator mx-4"/>
+
+        <!-- Calo mục tiêu + stepper + nút Tính theo VDD -->
+        <div class="px-4 py-3.5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-[8px] bg-ios-orange/15 flex items-center justify-center">
+              <span class="text-lg">🎯</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[15px] text-black">Calo mục tiêu / ngày</p>
+              <p class="text-[11px] text-ios-gray mt-0.5">
+                <span v-if="form.calorie_goal_manual">Bạn đã chốt số này</span>
+                <span v-else>Tự cập nhật theo cân nặng &amp; VDD</span>
+              </p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button
+                class="w-7 h-7 rounded-full bg-ios-gray5 flex items-center justify-center ios-press"
+                @click="bumpCalorieGoal(-100)"
+              >
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 13H5v-2h14v2z"/></svg>
+              </button>
+              <span class="text-[15px] font-semibold text-ios-blue w-16 text-center">{{ form.calorie_goal.toLocaleString('vi') }}</span>
+              <button
+                class="w-7 h-7 rounded-full bg-ios-gray5 flex items-center justify-center ios-press"
+                @click="bumpCalorieGoal(100)"
+              >
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="#8a9a7d"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              </button>
+            </div>
+          </div>
+          <button
+            class="mt-3 w-full h-[38px] rounded-[10px] bg-ios-blue/10 text-ios-blue text-[13px] font-semibold flex items-center justify-center gap-1.5 ios-press disabled:opacity-50"
+            :disabled="recomputing"
+            @click="recomputeCalorieGoal"
+          >
+            <svg v-if="recomputing" class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.3"/>
+              <path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor">
+              <path d="M12 6V3L8 7l4 4V8c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 14c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 9.74A7.93 7.93 0 004 14c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+            </svg>
+            Tính lại theo chuẩn VDD
+          </button>
         </div>
       </div>
     </div>

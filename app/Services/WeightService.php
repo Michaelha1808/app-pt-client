@@ -35,6 +35,7 @@ class WeightService
         );
 
         $this->syncCurrentWeight($user);
+        $this->autoRecomputeCalorieGoal($user);
 
         return $entry;
     }
@@ -46,6 +47,39 @@ class WeightService
 
         if ($latest && (float) $user->weight_kg !== (float) $latest->weight_kg) {
             $user->weight_kg = $latest->weight_kg;
+            $user->saveQuietly();
+        }
+    }
+
+    /**
+     * Khi user chưa từng chốt calorie_goal tay (`calorie_goal_manual = false`) thì mỗi lần cân
+     * nặng đổi mình tự tính lại calorie_goal theo VDD (BMR Mifflin + TDEE + preset lose/maintain/
+     * gain). Nếu user đã chỉnh tay ở profile/Edit thì tôn trọng — giữ nguyên, chỉ trend
+     * suggestGoal() ở Weight page mới nudge.
+     *
+     * Yêu cầu đủ input VDD (birth_year, gender, height, weight, activity_level, goal). Thiếu →
+     * không recompute — không đoán mò, tránh set calo linh tinh.
+     */
+    private function autoRecomputeCalorieGoal(User $user): void
+    {
+        if ($user->calorie_goal_manual) return;
+        if (!$user->birth_year || !$user->gender || !$user->height_cm || !$user->weight_kg
+            || !$user->activity_level || !$user->goal) {
+            return;
+        }
+
+        $age  = (int) date('Y') - (int) $user->birth_year;
+        $bmr  = \App\Support\NutritionStandard::bmr(
+            (float) $user->weight_kg,
+            (float) $user->height_cm,
+            $age,
+            $user->gender,
+        );
+        $tdee = \App\Support\NutritionStandard::tdee($bmr, $user->activity_level);
+        $goal = \App\Support\NutritionStandard::suggestCalorieGoal($tdee, $user->goal, $user->gender);
+
+        if ((int) $user->calorie_goal !== $goal) {
+            $user->calorie_goal = $goal;
             $user->saveQuietly();
         }
     }

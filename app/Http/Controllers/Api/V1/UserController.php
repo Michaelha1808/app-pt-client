@@ -22,25 +22,31 @@ class UserController extends Controller
     {
         $data = $request->validate([
             // DEFENSE: validate profile edit — cùng khoảng với register (nới/siết ở đây và AuthController::register)
-            'name'           => 'sometimes|string|min:2|max:100',
-            'birth_year'     => 'sometimes|integer|between:1900,2015',
-            'gender'         => 'sometimes|in:male,female,other',
-            'height_cm'      => 'sometimes|numeric|between:50,300',
-            'weight_kg'      => 'sometimes|numeric|between:20,500',
-            'calorie_goal'   => 'sometimes|integer|between:1000,5000',
-            'morning_notify' => 'sometimes|date_format:H:i',
-            'evening_notify' => 'sometimes|date_format:H:i',
+            'name'                => 'sometimes|string|min:2|max:100',
+            'birth_year'          => 'sometimes|integer|between:1900,2015',
+            'gender'              => 'sometimes|in:male,female,other',
+            'activity_level'      => 'sometimes|in:sedentary,light,moderate,active,very_active',
+            'goal'                => 'sometimes|in:lose,maintain,gain',
+            'height_cm'           => 'sometimes|numeric|between:50,300',
+            'weight_kg'           => 'sometimes|numeric|between:20,500',
+            'calorie_goal'        => 'sometimes|integer|between:1000,5000',
+            'calorie_goal_manual' => 'sometimes|boolean',
+            'morning_notify'      => 'sometimes|date_format:H:i',
+            'evening_notify'      => 'sometimes|date_format:H:i',
         ]);
 
         $user = $request->user();
         $user->update($request->only([
-            'name', 'birth_year', 'gender', 'height_cm', 'weight_kg',
-            'calorie_goal', 'morning_notify', 'evening_notify',
+            'name', 'birth_year', 'gender', 'activity_level', 'goal', 'height_cm', 'weight_kg',
+            'calorie_goal', 'calorie_goal_manual', 'morning_notify', 'evening_notify',
         ]));
 
-        // DEFENSE: đổi cân nặng → tự log WeightLog — giữ nhật ký cân theo profile edit
+        // DEFENSE: đổi cân nặng → tự log WeightLog — giữ nhật ký cân theo profile edit.
+        // logWeight cũng gọi syncCurrentWeight + auto-recompute calorie_goal khi
+        // calorie_goal_manual = false, nên phải chạy SAU khi update() ở trên (để cờ manual/goal
+        // mới có hiệu lực).
         if (array_key_exists('weight_kg', $data)) {
-            $weightService->logWeight($user, (float) $data['weight_kg']);
+            $weightService->logWeight($user->fresh(), (float) $data['weight_kg']);
         }
 
         return response()->json([
@@ -120,9 +126,12 @@ class UserController extends Controller
             'email_verified' => $user->email_verified_at !== null,
             'birth_year'     => $user->birth_year,
             'gender'         => $user->gender,
+            'activity_level' => $user->activity_level,
+            'goal'           => $user->goal,
             'height_cm'      => $user->height_cm !== null ? (float) $user->height_cm : null,
             'weight_kg'      => $user->weight_kg !== null ? (float) $user->weight_kg : null,
             'calorie_goal'   => $user->calorie_goal,
+            'calorie_goal_manual' => (bool) $user->calorie_goal_manual,
             'morning_notify' => $user->morning_notify ? substr($user->morning_notify, 0, 5) : null,
             'evening_notify' => $user->evening_notify ? substr($user->evening_notify, 0, 5) : null,
             'calorie_streak' => $user->streak?->current_streak ?? 0,

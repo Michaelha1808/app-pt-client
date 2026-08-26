@@ -226,6 +226,7 @@ async function nextStep() {
         birth_year: Number(birthYear.value),
         gender: gender.value as 'male' | 'female' | 'other',
         activity_level: activityLevel.value,
+        goal: goalType.value,
         height_cm: Number(height.value),
         weight_kg: Number(weight.value),
         calorie_goal: Number(calorieGoal.value),

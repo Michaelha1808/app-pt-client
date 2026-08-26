@@ -180,4 +180,68 @@ class WeightControllerTest extends TestCase
 
         $this->assertNull($response->json('goal_suggestion'));
     }
+
+    /**
+     * calorie_goal_manual = false → WeightService::logWeight tự tính lại calorie_goal theo VDD
+     * mỗi lần log cân mới. Không phải nudge chờ ≥2kg như suggestGoal, mà đồng bộ ngay.
+     */
+    public function test_logging_weight_auto_recomputes_calorie_goal_when_not_manual(): void
+    {
+        $user = User::factory()->create([
+            'birth_year'          => 1995,
+            'gender'              => 'male',
+            'activity_level'      => 'moderate',
+            'goal'                => 'lose',
+            'height_cm'           => 175,
+            'weight_kg'           => 90,
+            'calorie_goal'        => 2000,
+            'calorie_goal_manual' => false,
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/weight/log', ['weight_kg' => 85])
+            ->assertStatus(201);
+
+        // calorie_goal PHẢI đổi theo TDEE mới (85kg thay vì 90kg → TDEE thấp hơn).
+        $this->assertNotEquals(2000, (int) $user->fresh()->calorie_goal);
+    }
+
+    /** calorie_goal_manual = true → tôn trọng số user chốt, không ghi đè. */
+    public function test_logging_weight_keeps_calorie_goal_when_manual(): void
+    {
+        $user = User::factory()->create([
+            'birth_year'          => 1995,
+            'gender'              => 'male',
+            'activity_level'      => 'moderate',
+            'goal'                => 'lose',
+            'height_cm'           => 175,
+            'weight_kg'           => 90,
+            'calorie_goal'        => 1700,
+            'calorie_goal_manual' => true,
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/weight/log', ['weight_kg' => 85])
+            ->assertStatus(201);
+
+        $this->assertSame(1700, (int) $user->fresh()->calorie_goal);
+    }
+
+    /** Thiếu bất kỳ input VDD nào (vd chưa có goal) → skip auto-recompute thay vì đoán mò. */
+    public function test_logging_weight_skips_auto_recompute_when_goal_missing(): void
+    {
+        $user = User::factory()->create([
+            'birth_year'          => 1995,
+            'gender'              => 'male',
+            'activity_level'      => 'moderate',
+            'goal'                => null,
+            'height_cm'           => 175,
+            'weight_kg'           => 90,
+            'calorie_goal'        => 2000,
+            'calorie_goal_manual' => false,
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/v1/weight/log', ['weight_kg' => 85])
+            ->assertStatus(201);
+
+        $this->assertSame(2000, (int) $user->fresh()->calorie_goal);
+    }
 }

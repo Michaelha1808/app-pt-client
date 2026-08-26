@@ -9,9 +9,12 @@ export interface User {
   status?: 'active' | 'suspended'
   birth_year: number | null
   gender: 'male' | 'female' | 'other' | null
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null
+  goal: 'lose' | 'maintain' | 'gain' | null
   height_cm: number | null
   weight_kg: number | null
   calorie_goal: number | null
+  calorie_goal_manual: boolean
   morning_notify: string | null
   evening_notify: string | null
   calorie_streak: number
@@ -21,9 +24,12 @@ export interface UpdateProfilePayload {
   name?: string
   birth_year?: number
   gender?: 'male' | 'female' | 'other'
+  activity_level?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  goal?: 'lose' | 'maintain' | 'gain'
   height_cm?: number
   weight_kg?: number
   calorie_goal?: number
+  calorie_goal_manual?: boolean
   morning_notify?: string
   evening_notify?: string
 }
@@ -40,6 +46,8 @@ export interface RegisterPayload {
   name: string
   birth_year: number
   gender: 'male' | 'female' | 'other'
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  goal: 'lose' | 'maintain' | 'gain'
   height_cm: number
   weight_kg: number
   calorie_goal: number

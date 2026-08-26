@@ -35,6 +35,8 @@ class AuthController extends Controller
             // DEFENSE: giới tính đăng ký — sửa in:... để thêm/bớt lựa chọn (nhớ đồng bộ Register.vue)
             'gender'         => 'required|in:male,female,other',
             'activity_level' => 'nullable|in:sedentary,light,moderate,active,very_active',
+            // DEFENSE: mục tiêu register — dùng để tính lại calorie_goal khi cân đổi (WeightService::logWeight auto-sync)
+            'goal'           => 'nullable|in:lose,maintain,gain',
             // DEFENSE: chiều cao min/max — cm
             'height_cm'      => 'required|numeric|between:50,300',
             // DEFENSE: cân nặng min/max — kg
@@ -55,9 +57,13 @@ class AuthController extends Controller
             'birth_year'     => $request->birth_year,
             'gender'         => $request->gender,
             'activity_level' => $request->activity_level ?? 'light',
+            'goal'           => $request->goal ?? 'maintain',
             'height_cm'      => $request->height_cm,
             'weight_kg'      => $request->weight_kg,
             'calorie_goal'   => $request->calorie_goal ?? 2000,
+            // Register bước 3 auto-điền calorie_goal từ /nutrition/calculate → coi như auto,
+            // trừ khi user bấm nút ± chỉnh tay ở bước đó (FE có thể gửi calorie_goal_manual).
+            'calorie_goal_manual' => (bool) $request->boolean('calorie_goal_manual'),
         ]);
 
         $token = $user->createToken(DeviceName::fromRequest($request))->plainTextToken;
@@ -448,9 +454,12 @@ class AuthController extends Controller
             'status'         => $user->status ?? 'active',
             'birth_year'     => $user->birth_year,
             'gender'         => $user->gender,
+            'activity_level' => $user->activity_level,
+            'goal'           => $user->goal,
             'height_cm'      => $user->height_cm !== null ? (float) $user->height_cm : null,
             'weight_kg'      => $user->weight_kg !== null ? (float) $user->weight_kg : null,
             'calorie_goal'   => $user->calorie_goal,
+            'calorie_goal_manual' => (bool) $user->calorie_goal_manual,
             'morning_notify' => $user->morning_notify ? substr($user->morning_notify, 0, 5) : null,
             'evening_notify' => $user->evening_notify ? substr($user->evening_notify, 0, 5) : null,
             'calorie_streak' => $user->streak?->current_streak ?? 0,

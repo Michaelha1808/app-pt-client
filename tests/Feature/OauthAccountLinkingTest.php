@@ -100,6 +100,34 @@ class OauthAccountLinkingTest extends TestCase
         $this->assertSame('g-new-123', $existing->fresh()->google_id);
     }
 
+    /**
+     * Bản chất bug production: user cùng email đã bị admin soft-delete → lookup bị SoftDeletes
+     * global scope lọc mất, còn unique index Postgres trên email thì không loại trừ row trashed
+     * → INSERT nổ UniqueConstraintViolation. Phải withTrashed() để phát hiện và redirect thay vì
+     * crash / restore ngầm.
+     */
+    public function test_facebook_login_with_soft_deleted_account_redirects_instead_of_crashing(): void
+    {
+        $trashed = User::factory()->create([
+            'email'       => 'fboyquangninh@gmail.com',
+            'google_id'   => 'g-original',
+            'facebook_id' => null,
+            'provider'    => 'google',
+        ]);
+        $trashed->delete(); // soft delete (admin ban/remove)
+
+        $this->fakeSocialite('fb-4456451171281733', 'fboyquangninh@gmail.com', 'Triều Dương');
+
+        $this->get('/api/v1/auth/facebook/callback')
+            ->assertRedirect()
+            ->assertRedirectContains('error=account_deleted');
+
+        // KHÔNG tạo user mới, và KHÔNG restore hay link vào bản ghi trashed
+        $this->assertSame(0, User::where('email', 'fboyquangninh@gmail.com')->count());
+        $this->assertSame(1, User::withTrashed()->where('email', 'fboyquangninh@gmail.com')->count());
+        $this->assertNull($trashed->fresh()->facebook_id);
+    }
+
     public function test_facebook_callback_without_email_redirects_with_error(): void
     {
         $u = new SocialiteUser();

@@ -191,11 +191,16 @@ class AuthController extends Controller
         string $name,
         ?string $avatar,
     ): User {
-        $user = User::where($idColumn, $providerId)->first()
-            ?? User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+        // withTrashed(): unique index trên email của Postgres không loại trừ row đã soft-delete
+        // (deleted_at IS NOT NULL), nhưng global scope SoftDeletes thì có → nếu không withTrashed
+        // thì lookup miss, nhánh create() dưới đâm vào unique constraint và crash. Trả về user
+        // trashed để caller từ chối cấp token (soft-delete ở app này chỉ do admin làm khi ban/gỡ,
+        // không được restore ngầm qua OAuth).
+        $user = User::withTrashed()->where($idColumn, $providerId)->first()
+            ?? User::withTrashed()->whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
 
         if ($user) {
-            if (!$user->{$idColumn}) {
+            if (!$user->trashed() && !$user->{$idColumn}) {
                 $user->update([
                     $idColumn           => $providerId,
                     'provider'          => $provider,
@@ -218,14 +223,13 @@ class AuthController extends Controller
             ]);
         } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
             // Race giữa 2 request OAuth song song, hoặc email khớp một bản ghi mà bước tra
-            // cứu ở trên bỏ sót (vd trigger/scope lạ). Query lại theo cả provider_id lẫn
-            // email rồi link — nếu vẫn không thấy thì đúng là lỗi khác, đẩy tiếp cho handler
-            // gốc log lại.
-            $user = User::where($idColumn, $providerId)->first()
-                ?? User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
+            // cứu ở trên bỏ sót. Query lại (kèm withTrashed) rồi link — nếu vẫn không thấy
+            // thì đúng là lỗi khác, đẩy tiếp cho handler gốc log lại.
+            $user = User::withTrashed()->where($idColumn, $providerId)->first()
+                ?? User::withTrashed()->whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
             if (!$user) throw $e;
 
-            if (!$user->{$idColumn}) {
+            if (!$user->trashed() && !$user->{$idColumn}) {
                 $user->update([
                     $idColumn           => $providerId,
                     'provider'          => $provider,
@@ -276,6 +280,12 @@ class AuthController extends Controller
             $googleUser->getName(),
             $googleUser->getAvatar(),
         );
+
+        // Tài khoản đã bị admin xoá (soft delete) → không restore ngầm qua OAuth.
+        if ($user->trashed()) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=account_deleted');
+        }
 
         // Tài khoản bị khoá → không cấp token qua OAuth, quay lại trang login kèm mã lỗi.
         if ($user->isSuspended()) {
@@ -336,6 +346,11 @@ class AuthController extends Controller
             $fbUser->getName(),
             $fbUser->getAvatar(),
         );
+
+        if ($user->trashed()) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect($frontendUrl . '/auth/login?error=account_deleted');
+        }
 
         if ($user->isSuspended()) {
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');

@@ -20,17 +20,24 @@ class UserController extends Controller
         $request->validate([
             'search'   => 'nullable|string|max:100',
             'role'     => 'nullable|in:user,admin',
-            'status'   => 'nullable|in:active,suspended',
+            'status'   => 'nullable|in:active,suspended,deleted',
             'provider' => 'nullable|string|max:20',
             'sort'     => 'nullable|in:created_at,last_seen_at,name',
             'order'    => 'nullable|in:asc,desc',
             'per_page' => 'nullable|integer|between:1,100',
         ]);
 
-        $sort  = in_array($request->query('sort'), self::SORTABLE, true) ? $request->query('sort') : 'created_at';
-        $order = $request->query('order') === 'asc' ? 'asc' : 'desc';
+        $sort   = in_array($request->query('sort'), self::SORTABLE, true) ? $request->query('sort') : 'created_at';
+        $order  = $request->query('order') === 'asc' ? 'asc' : 'desc';
+        $status = $request->query('status');
 
+        // status=deleted → CHỈ trashed. Không truyền / khác 'deleted' → active/suspended
+        // (SoftDeletes global scope loại trashed). Admin có nhu cầu xem tài khoản đã xoá để
+        // phục hồi (vd user OAuth lại rồi thấy `account_deleted` báo về hỏi admin).
         $query = User::query()->withCount('mealLogs');
+        if ($status === 'deleted') {
+            $query->onlyTrashed();
+        }
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -39,7 +46,7 @@ class UserController extends Controller
             });
         }
         if ($role = $request->query('role'))         $query->where('role', $role);
-        if ($status = $request->query('status'))     $query->where('status', $status);
+        if ($status && $status !== 'deleted')        $query->where('status', $status);
         if ($provider = $request->query('provider')) $query->where('provider', $provider);
 
         $paginator = $query->orderBy($sort, $order)
@@ -153,6 +160,10 @@ class UserController extends Controller
 
     private function row(User $u): array
     {
+        // Trashed → hiện status ảo 'deleted' để FE phân biệt vs suspended (đều là "không dùng
+        // được") — 2 hành động khôi phục khác nhau: mở khoá (status) vs khôi phục (soft-delete).
+        $displayStatus = $u->trashed() ? 'deleted' : ($u->status ?? 'active');
+
         return [
             'id'              => $u->id,
             'name'            => $u->name,
@@ -160,11 +171,12 @@ class UserController extends Controller
             'avatar_url'      => $u->avatar_url,
             'provider'        => $u->provider ?? 'email',
             'role'            => $u->role ?? 'user',
-            'status'          => $u->status ?? 'active',
+            'status'          => $displayStatus,
             'calorie_streak'  => $u->calorie_streak ?? 0,
             'meal_logs_count' => $u->meal_logs_count ?? 0,
             'last_seen_at'    => optional($u->last_seen_at)->toIso8601String(),
             'created_at'      => optional($u->created_at)->toIso8601String(),
+            'deleted_at'      => optional($u->deleted_at)->toIso8601String(),
         ];
     }
 
@@ -191,6 +203,7 @@ class UserController extends Controller
             ],
             'sessions'   => $this->sessions($u),
             'updated_at' => optional($u->updated_at)->toIso8601String(),
+            'deleted_at' => optional($u->deleted_at)->toIso8601String(),
         ]);
     }
 

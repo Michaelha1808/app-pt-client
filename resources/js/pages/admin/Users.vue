@@ -132,7 +132,8 @@ async function confirmSuspend() {
 async function onRestore(u: AdminUserRow) {
   try {
     await restoreUser(u.id)
-    toast.success('Đã mở khoá'); load()
+    toast.success(u.status === 'deleted' ? 'Đã khôi phục tài khoản' : 'Đã mở khoá')
+    load()
   } catch (e) { toast.error(extractError(e)) }
 }
 
@@ -197,6 +198,7 @@ onMounted(load)
           <SelectItem value="all">Mọi trạng thái</SelectItem>
           <SelectItem value="active">Active</SelectItem>
           <SelectItem value="suspended">Bị khoá</SelectItem>
+          <SelectItem value="deleted">Đã xoá</SelectItem>
         </SelectContent>
       </Select>
       <Select v-model="providerFilter">
@@ -274,8 +276,15 @@ onMounted(load)
               </TableCell>
               <TableCell>
                 <Badge variant="outline" class="gap-1.5 font-medium">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="u.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'" />
-                  {{ u.status === 'active' ? 'Active' : 'Bị khoá' }}
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="{
+                      'bg-emerald-500': u.status === 'active',
+                      'bg-red-500':     u.status === 'suspended',
+                      'bg-zinc-400':    u.status === 'deleted',
+                    }"
+                  />
+                  {{ u.status === 'active' ? 'Active' : u.status === 'suspended' ? 'Bị khoá' : 'Đã xoá' }}
                 </Badge>
               </TableCell>
               <TableCell class="text-right text-muted-foreground tabular-nums">{{ u.calorie_streak }}</TableCell>
@@ -289,9 +298,15 @@ onMounted(load)
                   <template v-if="u.status === 'active'">
                     <IconAction v-if="!isSelf(u)" label="Khoá tài khoản" tone="warn" @click="askSuspend(u)"><Lock /></IconAction>
                   </template>
-                  <IconAction v-else label="Mở khoá" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
-                  <IconAction label="Gửi email đặt lại mật khẩu" tone="edit" @click="resetTarget = u"><KeyRound /></IconAction>
-                  <IconAction v-if="!isSelf(u)" label="Xoá tài khoản" tone="delete" @click="() => { deleteTarget = u; deleteOpen = true }"><Trash2 /></IconAction>
+                  <template v-else-if="u.status === 'suspended'">
+                    <IconAction label="Mở khoá" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
+                  </template>
+                  <template v-else>
+                    <!-- deleted: khôi phục soft-delete → clear deleted_at + status=active -->
+                    <IconAction label="Khôi phục tài khoản" tone="success" @click="onRestore(u)"><LockOpen /></IconAction>
+                  </template>
+                  <IconAction v-if="u.status !== 'deleted'" label="Gửi email đặt lại mật khẩu" tone="edit" @click="resetTarget = u"><KeyRound /></IconAction>
+                  <IconAction v-if="!isSelf(u) && u.status !== 'deleted'" label="Xoá tài khoản" tone="delete" @click="() => { deleteTarget = u; deleteOpen = true }"><Trash2 /></IconAction>
                 </div>
               </TableCell>
             </TableRow>

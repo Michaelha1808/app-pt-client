@@ -34,11 +34,12 @@ export interface AdminUserRow {
   avatar_url: string | null
   provider: string
   role: 'user' | 'admin'
-  status: 'active' | 'suspended'
+  status: 'active' | 'suspended' | 'deleted'
   calorie_streak: number
   meal_logs_count: number
   last_seen_at: string | null
   created_at: string
+  deleted_at: string | null
 }
 
 export interface AdminUserDetail extends AdminUserRow {

@@ -105,7 +105,11 @@ async function confirmSuspend() {
   finally { suspendBusy.value = false }
 }
 async function onRestore() {
-  try { await restoreUser(id); toast.success('Đã mở khoá'); load() }
+  try {
+    await restoreUser(id)
+    toast.success(user.value?.status === 'deleted' ? 'Đã khôi phục tài khoản' : 'Đã mở khoá')
+    load()
+  }
   catch (e) { toast.error(extractError(e)) }
 }
 async function confirmReset() {
@@ -190,13 +194,21 @@ onMounted(load)
             <h1 class="text-lg font-bold">{{ user.name }}</h1>
             <Badge :variant="user.role === 'admin' ? 'default' : 'secondary'" class="capitalize">{{ user.role }}</Badge>
             <Badge variant="outline" class="gap-1.5 font-medium">
-              <span class="w-1.5 h-1.5 rounded-full" :class="user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'" />
-              {{ user.status === 'active' ? 'Active' : 'Bị khoá' }}
+              <span
+                class="w-1.5 h-1.5 rounded-full"
+                :class="{
+                  'bg-emerald-500': user.status === 'active',
+                  'bg-red-500':     user.status === 'suspended',
+                  'bg-zinc-400':    user.status === 'deleted',
+                }"
+              />
+              {{ user.status === 'active' ? 'Active' : user.status === 'suspended' ? 'Bị khoá' : 'Đã xoá' }}
             </Badge>
             <Badge variant="outline" class="capitalize">{{ user.provider }}</Badge>
           </div>
           <div class="text-sm text-muted-foreground">{{ user.email }}</div>
           <div v-if="user.status === 'suspended' && user.suspend_reason" class="text-xs text-destructive mt-1">Lý do khoá: {{ user.suspend_reason }}</div>
+          <div v-else-if="user.status === 'deleted' && user.deleted_at" class="text-xs text-muted-foreground mt-1">Xoá lúc: {{ fmtTime(user.deleted_at) }}</div>
         </div>
       </Card>
 
@@ -315,12 +327,13 @@ onMounted(load)
                 <Lock class="w-4 h-4" /> Khoá tài khoản
               </Button>
               <Button v-else variant="outline" class="w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700" @click="onRestore">
-                <LockOpen class="w-4 h-4" /> Mở khoá tài khoản
+                <LockOpen class="w-4 h-4" />
+                {{ user.status === 'deleted' ? 'Khôi phục tài khoản' : 'Mở khoá tài khoản' }}
               </Button>
-              <Button variant="outline" class="w-full" @click="resetOpen = true">
+              <Button v-if="user.status !== 'deleted'" variant="outline" class="w-full" @click="resetOpen = true">
                 <KeyRound class="w-4 h-4" /> Gửi reset mật khẩu
               </Button>
-              <Button variant="outline" class="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" :disabled="!!isSelf || user.role === 'admin'" @click="deleteOpen = true">
+              <Button v-if="user.status !== 'deleted'" variant="outline" class="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" :disabled="!!isSelf || user.role === 'admin'" @click="deleteOpen = true">
                 <Trash2 class="w-4 h-4" /> Xoá tài khoản
               </Button>
             </CardContent>

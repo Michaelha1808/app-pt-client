@@ -22,7 +22,9 @@ onMounted(() => {
     oauth_disabled:    'Phương thức đăng nhập này đang tạm tắt. Vui lòng dùng email hoặc cách khác.',
     google_failed:     'Đăng nhập Google thất bại. Vui lòng thử lại.',
     facebook_failed:   'Đăng nhập Facebook thất bại. Vui lòng thử lại.',
+    facebook_no_email: 'Facebook không chia sẻ email của bạn. Vui lòng cho phép quyền email hoặc đăng nhập bằng cách khác.',
     account_suspended: 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.',
+    account_deleted:   'Tài khoản này đã bị xoá. Vui lòng liên hệ quản trị viên nếu bạn cần khôi phục.',
     session_expired:   'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
   }
   const err = route.query.error as string | undefined

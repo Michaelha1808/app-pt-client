@@ -56,11 +56,10 @@ class DishCatalogService
         // sánh tương đối với khẩu phần thường). Mặc định 1.0 nếu AI không ước tính được gì (vd
         // input chỉ có text).
         if ($match->reference_grams && !empty($d['estimated_grams'])) {
-            $ratio = (float) $d['estimated_grams'] / (float) $match->reference_grams;
+            $ratio = self::gramRatio((float) $d['estimated_grams'], (float) $match->reference_grams);
         } else {
-            $ratio = (float) ($d['portion_ratio'] ?? 1.0);
+            $ratio = max(0.3, min(3.0, (float) ($d['portion_ratio'] ?? 1.0)));
         }
-        $ratio = max(0.3, min(3.0, $ratio));
 
         $d['food_name']  = $match->name;
         $d['unit_type']  = $match->unit_type;
@@ -83,6 +82,38 @@ class DishCatalogService
         }
 
         return $d;
+    }
+
+    /**
+     * Scale số chuẩn của 1 dish theo gram NGƯỜI DÙNG tự nhập — dùng khi AI ước lượng khối
+     * lượng từ ảnh sai và user sửa lại số gram thật ở màn xác nhận (trước khi lưu). Khác
+     * groundOne() (ratio suy từ estimated_grams của AI): ở đây gram là số user tự chốt nên
+     * tin cậy cao nhất, không cần confidence/fallback portion_ratio.
+     *
+     * @return array{serving:string,calories:float,protein:int,carbs:int,fat:int,sodium:int,source:string,dish_id:int}
+     */
+    public function scaleByGrams(Dish $dish, float $grams): array
+    {
+        $ratio = $dish->reference_grams
+            ? self::gramRatio($grams, (float) $dish->reference_grams)
+            : 1.0;
+
+        return [
+            'serving'  => $dish->serving . sprintf(' (~%dg)', (int) round($grams)),
+            'calories' => round($dish->calories * $ratio, 1),
+            'protein'  => (int) round($dish->protein * $ratio),
+            'carbs'    => (int) round($dish->carbs * $ratio),
+            'fat'      => (int) round($dish->fat * $ratio),
+            'sodium'   => (int) round($dish->sodium * $ratio),
+            'source'   => 'catalog',
+            'dish_id'  => $dish->id,
+        ];
+    }
+
+    /** Tỉ lệ khối lượng thật ÷ khối lượng chuẩn VDD, clamp để tránh số bất thường (vd gõ nhầm). */
+    private static function gramRatio(float $grams, float $referenceGrams): float
+    {
+        return max(0.3, min(3.0, $grams / $referenceGrams));
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Dish;
 use App\Models\User;
 use App\Services\FoodAnalysisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,7 +65,7 @@ class FoodEstimateTest extends TestCase
         $this->fakeService()
             ->shouldReceive('estimateNutrition')
             ->once()
-            ->with('Bánh xèo tôm thịt', '1 cái (~200g)', null)
+            ->with('Bánh xèo tôm thịt', '1 cái (~200g)', null, null)
             ->andReturn(self::FAKE);
 
         $this->postJson('/api/v1/food/estimate', [
@@ -82,13 +83,67 @@ class FoodEstimateTest extends TestCase
         $this->fakeService()
             ->shouldReceive('estimateNutrition')
             ->once()
-            ->with('Phở gà', null, 'tô')
+            ->with('Phở gà', null, 'tô', null)
             ->andReturn(self::FAKE);
 
         $this->actingAs($user, 'sanctum')->postJson('/api/v1/food/estimate', [
             'food_name'  => 'Phở gà',
             'unit_label' => 'tô',
         ])->assertStatus(200);
+    }
+
+    /**
+     * User sửa khối lượng (gram) ở màn xác nhận vì AI đoán sai từ ảnh, món khớp thư viện có
+     * sẵn reference_grams (VDD) → phải scale tuyến tính tại chỗ, KHÔNG gọi lại Gemini.
+     */
+    public function test_estimate_scales_by_grams_when_dish_has_reference_grams(): void
+    {
+        $dish = Dish::create([
+            'name'             => 'Phở bò',
+            'name_normalized'  => 'pho bo',
+            'unit_type'        => 'portion',
+            'unit_label'       => 'tô',
+            'serving'          => '1 tô (~500g)',
+            'calories'         => 400,
+            'protein'          => 20,
+            'carbs'            => 50,
+            'fat'              => 10,
+            'sodium'           => 800,
+            'reference_grams'  => 500,
+        ]);
+
+        $this->fakeService()->shouldNotReceive('estimateNutrition');
+
+        $this->postJson('/api/v1/food/estimate', [
+            'food_name' => 'Phở bò',
+            'grams'     => 750,
+        ])->assertStatus(200)
+          ->assertJson([
+              'calories' => 600.0,
+              'protein'  => 30,
+              'carbs'    => 75,
+              'fat'      => 15,
+              'sodium'   => 1200,
+              'source'   => 'catalog',
+              'dish_id'  => $dish->id,
+          ])
+          ->assertJsonFragment(['serving' => '1 tô (~500g) (~750g)']);
+    }
+
+    /** Món không khớp thư viện (hoặc chưa có reference_grams) → gửi gram cho AI ước tính lại */
+    public function test_estimate_passes_grams_to_ai_when_no_catalog_reference(): void
+    {
+        $this->fakeService()
+            ->shouldReceive('estimateNutrition')
+            ->once()
+            ->with('Bánh xèo tôm thịt', null, null, 350.0)
+            ->andReturn(self::FAKE);
+
+        $this->postJson('/api/v1/food/estimate', [
+            'food_name' => 'Bánh xèo tôm thịt',
+            'grams'     => 350,
+        ])->assertStatus(200)
+          ->assertJson(self::FAKE);
     }
 
     /** Gemini lỗi → 502 kèm thông báo tiếng Việt, không phải 500 trần */

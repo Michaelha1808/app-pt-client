@@ -86,6 +86,7 @@ const sheetOpen = ref(false)
       carbs:     dish.carbs,
       fat:       dish.fat,
       sodium:    dish.sodium,
+      grams:     dish.estimated_grams ?? null,
     }"
     calories-label="Calo / 1 đơn vị (kcal) — số lượng chỉnh bằng nút +/- ngoài popup"
     @save="emit('save', $event)"

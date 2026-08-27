@@ -36,6 +36,7 @@ const editProtein  = ref(0)
 const editCarbs    = ref(0)
 const editFat      = ref(0)
 const editSodium   = ref(0)
+const editGrams    = ref<number | null>(null) // khối lượng thật (g) user tự sửa nếu AI đoán sai từ ảnh
 const editSheetOpen = ref(false)
 
 /**
@@ -56,6 +57,7 @@ function currentValues(): FoodEditValues {
     carbs:     editCarbs.value,
     fat:       editFat.value,
     sodium:    editSodium.value,
+    grams:     editGrams.value,
   }
 }
 
@@ -67,6 +69,7 @@ function applyValues(v: FoodEditValues) {
   editCarbs.value    = v.carbs
   editFat.value      = v.fat
   editSodium.value   = v.sodium
+  editGrams.value     = v.grams
 }
 
 // flush sync: template đọc thẳng editCalories (không còn fallback `|| result.calories`, vốn
@@ -81,6 +84,7 @@ watch(result, (r) => {
     carbs:     r.carbs,
     fat:       r.fat,
     sodium:    r.sodium,
+    grams:     r.estimated_grams ?? null,
   }
   applyValues(v)
   advised.value = { ...v }
@@ -143,9 +147,9 @@ function openEditSheet() {
 /**
  * Lưu từ popup sửa món → tự động đồng bộ lại MỌI thứ phụ thuộc vào món:
  *
- * 1. Đổi tên/khẩu phần mà KHÔNG tự chỉnh số  → gọi AI ước tính lại calo + macro. Sửa
- *    "Phở bò" thành "Bánh xèo tôm thịt" mà vẫn giữ 450 kcal của phở là số liệu sai, và số
- *    sai đó sẽ đi thẳng vào nhật ký khi bấm Xác nhận.
+ * 1. Đổi tên/khẩu phần/khối lượng (gram) mà KHÔNG tự chỉnh số → gọi lại AI/thư viện ước tính
+ *    calo + macro. Sửa "Phở bò" thành "Bánh xèo tôm thịt" mà vẫn giữ 450 kcal của phở, hoặc
+ *    sửa gram AI đoán sai từ ảnh mà calo không đổi theo, đều để lại số liệu sai trong nhật ký.
  * 2. Tự chỉnh số                              → tôn trọng số user gõ, không ghi đè.
  * 3. Bất kỳ thay đổi nào                      → sinh lại lời khuyên AI theo dữ liệu cuối cùng.
  *
@@ -161,18 +165,19 @@ async function handleEditSave(values: FoodEditValues) {
 
   const identityChanged = values.food_name !== base.food_name
                        || values.serving   !== base.serving
+  const gramsChanged    = values.grams !== base.grams
   const numbersChanged  = values.calories !== base.calories
                        || values.protein  !== base.protein
                        || values.carbs    !== base.carbs
                        || values.fat      !== base.fat
                        || values.sodium   !== base.sodium
 
-  if (!identityChanged && !numbersChanged) return
+  if (!identityChanged && !gramsChanged && !numbersChanged) return
 
   let next: FoodEditValues = { ...values }
 
-  if (identityChanged && !numbersChanged) {
-    const est = await estimate(values.food_name, values.serving)
+  if ((identityChanged || gramsChanged) && !numbersChanged) {
+    const est = await estimate(values.food_name, values.serving, null, values.grams)
     if (seq !== saveSeq) return
     if (!est) {
       toast.error('Chưa tính lại được calo cho món này — bạn có thể nhập tay trong ô Sửa.')
@@ -272,7 +277,7 @@ const shareMeal = computed<ShareMealData | null>(() => result.value ? {
 } : null)
 
 async function retry() {
-  applyValues({ food_name: '', serving: '', calories: 0, protein: 0, carbs: 0, fat: 0, sodium: 0 })
+  applyValues({ food_name: '', serving: '', calories: 0, protein: 0, carbs: 0, fat: 0, sodium: 0, grams: null })
   advised.value       = null
   editSheetOpen.value = false
   displayedText.value = ''
@@ -598,6 +603,7 @@ onUnmounted(() => { if (rafId) cancelAnimationFrame(rafId) })
       carbs:     editCarbs,
       fat:       editFat,
       sodium:    editSodium,
+      grams:     editGrams,
     }"
     @save="handleEditSave"
   />

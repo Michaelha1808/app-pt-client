@@ -223,6 +223,8 @@ class FoodController extends Controller
             'food_name'  => 'required|string|min:1|max:200',
             'serving'    => 'nullable|string|max:200',
             'unit_label' => 'nullable|string|max:50',
+            // Khối lượng thật (gram) user tự sửa vì AI ước lượng sai từ ảnh.
+            'grams'      => 'nullable|numeric|min:1|max:5000',
         ]);
 
         UsageTracker::record('food_estimate', $request->user('sanctum')?->id);
@@ -230,12 +232,21 @@ class FoodController extends Controller
         $foodName  = (string) $request->input('food_name');
         $serving   = $request->input('serving') ?: null;
         $unitLabel = $request->input('unit_label') ?: null;
+        $grams     = $request->filled('grams') ? (float) $request->input('grams') : null;
 
-        // Grounding: nếu khớp thư viện và user không đổi sang đơn vị khác → trả thẳng
-        // số chuẩn, khỏi gọi AI. Đổi đơn vị (vd catalog "tô" → user "chén") thì để AI
-        // tính lại vì tỉ lệ không đơn giản.
         $match = $catalog->match($foodName);
-        if ($match && (!$unitLabel || $unitLabel === $match->unit_label)) {
+
+        // User tự sửa gram + món khớp thư viện có reference_grams (VDD) → scale tuyến tính tại
+        // chỗ, không gọi AI: nhanh, xác định, và đúng công thức đã dùng lúc grounding kết quả
+        // phân tích ban đầu (groundOne), nên số liệu trước/sau khi sửa gram nhất quán.
+        if ($grams && $match && $match->reference_grams) {
+            return response()->json([...$catalog->scaleByGrams($match, $grams), 'warning' => null]);
+        }
+
+        // Grounding: nếu khớp thư viện, không đổi sang đơn vị khác, và không tự sửa gram →
+        // trả thẳng số chuẩn, khỏi gọi AI. Đổi đơn vị (vd catalog "tô" → user "chén") hoặc sửa
+        // gram mà catalog chưa có reference_grams thì để AI tính lại vì tỉ lệ không đơn giản.
+        if ($match && !$grams && (!$unitLabel || $unitLabel === $match->unit_label)) {
             return response()->json([
                 'serving'  => $match->serving,
                 'calories' => $match->calories,
@@ -250,7 +261,7 @@ class FoodController extends Controller
         }
 
         try {
-            $data = $service->estimateNutrition($foodName, $serving, $unitLabel);
+            $data = $service->estimateNutrition($foodName, $serving, $unitLabel, $grams);
             $data['source']  = 'ai';
             $data['dish_id'] = null;
             $data['warning'] = \App\Support\NutritionValidator::warning(

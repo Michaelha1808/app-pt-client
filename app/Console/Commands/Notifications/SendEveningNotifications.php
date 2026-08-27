@@ -42,7 +42,7 @@ class SendEveningNotifications extends Command
                 ? "Bạn đã nạp {$consumed}/{$goal} kcal. Đã đạt mục tiêu hôm nay! 🎉"
                 : "Bạn đã nạp {$consumed}/{$goal} kcal. Còn thiếu " . ($goal - $consumed) . " kcal.";
 
-            $title = 'Tổng kết hôm nay 🌙';
+            $title = 'Chào bạn, đã đến giờ ăn chiều';
             $this->dispatchPush($fcm, $user, [
                 'type'  => 'evening',
                 'title' => $title,

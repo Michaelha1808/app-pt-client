@@ -126,35 +126,44 @@ watch(picks, () => {
 onBeforeUnmount(() => { if (adviceTimer) clearTimeout(adviceTimer) })
 
 /**
- * User lưu popup sửa món → cùng quy tắc với Result.vue: đổi tên/khẩu phần mà không tự chỉnh
- * số thì AI ước tính lại calo + macro CHO 1 ĐƠN VỊ (nhân với stepper số lượng sau), còn nếu
- * user tự gõ số thì tôn trọng số đó. Nhận xét cả bữa do watcher `picks` tự sinh lại.
+ * User lưu popup sửa món → cùng quy tắc với Result.vue: đổi tên/khẩu phần/khối lượng (gram) mà
+ * không tự chỉnh số thì AI/thư viện ước tính lại calo + macro CHO 1 ĐƠN VỊ (nhân với stepper số
+ * lượng sau), còn nếu user tự gõ số thì tôn trọng số đó. Nhận xét cả bữa do watcher `picks` tự
+ * sinh lại.
  */
 async function handleDishSave(index: number, values: FoodEditValues) {
   const dish = picks.value[index]
   if (!dish) return
 
   const identityChanged = values.food_name !== dish.food_name || values.serving !== dish.serving
+  const gramsChanged    = (values.grams ?? null) !== (dish.estimated_grams ?? null)
   const numbersChanged  = values.calories !== dish.calories
                        || values.protein  !== dish.protein
                        || values.carbs    !== dish.carbs
                        || values.fat      !== dish.fat
                        || values.sodium   !== dish.sodium
 
-  Object.assign(dish, values)
+  dish.food_name       = values.food_name
+  dish.serving         = values.serving
+  dish.calories        = values.calories
+  dish.protein         = values.protein
+  dish.carbs           = values.carbs
+  dish.fat             = values.fat
+  dish.sodium          = values.sodium
+  dish.estimated_grams = values.grams ?? null
 
   // User đã chốt lại số liệu → không còn là món khớp thư viện chuẩn nữa, bỏ nhãn 📚 Thư viện
   // (giữ nhãn sẽ khiến số user tự sửa trông như số đã được kiểm chứng).
-  if (identityChanged || numbersChanged) {
+  if (identityChanged || gramsChanged || numbersChanged) {
     dish.source  = 'ai'
     dish.dish_id = null
   }
 
-  if (!identityChanged || numbersChanged) return
+  if ((!identityChanged && !gramsChanged) || numbersChanged) return
 
   estimatingAt.value = new Set(estimatingAt.value).add(index)
   try {
-    const est = await estimate(values.food_name, values.serving, dish.unit_label)
+    const est = await estimate(values.food_name, values.serving, dish.unit_label, values.grams)
     const target = picks.value[index]
     // User có thể đã sửa tiếp trong lúc chờ → chỉ áp khi tên vẫn là tên đã gửi đi
     if (est && target && target.food_name === values.food_name) {

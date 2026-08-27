@@ -17,6 +17,7 @@ export function useFoodEstimate() {
     foodName: string,
     serving?: string | null,
     unitLabel?: string | null,
+    grams?: number | null,
   ): Promise<NutritionEstimate | null> {
     if (!foodName.trim()) return null
 
@@ -30,6 +31,7 @@ export function useFoodEstimate() {
           food_name:  foodName,
           serving:    serving   ?? null,
           unit_label: unitLabel ?? null,
+          grams:      grams     ?? null,
         },
       })
       // calories = 0 nghĩa là AI không nhận ra đây là món ăn → giữ nguyên số user đang có,

@@ -185,10 +185,15 @@ PROMPT,
      *
      * @param  string|null $unitLabel Đơn vị của 1 phần ở màn Chọn món ("tô", "cái"...) — ước
      *                                tính cho 1 ĐƠN VỊ để nhân với stepper số lượng.
+     * @param  float|null  $grams     Khối lượng thật (gram) user tự sửa ở màn xác nhận vì AI
+     *                                đoán sai từ ảnh — chỉ dùng khi món không khớp thư viện
+     *                                `dishes` (có match thì FoodController scale tuyến tính
+     *                                theo reference_grams thay vì gọi AI, xem
+     *                                DishCatalogService::scaleByGrams()).
      * @return array{serving:string,calories:int,protein:int,carbs:int,fat:int,sodium:int}
      * @throws \RuntimeException
      */
-    public function estimateNutrition(string $foodName, ?string $serving = null, ?string $unitLabel = null): array
+    public function estimateNutrition(string $foodName, ?string $serving = null, ?string $unitLabel = null, ?float $grams = null): array
     {
         $servingLine = $serving
             ? "Khẩu phần người dùng ghi: \"{$serving}\". Ước tính đúng theo khẩu phần này."
@@ -196,6 +201,11 @@ PROMPT,
 
         if ($unitLabel) {
             $servingLine .= "\nƯớc tính cho ĐÚNG 1 {$unitLabel} (một đơn vị), không phải cả bữa.";
+        }
+
+        if ($grams) {
+            $target = $unitLabel ? "1 {$unitLabel}" : 'khẩu phần này';
+            $servingLine .= "\nNgười dùng đã cân/xác nhận khối lượng thật của {$target} là {$grams} gram — ƯU TIÊN số gram này, ước tính dinh dưỡng CHÍNH XÁC theo đúng khối lượng đó thay vì theo khẩu phần thông thường.";
         }
 
         $prompt = <<<PROMPT

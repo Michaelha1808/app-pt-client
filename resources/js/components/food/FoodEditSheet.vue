@@ -7,6 +7,7 @@ export interface FoodEditValues {
   carbs:     number
   fat:       number
   sodium:    number
+  grams?:    number | null   // khối lượng thật (g) — user tự sửa khi AI ước lượng sai từ ảnh (chỉ Result.vue dùng, MealPicker bỏ qua)
 }
 
 const props = withDefaults(defineProps<{
@@ -44,6 +45,7 @@ function save() {
     carbs:     clamp(form.carbs, 2000),
     fat:       clamp(form.fat, 1000),
     sodium:    clamp(form.sodium, 20000),
+    grams:     form.grams ? clamp(form.grams, 5000) : null,
   })
   close()
 }
@@ -76,6 +78,17 @@ function save() {
             maxlength="200"
             placeholder="VD: 1 tô lớn (~500ml), 2 phần (300g)..."
             class="w-full py-3 px-3.5 rounded-[12px] bg-ios-gray6 text-[15px] text-black outline-none focus:ring-1 focus:ring-ios-blue mb-4"
+          />
+
+          <!-- Khối lượng thật (gram) — sửa khi AI ước lượng khối lượng từ ảnh không chính xác -->
+          <p class="text-[13px] font-medium text-ios-gray mb-1.5">Khối lượng thực tế (gram)</p>
+          <input
+            v-model.number="form.grams"
+            type="number"
+            inputmode="numeric"
+            min="1" max="5000"
+            placeholder="VD: 350 (bỏ trống nếu giữ ước tính của AI)"
+            class="w-full py-3 px-3.5 rounded-[12px] bg-ios-gray6 text-[15px] text-black outline-none focus:ring-1 focus:ring-ios-blue mb-4 tabular-nums"
           />
 
           <!-- Calo -->

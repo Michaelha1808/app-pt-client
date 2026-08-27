@@ -55,6 +55,7 @@ export interface DetectedDish {
   confidence: number
   source?: 'catalog' | 'ai'   // 'catalog' = calo lấy từ thư viện chuẩn; 'ai' = AI ước tính
   dish_id?: number | null     // id món trong thư viện nếu khớp
+  estimated_grams?: number | null // khối lượng tuyệt đối (g) AI ước từ ảnh cho 1 đơn vị, null nếu không ước được
 }
 
 export interface DetectResponse {

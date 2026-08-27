@@ -14,6 +14,7 @@ declare global {
   const acceptHMRUpdate: typeof import('pinia').acceptHMRUpdate
   const apiFetch: typeof import('./utils/api').apiFetch
   const buildDefaultCaption: typeof import('./composables/useShareMeal').buildDefaultCaption
+  const calculateNutrition: typeof import('./composables/useNutritionStandards').calculateNutrition
   const clearAppBadge: typeof import('./utils/badge').clearAppBadge
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
@@ -115,6 +116,7 @@ declare global {
   const useMealPlan: typeof import('./composables/useMealPlan').useMealPlan
   const useModel: typeof import('vue').useModel
   const useNotifications: typeof import('./composables/useNotifications').useNotifications
+  const useNutritionStandards: typeof import('./composables/useNutritionStandards').useNutritionStandards
   const usePasskey: typeof import('./composables/usePasskey').usePasskey
   const usePlanProgress: typeof import('./composables/usePlanProgress').usePlanProgress
   const usePreferences: typeof import('./composables/usePreferences').usePreferences
@@ -159,6 +161,9 @@ declare global {
   export type { NotificationSettings } from './composables/useNotifications'
   import('./composables/useNotifications')
   // @ts-ignore
+  export type { ActivityLevel, Citation, CalculatePayload, CalculateResult } from './composables/useNutritionStandards'
+  import('./composables/useNutritionStandards')
+  // @ts-ignore
   export type { ProgressMeal, ProgressWorkout, DayProgress, WeekDay, PlanProgress } from './composables/usePlanProgress'
   import('./composables/usePlanProgress')
   // @ts-ignore
@@ -200,6 +205,7 @@ declare module 'vue' {
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly apiFetch: UnwrapRef<typeof import('./utils/api')['apiFetch']>
     readonly buildDefaultCaption: UnwrapRef<typeof import('./composables/useShareMeal')['buildDefaultCaption']>
+    readonly calculateNutrition: UnwrapRef<typeof import('./composables/useNutritionStandards')['calculateNutrition']>
     readonly clearAppBadge: UnwrapRef<typeof import('./utils/badge')['clearAppBadge']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -301,6 +307,7 @@ declare module 'vue' {
     readonly useMealPlan: UnwrapRef<typeof import('./composables/useMealPlan')['useMealPlan']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNotifications: UnwrapRef<typeof import('./composables/useNotifications')['useNotifications']>
+    readonly useNutritionStandards: UnwrapRef<typeof import('./composables/useNutritionStandards')['useNutritionStandards']>
     readonly usePasskey: UnwrapRef<typeof import('./composables/usePasskey')['usePasskey']>
     readonly usePlanProgress: UnwrapRef<typeof import('./composables/usePlanProgress')['usePlanProgress']>
     readonly usePreferences: UnwrapRef<typeof import('./composables/usePreferences')['usePreferences']>

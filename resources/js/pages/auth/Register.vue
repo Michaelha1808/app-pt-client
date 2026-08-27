@@ -15,29 +15,6 @@ const registrationClosed = computed(() => config.value?.features.registration_op
 
 onMounted(() => { loadPublicConfig(); loadStandards() })
 
-// Khi hồ sơ đủ dữ liệu → gọi backend tính BMR/TDEE/goal đề xuất theo mục tiêu
-// user chọn. Chạy mỗi khi user đổi mức vận động hoặc mục tiêu → số hiển thị
-// luôn khớp lựa chọn hiện tại, không cần bấm gì thêm.
-async function refreshSuggestion() {
-  if (!birthYear.value || !gender.value || !height.value || !weight.value) return
-  const res = await calculateNutrition({
-    birth_year:     Number(birthYear.value),
-    gender:         gender.value as 'male' | 'female' | 'other',
-    height_cm:      Number(height.value),
-    weight_kg:      Number(weight.value),
-    activity_level: activityLevel.value,
-    goal:           goalType.value,
-  })
-  if (!res) return
-  suggested.value          = res
-  suggestedCitations.value = res.citations
-  calorieGoal.value        = String(res.calorie_goal)
-}
-
-watch([birthYear, gender, height, weight, activityLevel, goalType], () => {
-  if (step.value >= 2) refreshSuggestion()
-})
-
 const step = ref(1)
 const totalSteps = 4
 const skippedPersonalInfo = ref(false)
@@ -69,6 +46,31 @@ const formError = ref('')
 const errors = reactive({
   email: '', password: '', confirmPassword: '',
   name: '', birthYear: '', gender: '', height: '', weight: '',
+})
+
+// Khi hồ sơ đủ dữ liệu → gọi backend tính BMR/TDEE/goal đề xuất theo mục tiêu
+// user chọn. Chạy mỗi khi user đổi mức vận động hoặc mục tiêu → số hiển thị
+// luôn khớp lựa chọn hiện tại, không cần bấm gì thêm. Đặt SAU các ref khai báo
+// ở trên: watch() chạy ngay lúc setup nên nếu để trên, `birthYear` v.v. còn
+// trong temporal dead zone (const) → ReferenceError → cả trang trắng.
+async function refreshSuggestion() {
+  if (!birthYear.value || !gender.value || !height.value || !weight.value) return
+  const res = await calculateNutrition({
+    birth_year:     Number(birthYear.value),
+    gender:         gender.value as 'male' | 'female' | 'other',
+    height_cm:      Number(height.value),
+    weight_kg:      Number(weight.value),
+    activity_level: activityLevel.value,
+    goal:           goalType.value,
+  })
+  if (!res) return
+  suggested.value          = res
+  suggestedCitations.value = res.citations
+  calorieGoal.value        = String(res.calorie_goal)
+}
+
+watch([birthYear, gender, height, weight, activityLevel, goalType], () => {
+  if (step.value >= 2) refreshSuggestion()
 })
 
 // DEFENSE: tiêu đề các bước đăng ký — text 4 step Register wizard
